@@ -1,0 +1,10 @@
+ccxt
+python-dotenv
+requests
+pandas
+numpy
+scikit-learn
+joblib
+python-telegram-bot
+matplotlib
+seaborn
