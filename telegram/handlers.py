@@ -62,10 +62,10 @@ class MessageHandler:
             # Обработка настроек EMA
             elif '⚙️ Настройки EMA' in message_text:
                 self.send_ema_settings_menu()
-            elif any(cmd in message_text for cmd in ['💼 Макс. позиция:', '📉 Макс. убыток/день:', '🔴 Макс. убыточных:']):
-                self.handle_risk_settings_selection(message_text)
             elif '⚙️ Настройки рисков' in message_text:
                 self.send_risk_settings_menu()
+            elif any(cmd in message_text for cmd in ['💼 Макс. позиция:', '📉 Макс. убыток/день:', '🔴 Макс. убыточных:']):
+                self.handle_risk_settings_selection(message_text)
             elif any(cmd in message_text for cmd in ['🎯 Take Profit:', '🛑 Stop Loss:', '📉 Trailing Stop:', '⏰ Min Hold Time:']):
                 self.handle_ema_settings_selection(message_text)
             elif '🔄 Обновления:' in message_text:
