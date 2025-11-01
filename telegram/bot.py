@@ -138,52 +138,41 @@ class TelegramBot:
             ema_status = "🔴 ВНИЗ"
         else:  # Нейтрально
             ema_status = "⚪ НЕЙТРАЛЬНО"
-        
         # Получаем баланс для расчета размера ставки
         balance = self.bot.exchange.get_balance()
         total_usdt = balance['total_usdt'] if balance else 0
         trade_amount_percent = self.bot.settings.settings['trade_amount_percent']
         position_size_usdt = total_usdt * trade_amount_percent
-        
         # Расширенная информация о позиции
         position_info = ""
         if self.bot.position == 'long':
             strategy = self.bot.get_active_strategy()
             current_price = market_data['current_price']
-            
+            # 💰 ИСПОЛЬЗУЕМ ФИКСИРОВАННЫЙ РАЗМЕР ПОЗИЦИИ ИЗ СТРАТЕГИИ
+            if hasattr(strategy, 'position_size_usdt') and strategy.position_size_usdt > 0:
+                # Используем зафиксированный размер позиции из стратегии
+                position_size_usdt = strategy.position_size_usdt
+            elif hasattr(self.bot, 'current_position_size_usdt') and self.bot.current_position_size_usdt > 0:
+                # Используем зафиксированный размер позиции из бота
+                position_size_usdt = self.bot.current_position_size_usdt
+            else:
+                # Fallback: используем расчет из баланса
+                position_size_usdt = total_usdt * trade_amount_percent if balance else 0
+            # ИСПОЛЬЗУЕМ ФИКСИРОВАННУЮ ЦЕНУ ВХОДА ИЗ СТРАТЕГИИ
             if hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
                 entry_price = strategy.entry_price
-                
-                # ПРАВИЛЬНЫЙ РАСЧЕТ ПРОЦЕНТОВ
+                # РАСЧЕТ АБСОЛЮТНЫХ ЗНАЧЕНИЙ
                 current_profit_percent = ((current_price - entry_price) / entry_price) * 100
-                
-                # 💰 ПРАВИЛЬНЫЙ РАСЧЕТ В USDT - используем реальный размер позиции
-                if hasattr(strategy, 'position_size_usdt') and strategy.position_size_usdt > 0:
-                    # Используем зафиксированный размер позиции из стратегии
-                    position_size_usdt = strategy.position_size_usdt
-                    current_profit_usdt = position_size_usdt * (current_profit_percent / 100)
-                elif hasattr(self.bot, 'current_position_size_usdt') and self.bot.current_position_size_usdt > 0:
-                    # Используем зафиксированный размер позиции из бота
-                    position_size_usdt = self.bot.current_position_size_usdt
-                    current_profit_usdt = position_size_usdt * (current_profit_percent / 100)
-                else:
-                    # Fallback: используем расчет из баланса
-                    position_size_usdt = total_usdt * trade_amount_percent if balance else 0
-                    current_profit_usdt = position_size_usdt * (current_profit_percent / 100)
-                
+                current_profit_usdt = position_size_usdt * (current_profit_percent / 100)  # Прибыль/убыток в USDT
                 # Расчет до тейк-профита
                 take_profit = strategy.settings.get('take_profit_percent', 2.0)
                 taker_fee = strategy.settings.get('taker_fee', 0.001)
                 total_fees = taker_fee * 2 * 100  # 0.2%
                 needed_profit = take_profit + total_fees
                 remaining_to_tp = max(0, needed_profit - current_profit_percent)
-                
-                # 🔧 ПРАВИЛЬНЫЙ РАСЧЕТ: оставшаяся прибыль до TP в USDT
-                remaining_profit_usdt = position_size_usdt * (remaining_to_tp / 100)
-                
+                remaining_profit_usdt = position_size_usdt * (remaining_to_tp / 100)  # Оставшаяся прибыль до TP в USDT
                 # Комиссии в USDT
                 fees_usdt = position_size_usdt * (total_fees / 100)
-                
                 position_info = f"""
 💼 <b>ПОЗИЦИЯ ОТКРЫТА</b>
 💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT ({trade_amount_percent*100:.1f}%)
@@ -191,15 +180,13 @@ class TelegramBot:
 📈 <b>Текущая прибыль:</b> 
 {current_profit_percent:+.2f}% ({current_profit_usdt:+.2f} USDT)
 🎯 <b>До Take Profit:</b> 
-{remaining_to_tp:+.2f}% ({remaining_profit_usdt:+.2f} USDT)
++{remaining_to_tp:.2f}% (+{remaining_profit_usdt:.2f} USDT)
 🛡️ <b>Комиссии:</b> {total_fees:.2f}% ({fees_usdt:.2f} USDT)
 """
-        
         # Информация о размере следующей ставки (если позиция не открыта)
         next_trade_info = ""
         if self.bot.position != 'long':
-            next_trade_info = f"\n<b>Следующая ставка:</b> {position_size_usdt:.2f} USDT ({trade_amount_percent*100:.1f}%)"
-        
+            next_trade_info = f"💰 <b>Следующая ставка:</b> {position_size_usdt:.2f} USDT ({trade_amount_percent*100:.1f}%)"
         # ПРАВИЛЬНОЕ ФОРМАТИРОВАНИЕ СИГНАЛА
         signal_display = signal.upper()
         if signal == 'buy':
@@ -208,7 +195,6 @@ class TelegramBot:
             signal_display = "🔴 ПРОДАЖА"
         elif signal == 'wait':
             signal_display = "⚪ ОЖИДАНИЕ"
-            
         message = f"""
 📈 <b>ОБНОВЛЕНИЕ РЫНКА</b>
 💱 <b>Пара:</b> {pair_name}
