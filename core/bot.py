@@ -3,6 +3,8 @@
 """
 import threading
 import time
+import json
+import os
 from datetime import datetime
 from config.settings import SettingsManager
 from core.exchange import ExchangeManager
@@ -15,8 +17,6 @@ from strategies.price_action import PriceActionStrategy
 from strategies.macd_rsi import MacdRsiStrategy
 from strategies.bollinger import BollingerStrategy
 from utils.logger import log_info, log_error
-import json
-import os
 
 class AdvancedTradingBot:
     def __init__(self):
@@ -45,11 +45,17 @@ class AdvancedTradingBot:
             'macd_rsi': MacdRsiStrategy(),
             'bollinger': BollingerStrategy()
         }
+        # 🔴 ПО УМОЛЧАНИЮ ТОРГОВЛЯ ОТКЛЮЧЕНА
+        if 'trading_enabled' not in self.settings.settings:
+            self.settings.settings['trading_enabled'] = False
+            self.settings.save_settings()
+            log_info("⚠️ Торговля по умолчанию отключена. Включите в настройках.")
+        else:
+            log_info(f"⚙️ Торговля: {'ВКЛЮЧЕНА' if self.settings.settings['trading_enabled'] else 'ОТКЛЮЧЕНА'}")
         log_info("⚡ Бот быстро инициализирован, ML загружается в фоне...")
         # ML в фоне - не блокирует старт
         self.ml_model = MLModel()
         self.start_background_ml()
-
         # 🟢 ЗАГРУЖАЕМ СОСТОЯНИЕ ПОЗИЦИИ ИЗ ФАЙЛА
         self.load_position_state()
 
@@ -84,7 +90,7 @@ class AdvancedTradingBot:
         """Выполнение одного цикла торговли"""
         try:
             # 🔧 ПРОВЕРКА: разрешена ли торговля
-            if not self.settings.settings.get('trading_enabled', True):
+            if not self.settings.settings.get('trading_enabled', False):
                 log_info("⏸️ Торговля отключена в настройках")
                 return
             # 🔧 ПРОВЕРКА: достаточно ли средств
@@ -199,7 +205,7 @@ class AdvancedTradingBot:
             if signal == 'buy' and self.position != 'long':
                 # Логика покупки
                 self.position = 'long'
-                # ❗ ФИКСИРУЕМ РАЗМЕР ПОЗИЦИИ В USDT
+                # ❗ ФИКСИРУЕМ РАЗМЕР ПОЗИЦИИ В USDT ПРИ ОТКРЫТИИ!
                 self.current_position_size_usdt = position_size_usdt
                 if not self.settings.settings['demo_mode']:
                     # Реальная торговля
@@ -294,6 +300,18 @@ class AdvancedTradingBot:
         except Exception as e:
             log_error(f"❌ Ошибка исполнения сделки: {e}")
 
+    def get_min_amount(self, symbol):
+        """Получение минимального количества для торговой пары"""
+        min_amounts = {
+            'BTC/USDT': 0.00001,
+            'ETH/USDT': 0.001,
+            'SOL/USDT': 0.1,
+            'ADA/USDT': 1.0,
+            'DOT/USDT': 0.1,
+            'LINK/USDT': 0.1
+        }
+        return min_amounts.get(symbol, 0.001)
+
     def calculate_trade_amount(self):
         """Расчет размера сделки"""
         balance = self.exchange.get_balance()
@@ -310,7 +328,7 @@ class AdvancedTradingBot:
             try:
                 cycle_count += 1
                 log_info(f"🔄 Цикл #{cycle_count} запущен")
-                if self.settings.settings.get('trading_enabled', True):
+                if self.settings.settings.get('trading_enabled', False):
                     log_info("🔍 Выполняем торговый цикл...")
                     self.execute_trading_cycle()
                     log_info("✅ Торговый цикл завершен")
@@ -371,15 +389,3 @@ class AdvancedTradingBot:
                     log_info("🔄 Торговая пара изменилась — игнорируем старое состояние позиции")
         except Exception as e:
             log_error(f"❌ Ошибка загрузки состояния позиции: {e}")
-
-    def get_min_amount(self, symbol):
-        """Получение минимального количества для торговой пары"""
-        min_amounts = {
-            'BTC/USDT': 0.00001,
-            'ETH/USDT': 0.001,
-            'SOL/USDT': 0.1,
-            'ADA/USDT': 1.0,
-            'DOT/USDT': 0.1,
-            'LINK/USDT': 0.1
-        }
-        return min_amounts.get(symbol, 0.001)
