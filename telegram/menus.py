@@ -40,18 +40,15 @@ class MenuManager:
         ]
         message = f"""
 🤖 <b>РАСШИРЕННЫЙ ТОРГОВЫЙ БОТ v4.0</b>
-
 💱 <b>Пара:</b> {current_pair}
 🎯 <b>Стратегия:</b> {strategy_name}
 {trading_status} <b>Торговля:</b> {'ВКЛ' if settings.settings['trading_enabled'] else 'ВЫКЛ'}
 {ml_status} <b>ML:</b> {'ВКЛ' if settings.ml_settings['enabled'] else 'ВЫКЛ'}
-
 🚀 <b>ВОЗМОЖНОСТИ:</b>
 • 🎯 5 торговых стратегий
 • 💱 Смена пар в 1 клик  
 • 🤖 Гибкие настройки ML
 • ⚡ Централизованное управление
-
 💡 <b>Команды:</b>
 • ⚙️ Настройки - все параметры бота
 • ⚡ Управление - контроль торговли
@@ -71,22 +68,18 @@ class MenuManager:
             [f"💱 Пара: {current_pair}"],
             ["🤖 ML Настройки"],
             ["⚙️ Настройки EMA"],
+            ["⚙️ Настройки рисков"],  # ← ДОБАВЛЕНО
             [f"🔄 Обновления: {'✅' if settings.settings['enable_price_updates'] else '❌'}"],
             ['🏠 Главное меню']
         ]
         message = f"""
 ⚙️ <b>НАСТРОЙКИ БОТА</b>
-
 📈 <b>Стратегия EMA:</b>
 • Порог срабатывания: <b>{current_threshold:.2f}%</b>
 • Размер позиции: <b>{settings.settings['trade_amount_percent']*100:.1f}%</b>
-
 🎯 <b>Активная стратегия:</b> <b>{settings.get_active_strategy_name()}</b>
-
 💱 <b>Торговая пара:</b> <b>{current_pair}</b>
-
 🤖 <b>Machine Learning:</b> {'✅ ВКЛЮЧЕН' if settings.ml_settings['enabled'] else '❌ ВЫКЛЮЧЕН'}
-
 💡 Нажмите на параметр для изменения
 """
         return message, self.create_keyboard(keyboard)
@@ -112,13 +105,11 @@ class MenuManager:
         ]
         message = f"""
 ⚙️ <b>НАСТРОЙКИ EMA СТРАТЕГИИ</b>
-
 🎯 <b>Условия закрытия:</b>
 • Take Profit: <b>{take_profit:.1f}%</b>
 • Stop Loss: <b>{stop_loss:.1f}%</b>
 • Trailing Stop: {'✅ ВКЛ' if trailing_stop else '❌ ВЫКЛ'}
 • Min Hold Time: <b>{min_hold_time} мин</b>
-
 💡 <b>Объяснение:</b>
 • Take Profit - фиксация прибыли
 • Stop Loss - ограничение убытков  
@@ -137,10 +128,8 @@ class MenuManager:
         keyboard.append(['🔙 Назад к настройкам'])
         message = f"""
 🎯 <b>ВЫБОР ТОРГОВОЙ СТРАТЕГИИ</b>
-
 💡 Активная стратегия:
 <b>{settings.get_active_strategy_name()}</b>
-
 📊 Доступные стратегии:
 • 📈 EMA + ML - Основная стратегия с AI
 • ⚡ Price Action - По движению цены
@@ -168,10 +157,8 @@ class MenuManager:
         current_name = settings.get_active_pair_name()
         message = f"""
 💱 <b>ВЫБОР ТОРГОВОЙ ПАРЫ</b>
-
 💰 Активная пара:
 <b>{current_pair} - {current_name}</b>
-
 💡 Выберите торговую пару для мониторинга и торговли.
 """
         return message, self.create_keyboard(keyboard)
@@ -189,15 +176,40 @@ class MenuManager:
         ]
         message = f"""
 🤖 <b>НАСТРОЙКИ MACHINE LEARNING</b>
-
 📊 <b>Текущий статус:</b> <b>{ml_status}</b>
-
 🎯 <b>Пороги уверенности:</b>
-• Покупка: > <b>{settings.ml_settings['confidence_threshold_buy']:.1f}</b>
-• Продажа: < <b>{settings.ml_settings['confidence_threshold_sell']:.1f}</b>
-
+• Покупка: >&lt; <b>{settings.ml_settings['confidence_threshold_buy']:.1f}</b>
+• Продажа: <&gt; <b>{settings.ml_settings['confidence_threshold_sell']:.1f}</b>
 💡 Объяснение:
 ML модель фильтрует сигналы стратегии. Чем выше порог, тем строже фильтрация.
+"""
+        return message, self.create_keyboard(keyboard)
+
+    def send_risk_settings_menu(self):
+        """Меню настроек управления рисками"""
+        risk_settings = self.bot.settings.risk_settings
+        max_pos = risk_settings.get('max_position_size', 25.0)
+        max_daily_loss = risk_settings.get('max_daily_loss', 3.0)
+        max_consec = risk_settings.get('max_consecutive_losses', 3)
+        stop_loss = risk_settings.get('stop_loss', 1.5)
+        take_profit = risk_settings.get('take_profit', 3.0)
+
+        keyboard = [
+            [f"💼 Макс. позиция: {max_pos:.1f}%"],
+            [f"📉 Макс. убыток/день: {max_daily_loss:.1f}%"],
+            [f"🔴 Макс. убыточных: {max_consec}"],
+            [f"🛑 Stop Loss: {stop_loss:.1f}%"],
+            [f"🎯 Take Profit: {take_profit:.1f}%"],
+            ['🔙 Назад к настройкам']
+        ]
+        message = f"""
+⚡ <b>НАСТРОЙКИ УПРАВЛЕНИЯ РИСКАМИ</b>
+💼 <b>Макс. размер позиции:</b> <b>{max_pos:.1f}%</b>
+📉 <b>Макс. убыток за день:</b> <b>{max_daily_loss:.1f}%</b>
+🔴 <b>Макс. убыточных подряд:</b> <b>{max_consec}</b>
+🛑 <b>Stop Loss по умолчанию:</b> <b>{stop_loss:.1f}%</b>
+🎯 <b>Take Profit по умолчанию:</b> <b>{take_profit:.1f}%</b>
+💡 Нажмите на параметр для изменения.
 """
         return message, self.create_keyboard(keyboard)
 
@@ -216,11 +228,9 @@ ML модель фильтрует сигналы стратегии. Чем в�
         ]
         message = f"""
 ⚡ <b>УПРАВЛЕНИЕ ТОРГОВЛЕЙ</b>
-
 📊 <b>Статус торговли:</b> <b>{trading_status}</b>
 🎯 <b>Торговые сигналы:</b> <b>{signals_status}</b>
 🔧 <b>Режим работы:</b> <b>{demo_status}</b>
-
 💡 Возможности:
 • Включить/выключить автоматическую торговлю
 • Остановить все операции
@@ -234,25 +244,21 @@ ML модель фильтрует сигналы стратегии. Чем в�
         metrics = self.bot.metrics.get_summary()
         message = f"""
 📊 <b>ДЕТАЛЬНАЯ АНАЛИТИКА</b>
-
 📈 <b>ОСНОВНЫЕ МЕТРИКИ:</b>
 • Всего сделок: <b>{metrics['total_trades']}</b>
 • Win Rate: <b>{metrics['win_rate']:.1f}%</b>
 • Profit Factor: <b>{metrics['profit_factor']:.2f}</b>
 • Общая прибыль: <b>{metrics['total_profit']:.2f} USDT</b>
-
 💰 <b>СТАТИСТИКА СДЕЛОК:</b>
 • Прибыльных: <b>{metrics['winning_trades']}</b>
 • Убыточных: <b>{metrics['losing_trades']}</b>
 • Средняя прибыль: <b>{metrics['average_win']:.2f} USDT</b>
 • Средний убыток: <b>{metrics['average_loss']:.2f} USDT</b>
-
 🎯 <b>РЕКОРДЫ:</b>
 • Лучшая сделка: <b>{metrics['best_trade']:.2f} USDT</b>
 • Худшая сделка: <b>{metrics['worst_trade']:.2f} USDT</b>
 • Серия побед: <b>{metrics['consecutive_wins']}</b>
 • Серия поражений: <b>{metrics['consecutive_losses']}</b>
-
 ⚡ <b>РИСКИ:</b>
 • Макс просадка: <b>{metrics['max_drawdown']:.2f}%</b>
 • Текущая просадка: <b>{metrics['current_drawdown']:.2f}%</b>

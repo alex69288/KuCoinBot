@@ -45,13 +45,12 @@ class AdvancedTradingBot:
             'macd_rsi': MacdRsiStrategy(),
             'bollinger': BollingerStrategy()
         }
-        # 🔴 ПО УМОЛЧАНИЮ ТОРГОВЛЯ ОТКЛЮЧЕНА
-        if 'trading_enabled' not in self.settings.settings:
-            self.settings.settings['trading_enabled'] = False
-            self.settings.save_settings()
-            log_info("⚠️ Торговля по умолчанию отключена. Включите в настройках.")
-        else:
-            log_info(f"⚙️ Торговля: {'ВКЛЮЧЕНА' if self.settings.settings['trading_enabled'] else 'ОТКЛЮЧЕНА'}")
+
+        # 🔴 ТОРГОВЛЯ ВСЕГДА ОТКЛЮЧЕНА ПРИ ЗАПУСКЕ (даже если была включена ранее)
+        self.settings.settings['trading_enabled'] = False
+        self.settings.save_settings()
+        log_info("⚠️ Торговля отключена при запуске (требуется ручное включение).")
+
         log_info("⚡ Бот быстро инициализирован, ML загружается в фоне...")
         # ML в фоне - не блокирует старт
         self.ml_model = MLModel()
@@ -234,7 +233,7 @@ class AdvancedTradingBot:
                     'price': executed_price,
                     'profit': 0,
                     'profit_percent': 0,
-                    'position_size': trade_amount_percent * 100,
+                    'position_size': self.settings.settings['trade_amount_percent'] * 100,
                     'position_size_usdt': position_size_usdt
                 }
                 self.metrics.update_metrics(trade_result)
@@ -280,7 +279,7 @@ class AdvancedTradingBot:
                     'price': executed_price,
                     'profit': profit_percent,
                     'profit_percent': profit_percent,
-                    'position_size': trade_amount_percent * 100,
+                    'position_size': self.settings.settings['trade_amount_percent'] * 100,
                     'position_size_usdt': position_size_usdt,
                     'profit_usdt': profit_usdt
                 }

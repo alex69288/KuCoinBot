@@ -62,6 +62,10 @@ class MessageHandler:
             # Обработка настроек EMA
             elif '⚙️ Настройки EMA' in message_text:
                 self.send_ema_settings_menu()
+            elif any(cmd in message_text for cmd in ['💼 Макс. позиция:', '📉 Макс. убыток/день:', '🔴 Макс. убыточных:']):
+                self.handle_risk_settings_selection(message_text)
+            elif '⚙️ Настройки рисков' in message_text:
+                self.send_risk_settings_menu()
             elif any(cmd in message_text for cmd in ['🎯 Take Profit:', '🛑 Stop Loss:', '📉 Trailing Stop:', '⏰ Min Hold Time:']):
                 self.handle_ema_settings_selection(message_text)
             elif '🔄 Обновления:' in message_text:
@@ -138,6 +142,14 @@ class MessageHandler:
             log_error(error_msg)
             self.bot.telegram.send_message(error_msg)
 
+    def handle_risk_settings_selection(self, message_text):
+        if "💼 Макс. позиция:" in message_text:
+            self.start_max_position_input()
+        elif "📉 Макс. убыток/день:" in message_text:
+            self.start_max_daily_loss_input()
+        elif "🔴 Макс. убыточных:" in message_text:
+            self.start_max_consecutive_input()
+
     def handle_direct_input(self, message_text):
         """Обработка прямого ввода значений"""
         try:
@@ -207,6 +219,24 @@ class MessageHandler:
                     self.send_ema_settings_menu()
                 else:
                     self.bot.telegram.send_message("❌ Значение должно быть от 1 до 60 минут")
+
+            elif self.waiting_for_input == 'max_daily_loss':
+                if validate_number_input(value, 0.5, 20.0):
+                    self.bot.settings.risk_settings['max_daily_loss'] = value
+                    self.bot.settings.save_settings()
+                    self.bot.telegram.send_message(f"✅ Макс. убыток/день: <b>{value:.1f}%</b>")
+                    self.send_risk_settings_menu()
+                else:
+                    self.bot.telegram.send_message("❌ Значение должно быть от 0.5 до 20.0")
+
+            elif self.waiting_for_input == 'max_consecutive_losses':
+                if validate_number_input(value, 1, 10) and value == int(value):
+                    self.bot.settings.risk_settings['max_consecutive_losses'] = int(value)
+                    self.bot.settings.save_settings()
+                    self.bot.telegram.send_message(f"✅ Макс. убыточных подряд: <b>{int(value)}</b>")
+                    self.send_risk_settings_menu()
+                else:
+                    self.bot.telegram.send_message("❌ Введите целое число от 1 до 10")    
             self.waiting_for_input = None
         except Exception as e:
             error_msg = f"❌ Ошибка обработки ввода: {e}"
@@ -445,6 +475,21 @@ Stop Loss - процент убытка для автоматического з
 • 5 - 5 минут (стандарт)
 • 10 - 10 минут (консервативно)
 • 2 - 2 минуты (агрессивно)
+"""
+        self.bot.telegram.send_message(message, keyboard)
+
+    def start_max_position_input(self):
+        self.waiting_for_input = 'max_position_size'
+        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
+        current = self.bot.settings.risk_settings.get('max_position_size', 25.0)
+        message = f"""
+💼 <b>МАКС. РАЗМЕР ПОЗИЦИИ</b>
+Текущее значение: <b>{current:.1f}%</b>
+💡 Введите новое значение (5.0 – 100.0%):
+Примеры:
+• 30 для 30%
+• 25.5 для 25.5%
+• 50 для 50%
 """
         self.bot.telegram.send_message(message, keyboard)
 
