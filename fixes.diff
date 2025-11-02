@@ -1,0 +1,184 @@
+--- a/core/bot.py
++++ b/core/bot.py
+@@ -65,10 +65,7 @@ class AdvancedTradingBot:
+         # Стратегии (быстрая инициализация)
+         self.strategies = {
+             'ema_ml': EmaMlStrategy(),
+             'price_action': PriceActionStrategy(), 
+             'macd_rsi': MacdRsiStrategy(),
+             'bollinger': BollingerStrategy()
+         }
+-        # 🔴 ПО УМОЛЧАНИЮ ТОРГОВЛЯ ОТКЛЮЧЕНА
+-        if 'trading_enabled' not in self.settings.settings:
+-            self.settings.settings['trading_enabled'] = False
+-            self.settings.save_settings()
+-            log_info("⚠️ Торговля по умолчанию отключена. Включите в настройках.")
+-        else:
+-            log_info(f"⚙️ Торговля: {'ВКЛЮЧЕНА' if self.settings.settings['trading_enabled'] else 'ОТКЛЮЧЕНА'}")
++        # 🔴 ТОРГОВЛЯ ВСЕГДА ОТКЛЮЧЕНА ПРИ ЗАПУСКЕ
++        self.settings.settings['trading_enabled'] = False
++        self.settings.save_settings()
++        log_info("⚠️ Торговля отключена при запуске (требуется ручное включение).")
+         log_info("⚡ Бот быстро инициализирован, ML загружается в фоне...")
+
+--- a/telegram/menus.py
++++ b/telegram/menus.py
+@@ -108,6 +108,7 @@ class MenuManager:
+             ["🤖 ML Настройки"],
+             ["⚙️ Настройки EMA"],
++            ["⚙️ Настройки рисков"],
+             [f"🔄 Обновления: {'✅' if settings.settings['enable_price_updates'] else '❌'}"],
+ 
+@@ -280,8 +281,8 @@ class MenuManager:
+         message = f"""
+ 🤖 <b>НАСТРОЙКИ MACHINE LEARNING</b>
+ 📊 <b>Текущий статус:</b> <b>{ml_status}</b>
+ 🎯 <b>Пороги уверенности:</b>
+-• Покупка: > <b>{settings.ml_settings['confidence_threshold_buy']:.1f}</b>
+-• Продажа: < <b>{settings.ml_settings['confidence_threshold_sell']:.1f}</b>
++• Покупка: > <b>{settings.ml_settings['confidence_threshold_buy']:.1f}</b>
++• Продажа: < <b>{settings.ml_settings['confidence_threshold_sell']:.1f}</b>
+ 💡 Объяснение:
+ ML модель фильтрует сигналы стратегии. Чем выше порог, тем строже фильтрация.
+ """
+@@ -289,6 +290,45 @@ class MenuManager:
+         return message, self.create_keyboard(keyboard)
+ 
++    def send_risk_settings_menu(self):
++        """Меню настроек управления рисками"""
++        risk_settings = self.bot.settings.risk_settings
++        max_pos = risk_settings.get('max_position_size', 25.0)
++        max_daily_loss = risk_settings.get('max_daily_loss', 3.0)
++        max_consec = risk_settings.get('max_consecutive_losses', 3)
++        stop_loss = risk_settings.get('stop_loss', 1.5)
++        take_profit = risk_settings.get('take_profit', 3.0)
++
++        keyboard = [
++            [f"💼 Макс. позиция: {max_pos:.1f}%"],
++            [f"📉 Макс. убыток/день: {max_daily_loss:.1f}%"],
++            [f"🔴 Макс. убыточных: {max_consec}"],
++            [f"🛑 Stop Loss: {stop_loss:.1f}%"],
++            [f"🎯 Take Profit: {take_profit:.1f}%"],
++            ['🔙 Назад к настройкам']
++        ]
++        message = f"""
++⚡ <b>НАСТРОЙКИ УПРАВЛЕНИЯ РИСКАМИ</b>
++💼 <b>Макс. размер позиции:</b> <b>{max_pos:.1f}%</b>
++📉 <b>Макс. убыток за день:</b> <b>{max_daily_loss:.1f}%</b>
++🔴 <b>Макс. убыточных подряд:</b> <b>{max_consec}</b>
++🛑 <b>Stop Loss по умолчанию:</b> <b>{stop_loss:.1f}%</b>
++🎯 <b>Take Profit по умолчанию:</b> <b>{take_profit:.1f}%</b>
++💡 Нажмите на параметр для изменения.
++"""
++        return message, self.create_keyboard(keyboard)
++
+
+--- a/telegram/handlers.py
++++ b/telegram/handlers.py
+@@ -125,6 +125,8 @@ class MessageHandler:
+             elif '⚙️ Настройки EMA' in message_text:
+                 self.send_ema_settings_menu()
++            elif '⚙️ Настройки рисков' in message_text:
++                self.send_risk_settings_menu()
+ 
+@@ -145,6 +147,9 @@ class MessageHandler:
+             elif any(cmd in message_text for cmd in ['🎯 Take Profit:', '🛑 Stop Loss:', '📉 Trailing Stop:', '⏰ Min Hold Time:']):
+                 self.handle_ema_settings_selection(message_text)
++            elif any(cmd in message_text for cmd in ['💼 Макс. позиция:', '📉 Макс. убыток/день:', '🔴 Макс. убыточных:']):
++                self.handle_risk_settings_selection(message_text)
++
+ 
+@@ -350,6 +355,50 @@ class MessageHandler:
+         self.bot.telegram.send_message(message, keyboard)
+ 
++    def send_risk_settings_menu(self):
++        message, keyboard = self.bot.telegram.menu_manager.send_risk_settings_menu()
++        self.bot.telegram.send_message(message, keyboard)
++
++    def handle_risk_settings_selection(self, message_text):
++        """Обработка выбора настроек рисков"""
++        try:
++            if "💼 Макс. позиция:" in message_text:
++                self.start_max_position_input()
++            elif "📉 Макс. убыток/день:" in message_text:
++                self.start_max_daily_loss_input()
++            elif "🔴 Макс. убыточных:" in message_text:
++                self.start_max_consecutive_input()
++            else:
++                self.bot.telegram.send_message("❌ Неизвестная команда настроек рисков")
++        except Exception as e:
++            error_msg = f"❌ Ошибка обработки настроек рисков: {e}"
++            log_error(error_msg)
++            self.bot.telegram.send_message(error_msg)
++
++    def start_max_position_input(self):
++        self.waiting_for_input = 'max_position_size'
++        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
++        current = self.bot.settings.risk_settings.get('max_position_size', 25.0)
++        message = f"""
++💼 <b>МАКС. РАЗМЕР ПОЗИЦИИ</b>
++Текущее значение: <b>{current:.1f}%</b>
++💡 Введите новое значение (5.0 – 100.0%):
++Примеры:
++• 30 для 30%
++• 25.5 для 25.5%
++• 50 для 50%
++"""
++        self.bot.telegram.send_message(message, keyboard)
++
++    def start_max_daily_loss_input(self):
++        self.waiting_for_input = 'max_daily_loss'
++        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
++        current = self.bot.settings.risk_settings.get('max_daily_loss', 3.0)
++        message = f"""
++📉 <b>МАКС. УБЫТОК ЗА ДЕНЬ</b>
++Текущее значение: <b>{current:.1f}%</b>
++💡 Введите новое значение (0.5 – 20.0%)
++"""
++        self.bot.telegram.send_message(message, keyboard)
++
++    def start_max_consecutive_input(self):
++        self.waiting_for_input = 'max_consecutive_losses'
++        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
++        current = self.bot.settings.risk_settings.get('max_consecutive_losses', 3)
++        message = f"""
++🔴 <b>МАКС. УБЫТОЧНЫХ ПОДРЯД</b>
++Текущее значение: <b>{current}</b>
++💡 Введите целое число (1 – 10)
++"""
++        self.bot.telegram.send_message(message, keyboard)
++
+@@ -420,6 +468,24 @@ class MessageHandler:
+             elif self.waiting_for_input == 'min_hold_time':
+                 if validate_number_input(value, 1, 60):
+                     strategy = self.bot.get_active_strategy()
+                     strategy.settings['min_hold_time'] = int(value) * 60
+                     self.bot.telegram.send_message(f"✅ Min Hold Time установлен: <b>{value} мин</b>")
+                     self.send_ema_settings_menu()
+                 else:
+                     self.bot.telegram.send_message("❌ Значение должно быть от 1 до 60 минут")
++            elif self.waiting_for_input == 'max_position_size':
++                if validate_number_input(value, 5.0, 100.0):
++                    self.bot.settings.risk_settings['max_position_size'] = value
++                    self.bot.settings.save_settings()
++                    self.bot.telegram.send_message(f"✅ Макс. размер позиции: <b>{value:.1f}%</b>")
++                    self.send_risk_settings_menu()
++                else:
++                    self.bot.telegram.send_message("❌ Значение должно быть от 5.0 до 100.0")
++            elif self.waiting_for_input == 'max_daily_loss':
++                if validate_number_input(value, 0.5, 20.0):
++                    self.bot.settings.risk_settings['max_daily_loss'] = value
++                    self.bot.settings.save_settings()
++                    self.bot.telegram.send_message(f"✅ Макс. убыток/день: <b>{value:.1f}%</b>")
++                    self.send_risk_settings_menu()
++                else:
++                    self.bot.telegram.send_message("❌ Значение должно быть от 0.5 до 20.0")
++            elif self.waiting_for_input == 'max_consecutive_losses':
++                if validate_number_input(value, 1, 10) and value == int(value):
++                    self.bot.settings.risk_settings['max_consecutive_losses'] = int(value)
++                    self.bot.settings.save_settings()
++                    self.bot.telegram.send_message(f"✅ Макс. убыточных подряд: <b>{int(value)}</b>")
++                    self.send_risk_settings_menu()
++                else:
++                    self.bot.telegram.send_message("❌ Введите целое число от 1 до 10")
+             self.waiting_for_input = None

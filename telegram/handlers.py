@@ -236,7 +236,33 @@ class MessageHandler:
                     self.bot.telegram.send_message(f"✅ Макс. убыточных подряд: <b>{int(value)}</b>")
                     self.send_risk_settings_menu()
                 else:
-                    self.bot.telegram.send_message("❌ Введите целое число от 1 до 10")    
+                    self.bot.telegram.send_message("❌ Введите целое число от 1 до 10")
+            elif self.waiting_for_input == 'max_position_size':
+                if validate_number_input(value, 5.0, 100.0):
+                    self.bot.settings.risk_settings['max_position_size'] = value
+                    self.bot.settings.save_settings()
+                    self.bot.telegram.send_message(f"✅ Макс. размер позиции: <b>{value:.1f}%</b>")
+                    self.send_risk_settings_menu()
+                else:
+                    self.bot.telegram.send_message("❌ Значение должно быть от 5.0 до 100.0")
+
+            elif self.waiting_for_input == 'max_daily_loss':
+                if validate_number_input(value, 0.5, 20.0):
+                    self.bot.settings.risk_settings['max_daily_loss'] = value
+                    self.bot.settings.save_settings()
+                    self.bot.telegram.send_message(f"✅ Макс. убыток/день: <b>{value:.1f}%</b>")
+                    self.send_risk_settings_menu()
+                else:
+                    self.bot.telegram.send_message("❌ Значение должно быть от 0.5 до 20.0")
+
+            elif self.waiting_for_input == 'max_consecutive_losses':
+                if validate_number_input(value, 1, 10) and value == int(value):
+                    self.bot.settings.risk_settings['max_consecutive_losses'] = int(value)
+                    self.bot.settings.save_settings()
+                    self.bot.telegram.send_message(f"✅ Макс. убыточных подряд: <b>{int(value)}</b>")
+                    self.send_risk_settings_menu()
+                else:
+                    self.bot.telegram.send_message("❌ Введите целое число от 1 до 10")
             self.waiting_for_input = None
         except Exception as e:
             error_msg = f"❌ Ошибка обработки ввода: {e}"
@@ -491,6 +517,10 @@ Stop Loss - процент убытка для автоматического з
 • 25.5 для 25.5%
 • 50 для 50%
 """
+        self.bot.telegram.send_message(message, keyboard)
+
+    def send_risk_settings_menu(self):
+        message, keyboard = self.bot.telegram.menu_manager.send_risk_settings_menu()
         self.bot.telegram.send_message(message, keyboard)
 
     def toggle_ml_enabled(self):
