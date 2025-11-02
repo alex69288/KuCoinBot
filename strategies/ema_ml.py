@@ -56,24 +56,34 @@ class EmaMlStrategy(BaseStrategy):
             take_profit_percent = self.settings.get('take_profit_percent', 2.0)
             
             if take_profit_usdt > 0:
-                # 🔹 РЕЖИМ USDT
+                # 🔹 РЕЖИМ USDT (включая маленькие значения)
                 current_profit_usdt = (current_price - self.entry_price) / self.entry_price * self.position_size_usdt
                 fees_usdt = self.position_size_usdt * taker_fee * 2
                 net_profit_usdt = current_profit_usdt - fees_usdt
                 
+                # 🔧 ПОДДЕРЖКА МАЛЕНЬКИХ ЗНАЧЕНИЙ TP
                 if net_profit_usdt >= take_profit_usdt:
-                    log_info(f"🎯 Take Profit (USDT) сработал: +{net_profit_usdt:.2f} USDT")
+                    # 🔧 АВТОМАТИЧЕСКОЕ ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
+                    if take_profit_usdt < 0.1:
+                        log_info(f"🎯 Take Profit (USDT) сработал: +{net_profit_usdt:.4f} USDT (цель: {take_profit_usdt:.4f} USDT)")
+                    else:
+                        log_info(f"🎯 Take Profit (USDT) сработал: +{net_profit_usdt:.2f} USDT (цель: {take_profit_usdt:.2f} USDT)")
                     self.last_signal_time = current_time
                     return 'sell'
                     
             else:
-                # 🔹 РЕЖИМ ПРОЦЕНТОВ
+                # 🔹 РЕЖИМ ПРОЦЕНТОВ (включая маленькие значения)
                 gross_profit_percent = ((current_price - self.entry_price) / self.entry_price) * 100
                 total_fees_percent = taker_fee * 2 * 100
                 net_profit_percent = gross_profit_percent - total_fees_percent
                 
+                # 🔧 ПОДДЕРЖКА МАЛЕНЬКИХ ЗНАЧЕНИЙ TP
                 if net_profit_percent >= take_profit_percent:
-                    log_info(f"🎯 Take Profit (%) сработал: +{net_profit_percent:.2f}%")
+                    # 🔧 АВТОМАТИЧЕСКОЕ ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
+                    if take_profit_percent < 0.1:
+                        log_info(f"🎯 Take Profit (%) сработал: +{net_profit_percent:.4f}% (цель: {take_profit_percent:.4f}%)")
+                    else:
+                        log_info(f"🎯 Take Profit (%) сработал: +{net_profit_percent:.2f}% (цель: {take_profit_percent:.2f}%)")
                     self.last_signal_time = current_time
                     return 'sell'
 
@@ -83,23 +93,47 @@ class EmaMlStrategy(BaseStrategy):
             net_profit_percent_sl = current_profit_percent - (taker_fee * 2 * 100)
             
             if net_profit_percent_sl <= -stop_loss:
-                log_info(f"🛑 Stop Loss сработал: {net_profit_percent_sl:.2f}%")
+                # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ УБЫТКОВ
+                if abs(net_profit_percent_sl) < 0.1:
+                    log_info(f"🛑 Stop Loss сработал: {net_profit_percent_sl:.4f}%")
+                else:
+                    log_info(f"🛑 Stop Loss сработал: {net_profit_percent_sl:.2f}%")
                 self.last_signal_time = current_time
                 return 'sell'
 
-            # Trailing Stop
+            # Trailing Stop (только для процентов)
             if self.settings.get('trailing_stop', False):
                 trailing_stop_pct = 1.0
                 drawdown = ((self.highest_price_since_entry - current_price) / self.highest_price_since_entry) * 100
                 effective_drawdown = drawdown + (taker_fee * 100)
                 if effective_drawdown >= trailing_stop_pct:
-                    log_info(f"📉 Trailing Stop сработал: -{effective_drawdown:.2f}%")
+                    # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ПРОСАДОК
+                    if effective_drawdown < 0.1:
+                        log_info(f"📉 Trailing Stop сработал: -{effective_drawdown:.4f}%")
+                    else:
+                        log_info(f"📉 Trailing Stop сработал: -{effective_drawdown:.2f}%")
                     self.last_signal_time = current_time
                     return 'sell'
 
             # Обновляем максимум
             if current_price > self.highest_price_since_entry:
                 self.highest_price_since_entry = current_price
+
+            # 🔧 ДИАГНОСТИЧЕСКОЕ ЛОГИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
+            if take_profit_usdt > 0:
+                # Режим USDT
+                remaining_to_tp = max(0, take_profit_usdt - net_profit_usdt)
+                if remaining_to_tp < 0.1:
+                    log_info(f"📊 Диагностика TP (USDT): прибыль {net_profit_usdt:.4f} USDT, до TP {remaining_to_tp:.4f} USDT")
+                else:
+                    log_info(f"📊 Диагностика TP (USDT): прибыль {net_profit_usdt:.2f} USDT, до TP {remaining_to_tp:.2f} USDT")
+            else:
+                # Режим процентов
+                remaining_to_tp = max(0, take_profit_percent - net_profit_percent)
+                if remaining_to_tp < 0.1:
+                    log_info(f"📊 Диагностика TP (%): прибыль {net_profit_percent:.4f}%, до TP {remaining_to_tp:.4f}%")
+                else:
+                    log_info(f"📊 Диагностика TP (%): прибыль {net_profit_percent:.2f}%, до TP {remaining_to_tp:.2f}%")
 
             return 'wait'
 
@@ -116,14 +150,22 @@ class EmaMlStrategy(BaseStrategy):
             self.position_opened_at = current_time
             self.position_size_usdt = position_size_usdt
             
-            # 🔧 Логирование в правильном режиме
+            # 🔧 Логирование в правильном режиме с поддержкой маленьких значений
             take_profit_usdt = self.settings.get('take_profit_usdt', 0.0)
             if take_profit_usdt > 0:
-                log_info(f"🟢 Открываем LONG: цена={current_price:.2f}, TP={take_profit_usdt:.2f} USDT, размер={position_size_usdt:.2f} USDT")
+                # 🔧 АВТОМАТИЧЕСКОЕ ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
+                if take_profit_usdt < 0.1:
+                    log_info(f"🟢 Открываем LONG: цена={current_price:.2f}, TP={take_profit_usdt:.4f} USDT, размер={position_size_usdt:.2f} USDT")
+                else:
+                    log_info(f"🟢 Открываем LONG: цена={current_price:.2f}, TP={take_profit_usdt:.2f} USDT, размер={position_size_usdt:.2f} USDT")
             else:
                 take_profit_percent = self.settings.get('take_profit_percent', 2.0)
-                log_info(f"🟢 Открываем LONG: цена={current_price:.2f}, TP={take_profit_percent:.1f}%, размер={position_size_usdt:.2f} USDT")
-                
+                # 🔧 АВТОМАТИЧЕСКОЕ ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
+                if take_profit_percent < 0.1:
+                    log_info(f"🟢 Открываем LONG: цена={current_price:.2f}, TP={take_profit_percent:.4f}%, размер={position_size_usdt:.2f} USDT")
+                else:
+                    log_info(f"🟢 Открываем LONG: цена={current_price:.2f}, TP={take_profit_percent:.2f}%, размер={position_size_usdt:.2f} USDT")
+            
             self.last_signal_time = current_time
             return 'buy'
 
@@ -147,10 +189,18 @@ class EmaMlStrategy(BaseStrategy):
         
         # 🔹 ПРАВИЛЬНОЕ ОПРЕДЕЛЕНИЕ РЕЖИМА
         if take_profit_usdt > 0:
-            take_profit_display = f"{take_profit_usdt:.2f} USDT"
+            # 🔧 АВТОМАТИЧЕСКОЕ ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
+            if take_profit_usdt < 0.1:
+                take_profit_display = f"{take_profit_usdt:.4f} USDT"
+            else:
+                take_profit_display = f"{take_profit_usdt:.2f} USDT"
             tp_mode = "USDT"
         else:
-            take_profit_display = f"{take_profit_percent:.1f}%"
+            # 🔧 АВТОМАТИЧЕСКОЕ ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
+            if take_profit_percent < 0.1:
+                take_profit_display = f"{take_profit_percent:.4f}%"
+            else:
+                take_profit_display = f"{take_profit_percent:.2f}%"
             tp_mode = "проценты"
             
         return {
@@ -160,3 +210,60 @@ class EmaMlStrategy(BaseStrategy):
             'trailing_stop': '✅ ВКЛ' if self.settings.get('trailing_stop', False) else '❌ ВЫКЛ',
             'min_hold_time': f"{self.settings.get('min_hold_time', 300)//60} мин",
         }
+
+    def get_current_profit_info(self, current_price):
+        """Получение информации о текущей прибыли с поддержкой маленьких значений"""
+        if not self.position == 'long' or self.entry_price == 0:
+            return "Нет открытой позиции"
+        
+        take_profit_usdt = self.settings.get('take_profit_usdt', 0.0)
+        take_profit_percent = self.settings.get('take_profit_percent', 2.0)
+        taker_fee = self.settings.get('taker_fee', 0.001)
+        
+        if take_profit_usdt > 0:
+            # Режим USDT
+            current_profit_usdt = (current_price - self.entry_price) / self.entry_price * self.position_size_usdt
+            fees_usdt = self.position_size_usdt * taker_fee * 2
+            net_profit_usdt = current_profit_usdt - fees_usdt
+            remaining_to_tp = max(0, take_profit_usdt - net_profit_usdt)
+            
+            # 🔧 АВТОМАТИЧЕСКОЕ ФОРМАТИРОВАНИЕ
+            profit_format = ".4f" if abs(net_profit_usdt) < 0.1 else ".2f"
+            tp_format = ".4f" if take_profit_usdt < 0.1 else ".2f"
+            remaining_format = ".4f" if remaining_to_tp < 0.1 else ".2f"
+            
+            return {
+                'mode': 'USDT',
+                'current_profit': net_profit_usdt,
+                'current_profit_formatted': f"{net_profit_usdt:{profit_format}} USDT",
+                'take_profit': take_profit_usdt,
+                'take_profit_formatted': f"{take_profit_usdt:{tp_format}} USDT",
+                'remaining_to_tp': remaining_to_tp,
+                'remaining_formatted': f"{remaining_to_tp:{remaining_format}} USDT",
+                'fees': fees_usdt
+            }
+        else:
+            # Режим процентов
+            current_profit_percent = ((current_price - self.entry_price) / self.entry_price) * 100
+            total_fees_percent = taker_fee * 2 * 100
+            net_profit_percent = current_profit_percent - total_fees_percent
+            remaining_to_tp = max(0, take_profit_percent - net_profit_percent)
+            current_profit_usdt = self.position_size_usdt * (net_profit_percent / 100)
+            
+            # 🔧 АВТОМАТИЧЕСКОЕ ФОРМАТИРОВАНИЕ
+            profit_format = ".4f" if abs(net_profit_percent) < 0.1 else ".2f"
+            tp_format = ".4f" if take_profit_percent < 0.1 else ".2f"
+            remaining_format = ".4f" if remaining_to_tp < 0.1 else ".2f"
+            
+            return {
+                'mode': 'percent',
+                'current_profit': net_profit_percent,
+                'current_profit_formatted': f"{net_profit_percent:{profit_format}}%",
+                'current_profit_usdt': current_profit_usdt,
+                'current_profit_usdt_formatted': f"{current_profit_usdt:.4f} USDT",
+                'take_profit': take_profit_percent,
+                'take_profit_formatted': f"{take_profit_percent:{tp_format}}%",
+                'remaining_to_tp': remaining_to_tp,
+                'remaining_formatted': f"{remaining_to_tp:{remaining_format}}%",
+                'fees': total_fees_percent
+            }

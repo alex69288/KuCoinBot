@@ -210,24 +210,34 @@ class MessageHandler:
                 else:
                     self.bot.telegram.send_message("❌ Значение должно быть от 0.1 до 0.9")
             elif self.waiting_for_input == 'take_profit':
-                # ✅ Разрешаем ввод 0 — это ключевое изменение!
-                if value >= 0 and value <= 20.0:
+                # ✅ РАЗРЕШАЕМ ВВОД ОТ 0.01% ДО 20.0%
+                if value >= 0.01 and value <= 20.0:
                     strategy = self.bot.get_active_strategy()
                     strategy.settings['take_profit_percent'] = value
                     strategy.settings['take_profit_usdt'] = 0.0  # 🔹 Явно устанавливаем режим процентов
-                    self.bot.telegram.send_message(f"✅ Take Profit установлен: <b>{value:.1f}%</b>")
+                    self.bot.telegram.send_message(f"✅ Take Profit установлен: <b>{value:.2f}%</b>")
                     self.send_ema_settings_menu()
                 else:
-                    self.bot.telegram.send_message("❌ Значение должно быть от 0 до 20.0")
+                    self.bot.telegram.send_message("❌ Значение должно быть от 0.01 до 20.0%")
+                    
             elif self.waiting_for_input == 'take_profit_usdt':
-                if value >= 0:
+                # ✅ РАЗРЕШАЕМ ВВОД ОТ 0.01 USDT
+                if value >= 0.01:
                     strategy = self.bot.get_active_strategy()
                     strategy.settings['take_profit_usdt'] = value
                     strategy.settings['take_profit_percent'] = 0.0  # 🔹 Явно устанавливаем режим USDT
                     self.bot.telegram.send_message(f"✅ Take Profit установлен: <b>{value:.2f} USDT</b>")
                     self.send_ema_settings_menu()
+                elif value == 0:
+                    # Переключение обратно в режим процентов
+                    strategy = self.bot.get_active_strategy()
+                    strategy.settings['take_profit_usdt'] = 0.0
+                    strategy.settings['take_profit_percent'] = 2.0  # Значение по умолчанию
+                    self.bot.telegram.send_message("🔄 Take Profit переключен в режим процентов (2.0%)")
+                    self.send_ema_settings_menu()
                 else:
-                    self.bot.telegram.send_message("❌ Значение должно быть >= 0")
+                    self.bot.telegram.send_message("❌ Значение должно быть >= 0.01 USDT или 0 для переключения в %")
+                    
             elif self.waiting_for_input == 'stop_loss':
                 if validate_number_input(value, 0.5, 10.0):
                     strategy = self.bot.get_active_strategy()
@@ -286,7 +296,7 @@ class MessageHandler:
                 position_size = getattr(strategy, 'position_size_usdt', 0)
                 if position_size > 0 and current_usdt > 0:
                     new_percent = (current_usdt / position_size) * 100
-                    strategy.settings['take_profit_percent'] = max(0.5, new_percent)  # минимум 0.5%
+                    strategy.settings['take_profit_percent'] = max(0.01, new_percent)  # минимум 0.01%
                 else:
                     strategy.settings['take_profit_percent'] = 2.0  # значение по умолчанию
                 
@@ -297,7 +307,7 @@ class MessageHandler:
                 position_size = getattr(strategy, 'position_size_usdt', 0)
                 if position_size > 0 and current_percent > 0:
                     new_usdt = position_size * (current_percent / 100)
-                    strategy.settings['take_profit_usdt'] = max(0.1, new_usdt)  # минимум 0.1 USDT
+                    strategy.settings['take_profit_usdt'] = max(0.01, new_usdt)  # минимум 0.01 USDT
                 else:
                     # Если нет данных о размере позиции, используем разумное значение по умолчанию
                     strategy.settings['take_profit_usdt'] = 0.5  # 0.5 USDT по умолчанию
@@ -504,10 +514,12 @@ Stop Loss - процент убытка для автоматического з
         message = f"""
 🎯 <b>НАСТРОЙКА TAKE PROFIT (в USDT)</b>
 Текущее значение: <b>{current_tp_usdt:.2f} USDT</b>
-💡 Введите новое значение (> 0.1 USDT):
+💡 Введите новое значение (>= 0.01 USDT):
 Примеры:
-• 0.5 — фиксировать прибыль от 0.5 USDT
-• 1.2 — от 1.2 USDT
+• 0.01 — фиксировать прибыль от 0.01 USDT
+• 0.05 — от 0.05 USDT  
+• 0.10 — от 0.10 USDT
+• 1.00 — от 1.00 USDT
 • 0 — отключить (вернётся к %)
 """
         self.bot.telegram.send_message(message, keyboard)
@@ -522,13 +534,14 @@ Stop Loss - процент убытка для автоматического з
         current_tp = strategy.settings.get('take_profit_percent', 2.0)
         message = f"""
 🎯 <b>НАСТРОЙКА TAKE PROFIT</b>
-Текущее значение: <b>{current_tp:.1f}%</b>
-💡 Введите новое значение (0.5 - 20.0%):
-Take Profit - процент прибыли для автоматического закрытия позиции.
+Текущее значение: <b>{current_tp:.2f}%</b>
+💡 Введите новое значение (0.01 - 20.0%):
 Примеры:
-• 2.0 - стандартный TP 2%
-• 1.5 - консервативный TP 1.5%
-• 3.0 - агрессивный TP 3%
+• 0.01 — консервативный TP 0.01%
+• 0.10 — TP 0.10%
+• 0.50 — TP 0.50%
+• 1.00 — стандартный TP 1%
+• 2.00 — агрессивный TP 2%
 """
         self.bot.telegram.send_message(message, keyboard)
 
