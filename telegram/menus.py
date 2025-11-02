@@ -68,7 +68,7 @@ class MenuManager:
             [f"💱 Пара: {current_pair}"],
             ["🤖 ML Настройки"],
             ["⚙️ Настройки EMA"],
-            ["⚙️ Настройки рисков"],  # ← ДОБАВЛЕНО
+            ["⚙️ Настройки рисков"],
             [f"🔄 Обновления: {'✅' if settings.settings['enable_price_updates'] else '❌'}"],
             ['🏠 Главное меню']
         ]
@@ -85,36 +85,48 @@ class MenuManager:
         return message, self.create_keyboard(keyboard)
 
     def send_ema_settings_menu(self):
-        """Меню настроек EMA стратегии"""
+        """Меню настроек EMA стратегии - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
         settings = self.bot.settings
         strategy = self.bot.get_active_strategy()
         if hasattr(strategy, 'settings'):
             ema_settings = strategy.settings
         else:
             ema_settings = {}
-        take_profit = ema_settings.get('take_profit_percent', 2.0)
+
+        # 🔹 ПРАВИЛЬНОЕ ОПРЕДЕЛЕНИЕ РЕЖИМА TAKE PROFIT
+        take_profit_usdt = ema_settings.get('take_profit_usdt', 0.0)
+        take_profit_percent = ema_settings.get('take_profit_percent', 2.0)
+        
+        # Если установлен USDT TP > 0 - режим USDT, иначе проценты
+        if take_profit_usdt > 0:
+            take_profit_display = f"{take_profit_usdt:.2f} USDT"
+            tp_mode = "USDT"
+        else:
+            take_profit_display = f"{take_profit_percent:.1f}%"
+            tp_mode = "проценты"
+
         stop_loss = ema_settings.get('stop_loss_percent', 1.5)
         trailing_stop = ema_settings.get('trailing_stop', False)
         min_hold_time = ema_settings.get('min_hold_time', 300) // 60
+
         keyboard = [
-            [f"🎯 Take Profit: {take_profit:.1f}%"],
+            [f"🎯 Take Profit: {take_profit_display}"],
+            [f"🔄 TP режим: {tp_mode}"],
             [f"🛑 Stop Loss: {stop_loss:.1f}%"],
             [f"📉 Trailing Stop: {'✅ ВКЛ' if trailing_stop else '❌ ВЫКЛ'}"],
             [f"⏰ Min Hold Time: {min_hold_time} мин"],
             ['🔙 Назад к настройкам']
         ]
+
         message = f"""
 ⚙️ <b>НАСТРОЙКИ EMA СТРАТЕГИИ</b>
-🎯 <b>Условия закрытия:</b>
-• Take Profit: <b>{take_profit:.1f}%</b>
-• Stop Loss: <b>{stop_loss:.1f}%</b>
-• Trailing Stop: {'✅ ВКЛ' if trailing_stop else '❌ ВЫКЛ'}
-• Min Hold Time: <b>{min_hold_time} мин</b>
-💡 <b>Объяснение:</b>
-• Take Profit - фиксация прибыли
-• Stop Loss - ограничение убытков  
-• Trailing Stop - защита прибыли
-• Min Hold Time - минимальное время удержания
+🎯 <b>Take Profit:</b> <b>{take_profit_display}</b>
+🔄 <b>Режим TP:</b> <b>{tp_mode}</b>
+🛑 <b>Stop Loss:</b> <b>{stop_loss:.1f}%</b>
+📉 <b>Trailing Stop:</b> {'✅ ВКЛ' if trailing_stop else '❌ ВЫКЛ'}
+⏰ <b>Min Hold Time:</b> <b>{min_hold_time} мин</b>
+
+💡 <b>Совет:</b> Нажмите "🔄 TP режим", чтобы переключить между процентами и USDT.
 """
         return message, self.create_keyboard(keyboard)
 
@@ -178,8 +190,8 @@ class MenuManager:
 🤖 <b>НАСТРОЙКИ MACHINE LEARNING</b>
 📊 <b>Текущий статус:</b> <b>{ml_status}</b>
 🎯 <b>Пороги уверенности:</b>
-• Покупка: >&lt; <b>{settings.ml_settings['confidence_threshold_buy']:.1f}</b>
-• Продажа: <&gt; <b>{settings.ml_settings['confidence_threshold_sell']:.1f}</b>
+• Покупка: >< <b>{settings.ml_settings['confidence_threshold_buy']:.1f}</b>
+• Продажа: <> <b>{settings.ml_settings['confidence_threshold_sell']:.1f}</b>
 💡 Объяснение:
 ML модель фильтрует сигналы стратегии. Чем выше порог, тем строже фильтрация.
 """
@@ -193,7 +205,6 @@ ML модель фильтрует сигналы стратегии. Чем в�
         max_consec = risk_settings.get('max_consecutive_losses', 3)
         stop_loss = risk_settings.get('stop_loss', 1.5)
         take_profit = risk_settings.get('take_profit', 3.0)
-
         keyboard = [
             [f"💼 Макс. позиция: {max_pos:.1f}%"],
             [f"📉 Макс. убыток/день: {max_daily_loss:.1f}%"],
@@ -265,6 +276,6 @@ ML модель фильтрует сигналы стратегии. Чем в�
 """
         keyboard = [
             ['📈 Детальный отчет', '📊 Графики'],
-            ['🧹 Очистить статистику', '🏠 Главное меню']
+            ['🧹 Очистить статистика', '🏠 Главное меню']
         ]
         return message, self.create_keyboard(keyboard)

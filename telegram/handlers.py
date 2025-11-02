@@ -17,7 +17,6 @@ class MessageHandler:
             if self.waiting_for_input:
                 self.handle_direct_input(message_text)
                 return
-
             self.bot.telegram.send_message("⏳ Обрабатываю запрос...")
             # Обработка кнопок "Назад"
             if message_text in ['🔙 Назад к настройкам', '🔙 Назад']:
@@ -92,6 +91,9 @@ class MessageHandler:
                 self.send_charts_info()
             elif message_text == '🧹 Очистить статистику':
                 self.clear_statistics()
+            # 🔹 ОБРАБОТКА ПЕРЕКЛЮЧЕНИЯ РЕЖИМА TP
+            elif '🔄 TP режим:' in message_text:
+                self.toggle_take_profit_mode()
         except Exception as e:
             error_msg = f"❌ Ошибка обработки команды: {e}"
             log_error(error_msg)
@@ -128,9 +130,14 @@ class MessageHandler:
     def handle_ema_settings_selection(self, message_text):
         """Обработка выбора настроек EMA"""
         try:
-            strategy = self.bot.get_active_strategy()
             if "🎯 Take Profit:" in message_text:
-                self.start_take_profit_input()
+                # Определяем, в каком режиме сейчас TP
+                strategy = self.bot.get_active_strategy()
+                take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
+                if take_profit_usdt > 0:
+                    self.start_take_profit_usdt_input()
+                else:
+                    self.start_take_profit_input()
             elif "🛑 Stop Loss:" in message_text:
                 self.start_stop_loss_input()
             elif "📉 Trailing Stop:" in message_text:
@@ -143,12 +150,18 @@ class MessageHandler:
             self.bot.telegram.send_message(error_msg)
 
     def handle_risk_settings_selection(self, message_text):
-        if "💼 Макс. позиция:" in message_text:
-            self.start_max_position_input()
-        elif "📉 Макс. убыток/день:" in message_text:
-            self.start_max_daily_loss_input()
-        elif "🔴 Макс. убыточных:" in message_text:
-            self.start_max_consecutive_input()
+        """Обработка выбора настроек рисков"""
+        try:
+            if "💼 Макс. позиция:" in message_text:
+                self.start_max_position_input()
+            elif "📉 Макс. убыток/день:" in message_text:
+                self.start_max_daily_loss_input()
+            elif "🔴 Макс. убыточных:" in message_text:
+                self.start_max_consecutive_input()
+        except Exception as e:
+            error_msg = f"❌ Ошибка обработки настроек рисков: {e}"
+            log_error(error_msg)
+            self.bot.telegram.send_message(error_msg)
 
     def handle_direct_input(self, message_text):
         """Обработка прямого ввода значений"""
@@ -163,6 +176,7 @@ class MessageHandler:
             except ValueError:
                 self.bot.telegram.send_message("❌ Введите корректное число")
                 return
+
             if self.waiting_for_input == 'ema_threshold':
                 if validate_number_input(value, 0.01, 10.0):
                     self.bot.settings.settings['ema_cross_threshold'] = value / 100
@@ -196,13 +210,24 @@ class MessageHandler:
                 else:
                     self.bot.telegram.send_message("❌ Значение должно быть от 0.1 до 0.9")
             elif self.waiting_for_input == 'take_profit':
-                if validate_number_input(value, 0.5, 20.0):
+                # ✅ Разрешаем ввод 0 — это ключевое изменение!
+                if value >= 0 and value <= 20.0:
                     strategy = self.bot.get_active_strategy()
                     strategy.settings['take_profit_percent'] = value
+                    strategy.settings['take_profit_usdt'] = 0.0  # 🔹 Явно устанавливаем режим процентов
                     self.bot.telegram.send_message(f"✅ Take Profit установлен: <b>{value:.1f}%</b>")
                     self.send_ema_settings_menu()
                 else:
-                    self.bot.telegram.send_message("❌ Значение должно быть от 0.5 до 20.0")
+                    self.bot.telegram.send_message("❌ Значение должно быть от 0 до 20.0")
+            elif self.waiting_for_input == 'take_profit_usdt':
+                if value >= 0:
+                    strategy = self.bot.get_active_strategy()
+                    strategy.settings['take_profit_usdt'] = value
+                    strategy.settings['take_profit_percent'] = 0.0  # 🔹 Явно устанавливаем режим USDT
+                    self.bot.telegram.send_message(f"✅ Take Profit установлен: <b>{value:.2f} USDT</b>")
+                    self.send_ema_settings_menu()
+                else:
+                    self.bot.telegram.send_message("❌ Значение должно быть >= 0")
             elif self.waiting_for_input == 'stop_loss':
                 if validate_number_input(value, 0.5, 10.0):
                     strategy = self.bot.get_active_strategy()
@@ -214,12 +239,11 @@ class MessageHandler:
             elif self.waiting_for_input == 'min_hold_time':
                 if validate_number_input(value, 1, 60):
                     strategy = self.bot.get_active_strategy()
-                    strategy.settings['min_hold_time'] = int(value) * 60  # Конвертируем в секунды
+                    strategy.settings['min_hold_time'] = int(value) * 60
                     self.bot.telegram.send_message(f"✅ Min Hold Time установлен: <b>{value} мин</b>")
                     self.send_ema_settings_menu()
                 else:
                     self.bot.telegram.send_message("❌ Значение должно быть от 1 до 60 минут")
-
             elif self.waiting_for_input == 'max_daily_loss':
                 if validate_number_input(value, 0.5, 20.0):
                     self.bot.settings.risk_settings['max_daily_loss'] = value
@@ -228,7 +252,6 @@ class MessageHandler:
                     self.send_risk_settings_menu()
                 else:
                     self.bot.telegram.send_message("❌ Значение должно быть от 0.5 до 20.0")
-
             elif self.waiting_for_input == 'max_consecutive_losses':
                 if validate_number_input(value, 1, 10) and value == int(value):
                     self.bot.settings.risk_settings['max_consecutive_losses'] = int(value)
@@ -245,27 +268,48 @@ class MessageHandler:
                     self.send_risk_settings_menu()
                 else:
                     self.bot.telegram.send_message("❌ Значение должно быть от 5.0 до 100.0")
-
-            elif self.waiting_for_input == 'max_daily_loss':
-                if validate_number_input(value, 0.5, 20.0):
-                    self.bot.settings.risk_settings['max_daily_loss'] = value
-                    self.bot.settings.save_settings()
-                    self.bot.telegram.send_message(f"✅ Макс. убыток/день: <b>{value:.1f}%</b>")
-                    self.send_risk_settings_menu()
-                else:
-                    self.bot.telegram.send_message("❌ Значение должно быть от 0.5 до 20.0")
-
-            elif self.waiting_for_input == 'max_consecutive_losses':
-                if validate_number_input(value, 1, 10) and value == int(value):
-                    self.bot.settings.risk_settings['max_consecutive_losses'] = int(value)
-                    self.bot.settings.save_settings()
-                    self.bot.telegram.send_message(f"✅ Макс. убыточных подряд: <b>{int(value)}</b>")
-                    self.send_risk_settings_menu()
-                else:
-                    self.bot.telegram.send_message("❌ Введите целое число от 1 до 10")
             self.waiting_for_input = None
         except Exception as e:
             error_msg = f"❌ Ошибка обработки ввода: {e}"
+            log_error(error_msg)
+            self.bot.telegram.send_message(error_msg)
+
+    def toggle_take_profit_mode(self):
+        """Переключает режим Take Profit между процентами и USDT - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
+        try:
+            strategy = self.bot.get_active_strategy()
+            current_usdt = strategy.settings.get('take_profit_usdt', 0.0)
+            current_percent = strategy.settings.get('take_profit_percent', 2.0)
+            
+            if current_usdt > 0:
+                # Переключаем на проценты - конвертируем USDT в проценты
+                position_size = getattr(strategy, 'position_size_usdt', 0)
+                if position_size > 0 and current_usdt > 0:
+                    new_percent = (current_usdt / position_size) * 100
+                    strategy.settings['take_profit_percent'] = max(0.5, new_percent)  # минимум 0.5%
+                else:
+                    strategy.settings['take_profit_percent'] = 2.0  # значение по умолчанию
+                
+                strategy.settings['take_profit_usdt'] = 0.0
+                msg = "🔄 Take Profit переключен в режим <b>процентов</b>"
+            else:
+                # Переключаем на USDT - конвертируем проценты в USDT
+                position_size = getattr(strategy, 'position_size_usdt', 0)
+                if position_size > 0 and current_percent > 0:
+                    new_usdt = position_size * (current_percent / 100)
+                    strategy.settings['take_profit_usdt'] = max(0.1, new_usdt)  # минимум 0.1 USDT
+                else:
+                    # Если нет данных о размере позиции, используем разумное значение по умолчанию
+                    strategy.settings['take_profit_usdt'] = 0.5  # 0.5 USDT по умолчанию
+                
+                strategy.settings['take_profit_percent'] = 0.0
+                msg = "🔄 Take Profit переключен в режим <b>USDT</b>"
+            
+            self.bot.telegram.send_message(msg)
+            self.send_ema_settings_menu()
+            
+        except Exception as e:
+            error_msg = f"❌ Ошибка переключения режима TP: {e}"
             log_error(error_msg)
             self.bot.telegram.send_message(error_msg)
 
@@ -278,10 +322,8 @@ class MessageHandler:
                 self.bot.settings.save_settings()
                 message = f"""
 ✅ <b>СТРАТЕГИЯ ИЗМЕНЕНА</b>
-
 🔄 Было: <b>{self.bot.settings.strategy_settings['available_strategies'][old_strategy]}</b>
 🎯 Стало: <b>{strategy_name}</b>
-
 💡 Бот теперь использует выбранную стратегию для торговли.
 """
                 self.bot.telegram.send_message(message)
@@ -300,17 +342,14 @@ class MessageHandler:
                 if new_data:
                     message = f"""
 ✅ <b>ТОРГОВАЯ ПАРА ИЗМЕНЕНА</b>
-
 🔄 Было: <b>{old_pair}</b>
 🎯 Стало: <b>{pair_id} - {pair_name}</b>
-
 💰 Текущая цена: <b>{new_data['current_price']:.2f} USDT</b>
 📈 Изменение 24ч: <b>{new_data['price_change_24h']:+.2f}%</b>
 """
                 else:
                     message = f"""
 ✅ <b>ТОРГОВАЯ ПАРА ИЗМЕНЕНА</b>
-
 🔄 Было: <b>{old_pair}</b>  
 🎯 Стало: <b>{pair_id} - {pair_name}</b>
 """
@@ -362,13 +401,11 @@ class MessageHandler:
         """Информация о графиках"""
         message = """
 📊 <b>ГРАФИКИ И ВИЗУАЛИЗАЦИЯ</b>
-
 📈 <b>Доступные графики:</b>
 • 📊 График цен с индикаторами
 • 📉 История сделок
 • 🎯 Эффективность стратегий
 • ⚡ Уровни риска
-
 💡 <b>Функция в разработке:</b>
 В следующем обновлении будут добавлены интерактивные графики для лучшей визуализации данных.
 """
@@ -377,7 +414,7 @@ class MessageHandler:
     def clear_statistics(self):
         """Очистка статистики"""
         self.bot.metrics.reset_metrics()
-        message = "🧹 <b>Статистика очищена</b>\n\nВсе метрики и история сделок сброшены."
+        message = "🧹 <b>Статистика очищена</b>\nВсе метрики и история сделок сброшены."
         self.bot.telegram.send_message(message)
 
     # Методы управления настройками
@@ -386,9 +423,7 @@ class MessageHandler:
         keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
         message = f"""
 📈 <b>НАСТРОЙКА ПОРОГА EMA</b>
-
 Текущее значение: <b>{self.bot.settings.settings['ema_cross_threshold'] * 100:.2f}%</b>
-
 💡 Введите новое значение в процентах:
 Примеры:
 • 0.25 для 0.25%
@@ -402,9 +437,7 @@ class MessageHandler:
         keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
         message = f"""
 💰 <b>НАСТРОЙКА РАЗМЕРА СТАВКИ</b>
-
 Текущее значение: <b>{self.bot.settings.settings['trade_amount_percent'] * 100:.1f}%</b>
-
 💡 Введите новое значение в процентах:
 Примеры:
 • 25 для 25%
@@ -418,9 +451,7 @@ class MessageHandler:
         keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
         message = f"""
 🎯 <b>НАСТРОЙКА ПОРОГА ML ДЛЯ ПОКУПКИ</b>
-
 Текущее значение: <b>{self.bot.settings.ml_settings['confidence_threshold_buy']:.1f}</b>
-
 💡 Введите новое значение (0.1 - 0.9):
 Чем выше значение, тем строже фильтрация сигналов.
 Примеры:
@@ -435,34 +466,13 @@ class MessageHandler:
         keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
         message = f"""
 🎯 <b>НАСТРОЙКА ПОРОГА ML ДЛЯ ПРОДАЖИ</b>
-
 Текущее значение: <b>{self.bot.settings.ml_settings['confidence_threshold_sell']:.1f}</b>
-
 💡 Введите новое значение (0.1 - 0.9):
 Чем ниже значение, тем строже фильтрация сигналов.
 Примеры:
 • 0.2 - более агрессивно
 • 0.5 - более консервативно
 • 0.3 - сбалансировано
-"""
-        self.bot.telegram.send_message(message, keyboard)
-
-    def start_take_profit_input(self):
-        self.waiting_for_input = 'take_profit'
-        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
-        strategy = self.bot.get_active_strategy()
-        current_tp = strategy.settings.get('take_profit_percent', 2.0)
-        message = f"""
-🎯 <b>НАСТРОЙКА TAKE PROFIT</b>
-
-Текущее значение: <b>{current_tp:.1f}%</b>
-
-💡 Введите новое значение (0.5 - 20.0%):
-Take Profit - процент прибыли для автоматического закрытия позиции.
-Примеры:
-• 2.0 - стандартный TP 2%
-• 1.5 - консервативный TP 1.5%
-• 3.0 - агрессивный TP 3%
 """
         self.bot.telegram.send_message(message, keyboard)
 
@@ -473,15 +483,52 @@ Take Profit - процент прибыли для автоматическог�
         current_sl = strategy.settings.get('stop_loss_percent', 1.5)
         message = f"""
 🛑 <b>НАСТРОЙКА STOP LOSS</b>
-
 Текущее значение: <b>{current_sl:.1f}%</b>
-
 💡 Введите новое значение (0.5 - 10.0%):
 Stop Loss - процент убытка для автоматического закрытия позиции.
 Примеры:
 • 1.5 - стандартный SL 1.5%
 • 1.0 - консервативный SL 1%
 • 2.0 - агрессивный SL 2%
+"""
+        self.bot.telegram.send_message(message, keyboard)
+
+    def start_take_profit_usdt_input(self):
+        self.waiting_for_input = 'take_profit_usdt'
+        # 🔹 Автоматически переключаем в режим USDT
+        strategy = self.bot.get_active_strategy()
+        strategy.settings['take_profit_percent'] = 0.0
+        
+        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
+        current_tp_usdt = strategy.settings.get('take_profit_usdt', 0.0)
+        message = f"""
+🎯 <b>НАСТРОЙКА TAKE PROFIT (в USDT)</b>
+Текущее значение: <b>{current_tp_usdt:.2f} USDT</b>
+💡 Введите новое значение (> 0.1 USDT):
+Примеры:
+• 0.5 — фиксировать прибыль от 0.5 USDT
+• 1.2 — от 1.2 USDT
+• 0 — отключить (вернётся к %)
+"""
+        self.bot.telegram.send_message(message, keyboard)
+
+    def start_take_profit_input(self):
+        self.waiting_for_input = 'take_profit'
+        # 🔹 Автоматически переключаем в режим процентов
+        strategy = self.bot.get_active_strategy()
+        strategy.settings['take_profit_usdt'] = 0.0
+        
+        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
+        current_tp = strategy.settings.get('take_profit_percent', 2.0)
+        message = f"""
+🎯 <b>НАСТРОЙКА TAKE PROFIT</b>
+Текущее значение: <b>{current_tp:.1f}%</b>
+💡 Введите новое значение (0.5 - 20.0%):
+Take Profit - процент прибыли для автоматического закрытия позиции.
+Примеры:
+• 2.0 - стандартный TP 2%
+• 1.5 - консервативный TP 1.5%
+• 3.0 - агрессивный TP 3%
 """
         self.bot.telegram.send_message(message, keyboard)
 
@@ -492,9 +539,7 @@ Stop Loss - процент убытка для автоматического з
         current_time = strategy.settings.get('min_hold_time', 300) // 60
         message = f"""
 ⏰ <b>НАСТРОЙКА MIN HOLD TIME</b>
-
 Текущее значение: <b>{current_time} мин</b>
-
 💡 Введите новое значение (1 - 60 минут):
 Минимальное время удержания позиции перед возможностью закрытия.
 Примеры:
@@ -516,6 +561,36 @@ Stop Loss - процент убытка для автоматического з
 • 30 для 30%
 • 25.5 для 25.5%
 • 50 для 50%
+"""
+        self.bot.telegram.send_message(message, keyboard)
+
+    def start_max_daily_loss_input(self):
+        self.waiting_for_input = 'max_daily_loss'
+        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
+        current = self.bot.settings.risk_settings.get('max_daily_loss', 3.0)
+        message = f"""
+📉 <b>МАКС. УБЫТОК/ДЕНЬ</b>
+Текущее значение: <b>{current:.1f}%</b>
+💡 Введите новое значение (0.5 – 20.0%):
+Примеры:
+• 2.0 для 2%
+• 3.5 для 3.5%
+• 5.0 для 5%
+"""
+        self.bot.telegram.send_message(message, keyboard)
+
+    def start_max_consecutive_input(self):
+        self.waiting_for_input = 'max_consecutive_losses'
+        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
+        current = self.bot.settings.risk_settings.get('max_consecutive_losses', 3)
+        message = f"""
+🔴 <b>МАКС. УБЫТОЧНЫХ ПОДРЯД</b>
+Текущее значение: <b>{current}</b>
+💡 Введите новое значение (1 – 10):
+Примеры:
+• 3 для 3 убыточных сделок
+• 5 для 5 убыточных сделок
+• 2 для 2 убыточных сделок
 """
         self.bot.telegram.send_message(message, keyboard)
 
@@ -587,7 +662,7 @@ Stop Loss - процент убытка для автоматического з
             self.bot.entry_price = 0
         self.bot.settings.settings['trading_enabled'] = False
         self.bot.settings.save_settings()
-        message = "🛑 <b>ЭКСТРЕННАЯ ОСТАНОВКА</b>\n\nПозиции закрыты. Торговля остановлена."
+        message = "🛑 <b>ЭКСТРЕННАЯ ОСТАНОВКА</b>\nПозиции закрыты. Торговля остановлена."
         self.bot.telegram.send_message(message)
 
     def send_status(self):
@@ -607,7 +682,6 @@ Stop Loss - процент убытка для автоматического з
         next_trade_amount = balance['total_usdt'] * trade_amount_percent if balance else 0
         message = f"""
 📊 <b>РАСШИРЕННЫЙ СТАТУС</b>
-
 💱 <b>Пара:</b> {pair_name} ({current_pair})
 🎯 <b>Стратегия:</b> {strategy_name}
 💰 <b>Цена:</b> {data['current_price']:.2f} USDT
@@ -615,19 +689,15 @@ Stop Loss - процент убытка для автоматического з
 🤖 <b>ML сигнал:</b> {ml_signal} ({ml_confidence:.1%})
 🎯 <b>Торговый сигнал:</b> {signal.upper()}
 📈 <b>Позиция:</b> {position_status}
-
 💰 <b>Следующая ставка:</b> {next_trade_amount:.2f} USDT ({trade_amount_percent*100:.1f}%)
-
 📊 <b>АНАЛИТИКА:</b>
 • Win Rate: {self.bot.metrics.win_rate:.1f}%
 • Прибыльных: {self.bot.metrics.winning_trades}
 • Всего сделок: {self.bot.metrics.total_trades}
-
 ⚡ <b>СИСТЕМА:</b>
 • Торговля: {'✅ ВКЛ' if self.bot.settings.settings['trading_enabled'] else '❌ ВЫКЛ'}
 • ML: {'✅ ВКЛ' if self.bot.settings.ml_settings['enabled'] else '❌ ВЫКЛ'}
 • Режим: {'🟢 ДЕМО' if self.bot.settings.settings['demo_mode'] else '🔴 РЕАЛЬНЫЙ'}
-
 ⏰ {self.bot.metrics.get_current_time()}
 """
         self.bot.telegram.send_message(message)
@@ -645,40 +715,34 @@ Stop Loss - процент убытка для автоматического з
         next_trade_amount = balance['total_usdt'] * trade_amount_percent
         message = f"""
 💼 <b>ИНФОРМАЦИЯ ОБ АККАУНТЕ</b>
-
 💰 <b>БАЛАНС USDT:</b>
 • Всего: {balance['total_usdt']:.2f} USDT
 • Свободно: {balance['free_usdt']:.2f} USDT
 • Занято: {balance['used_usdt']:.2f} USDT
-
 ₿ <b>БАЛАНС BTC:</b>
 • Всего: {balance['total_btc']:.6f} BTC
 • Свободно: {balance['free_btc']:.6f} BTC
 • Стоимость: {btc_value:.2f} USDT
-
 📊 <b>ОБЩАЯ СТАТИСТИКА:</b>
 • Общая стоимость: {total_value:.2f} USDT
 • Прибыль за сегодня: {self.bot.metrics.daily_profit:.2f} USDT
 • Открыта позиция: {'✅ ДА' if self.bot.position else '❌ НЕТ'}
 • Всего сделок: {len(self.bot.metrics.trade_history)}
-
 🎯 <b>СЛЕДУЮЩАЯ СТАВКА:</b>
 • Размер: {next_trade_amount:.2f} USDT
 • Процент: {trade_amount_percent*100:.1f}%
-
 ⚡ <b>СТАТУС:</b>
 • Режим: {'🟢 ДЕМО' if self.bot.settings.settings['demo_mode'] else '🔴 РЕАЛЬНЫЙ'}
 • Торговые сигналы: {'✅ ВКЛ' if self.bot.settings.settings['enable_trade_signals'] else '❌ ВЫКЛ'}
-
 ⏰ Обновлено: {self.bot.metrics.get_current_time()}
 """
         self.bot.telegram.send_message(message)
 
     def send_trade_history(self):
         if not self.bot.metrics.trade_history:
-            message = "📊 <b>ИСТОРИЯ СДЕЛОК</b>\n\nИстория пуста"
+            message = "📊 <b>ИСТОРИЯ СДЕЛОК</b>\nИстория пуста"
         else:
-            message = "📊 <b>ПОСЛЕДНИЕ СДЕЛКИ</b>\n\n"
+            message = "📊 <b>ПОСЛЕДНИЕ СДЕЛКИ</b>\n"
             for trade in self.bot.metrics.trade_history[-5:]:
                 emoji = "🟢" if trade.get('profit', 0) > 0 else "🔴"
                 profit_str = f"+{trade['profit']:.2f}%" if trade.get('profit', 0) > 0 else f"{trade['profit']:.2f}%"

@@ -224,8 +224,12 @@ class AdvancedTradingBot:
                     message = f"ДЕМО-РЕЖИМ | Размер ставки: {position_size_usdt:.2f} USDT"
                     executed_price = current_price
                     log_info("✅ Демо-покупка выполнена")
+                    
                 # Обновляем информацию о позиции в стратегии
                 strategy.update_position_info(signal, executed_price)
+                # 🔧 СОХРАНЯЕМ РАЗМЕР ПОЗИЦИИ В СТРАТЕГИИ
+                strategy.position_size_usdt = position_size_usdt
+                
                 # Обновляем метрики
                 trade_result = {
                     'symbol': symbol,
@@ -246,12 +250,28 @@ class AdvancedTradingBot:
                     strategy.name, message, position_size_usdt
                 )
             elif signal == 'sell' and self.position == 'long':
-                # Логика продажи
+                # 🔧 ИСПРАВЛЕНИЕ: Расчет прибыли в правильном режиме
                 profit_percent = 0
                 profit_usdt = 0
+                
+                if hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
+                    # Расчет прибыли в зависимости от режима
+                    take_profit_usdt_setting = strategy.settings.get('take_profit_usdt', 0.0)
+                    
+                    if take_profit_usdt_setting > 0:
+                        # 🔹 РЕЖИМ USDT
+                        profit_usdt = (current_price - strategy.entry_price) / strategy.entry_price * strategy.position_size_usdt
+                        profit_percent = (profit_usdt / strategy.position_size_usdt) * 100
+                        log_info(f"💰 Расчет прибыли (USDT режим): {profit_usdt:+.2f} USDT ({profit_percent:+.2f}%)")
+                    else:
+                        # 🔹 РЕЖИМ ПРОЦЕНТОВ
+                        profit_percent = ((current_price - strategy.entry_price) / strategy.entry_price) * 100
+                        profit_usdt = strategy.position_size_usdt * (profit_percent / 100)
+                        log_info(f"💰 Расчет прибыли (% режим): {profit_percent:+.2f}% ({profit_usdt:+.2f} USDT)")
+                
                 if not self.settings.settings['demo_mode']:
                     # Реальная торговля
-                    amount = position_size_usdt / strategy.entry_price  # Количество купленных монет
+                    amount = strategy.position_size_usdt / strategy.entry_price  # Количество купленных монет
                     order, message = self.exchange.create_order(
                         symbol, 'market', 'sell', amount
                     )
@@ -266,10 +286,7 @@ class AdvancedTradingBot:
                     message = f"ДЕМО-РЕЖИМ | Прибыль: {profit_usdt:+.2f} USDT"
                     executed_price = current_price
                     log_info("✅ Демо-продажа выполнена")
-                # Расчет прибыли используем из стратегии
-                if strategy.entry_price > 0:
-                    profit_percent = ((executed_price - strategy.entry_price) / strategy.entry_price) * 100
-                    profit_usdt = self.current_position_size_usdt * (profit_percent / 100)
+                    
                 # Обновляем информацию о позиции в стратегии
                 strategy.update_position_info(signal, executed_price)
                 # Обновляем метрики
@@ -280,7 +297,7 @@ class AdvancedTradingBot:
                     'profit': profit_percent,
                     'profit_percent': profit_percent,
                     'position_size': self.settings.settings['trade_amount_percent'] * 100,
-                    'position_size_usdt': position_size_usdt,
+                    'position_size_usdt': strategy.position_size_usdt,
                     'profit_usdt': profit_usdt
                 }
                 self.metrics.update_metrics(trade_result)
@@ -289,12 +306,14 @@ class AdvancedTradingBot:
                 self.position = None
                 self.current_position_size_usdt = 0
                 self.entry_price = 0
+                # 🔧 СБРАСЫВАЕМ РАЗМЕР ПОЗИЦИИ В СТРАТЕГИИ
+                strategy.position_size_usdt = 0
                 # Сохраняем состояние позиции в файл (позиция закрыта)
                 self.save_position_state()
                 # Отправляем уведомление
                 self.telegram.send_trade_signal(
                     signal, market_data, ml_confidence, ml_signal,
-                    strategy.name, message, position_size_usdt, profit_usdt
+                    strategy.name, message, strategy.position_size_usdt, profit_usdt
                 )
         except Exception as e:
             log_error(f"❌ Ошибка исполнения сделки: {e}")
@@ -359,12 +378,14 @@ class AdvancedTradingBot:
     # 📁 МЕТОДЫ СОХРАНЕНИЯ И ЗАГРУЗКИ СОСТОЯНИЯ ПОЗИЦИИ
     def save_position_state(self):
         """Сохраняет состояние позиции в файл"""
+        strategy = self.get_active_strategy()
         state = {
             'position': self.position,
             'entry_price': self.entry_price,
             'position_size_usdt': self.current_position_size_usdt,
             'symbol': self.settings.trading_pairs['active_pair'],
-            'opened_at': self.last_trade_time
+            'opened_at': self.last_trade_time,
+            'strategy_position_size_usdt': getattr(strategy, 'position_size_usdt', 0)
         }
         with open('position_state.json', 'w') as f:
             json.dump(state, f, indent=2)
@@ -382,6 +403,13 @@ class AdvancedTradingBot:
                     self.entry_price = state.get('entry_price', 0)
                     self.current_position_size_usdt = state.get('position_size_usdt', 0)
                     self.last_trade_time = state.get('opened_at', 0)
+                    
+                    # 🔧 ВОССТАНАВЛИВАЕМ РАЗМЕР ПОЗИЦИИ В СТРАТЕГИИ
+                    strategy = self.get_active_strategy()
+                    strategy_position_size = state.get('strategy_position_size_usdt', 0)
+                    if strategy_position_size > 0:
+                        strategy.position_size_usdt = strategy_position_size
+                    
                     if self.position == 'long':
                         log_info(f"✅ Восстановлена открытая позиция: вход {self.entry_price:.2f} USDT, размер {self.current_position_size_usdt:.2f} USDT")
                 else:

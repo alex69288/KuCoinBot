@@ -129,6 +129,7 @@ class TelegramBot:
             return
         symbol = self.bot.settings.trading_pairs['active_pair']
         pair_name = self.bot.settings.get_active_pair_name()
+        
         # Добавляем информацию об EMA - ИСПРАВЛЕННЫЙ РАСЧЕТ
         ema_diff_percent = market_data.get('ema_diff_percent', 0) * 100
         # ПРАВИЛЬНОЕ ОПРЕДЕЛЕНИЕ СТАТУСА EMA
@@ -138,55 +139,68 @@ class TelegramBot:
             ema_status = "🔴 ВНИЗ"
         else:  # Нейтрально
             ema_status = "⚪ НЕЙТРАЛЬНО"
+            
         # Получаем баланс для расчета размера ставки
         balance = self.bot.exchange.get_balance()
         total_usdt = balance['total_usdt'] if balance else 0
         trade_amount_percent = self.bot.settings.settings['trade_amount_percent']
         position_size_usdt = total_usdt * trade_amount_percent
+        
         # Расширенная информация о позиции
         position_info = ""
         if self.bot.position == 'long':
             strategy = self.bot.get_active_strategy()
             current_price = market_data['current_price']
+            
             # 💰 ИСПОЛЬЗУЕМ ФИКСИРОВАННЫЙ РАЗМЕР ПОЗИЦИИ ИЗ СТРАТЕГИИ
             if hasattr(strategy, 'position_size_usdt') and strategy.position_size_usdt > 0:
-                # Используем зафиксированный размер позиции из стратегии
                 position_size_usdt = strategy.position_size_usdt
             elif hasattr(self.bot, 'current_position_size_usdt') and self.bot.current_position_size_usdt > 0:
-                # Используем зафиксированный размер позиции из бота
                 position_size_usdt = self.bot.current_position_size_usdt
             else:
-                # Fallback: используем расчет из баланса
                 position_size_usdt = total_usdt * trade_amount_percent if balance else 0
-            # ИСПОЛЬЗУЕМ ФИКСИРОВАННУЮ ЦЕНУ ВХОДА ИЗ СТРАТЕГИИ
-            if hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
-                entry_price = strategy.entry_price
-                # РАСЧЕТ АБСОЛЮТНЫХ ЗНАЧЕНИЙ
-                current_profit_percent = ((current_price - entry_price) / entry_price) * 100
-                current_profit_usdt = position_size_usdt * (current_profit_percent / 100)  # Прибыль/убыток в USDT
-                # Расчет до тейк-профита
-                take_profit = strategy.settings.get('take_profit_percent', 2.0)
-                taker_fee = strategy.settings.get('taker_fee', 0.001)
-                total_fees = taker_fee * 2 * 100  # 0.2%
-                needed_profit = take_profit + total_fees
-                remaining_to_tp = max(0, needed_profit - current_profit_percent)
-                remaining_profit_usdt = position_size_usdt * (remaining_to_tp / 100)  # Оставшаяся прибыль до TP в USDT
-                # Комиссии в USDT
-                fees_usdt = position_size_usdt * (total_fees / 100)
+                
+            # 🔧 ИСПРАВЛЕНИЕ: Правильное отображение в зависимости от режима
+            take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
+            take_profit_percent = strategy.settings.get('take_profit_percent', 2.0)
+            taker_fee = strategy.settings.get('taker_fee', 0.001)
+            
+            if take_profit_usdt > 0 and hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
+                # 🔹 РЕЖИМ USDT
+                current_profit_usdt = (current_price - strategy.entry_price) / strategy.entry_price * position_size_usdt
+                fees_usdt = position_size_usdt * taker_fee * 2
+                remaining_to_tp = max(0, take_profit_usdt - (current_profit_usdt - fees_usdt))
+                
                 position_info = f"""
-💼 <b>ПОЗИЦИЯ ОТКРЫТА</b>
-💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT ({trade_amount_percent*100:.1f}%)
-🎯 <b>Цена входа:</b> {entry_price:.2f} USDT
-📈 <b>Текущая прибыль:</b> 
-{current_profit_percent:+.2f}% ({current_profit_usdt:+.2f} USDT)
-🎯 <b>До Take Profit:</b> 
-+{remaining_to_tp:.2f}% (+{remaining_profit_usdt:.2f} USDT)
-🛡️ <b>Комиссии:</b> {total_fees:.2f}% ({fees_usdt:.2f} USDT)
+💼 <b>ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ USDT)</b>
+💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT
+🎯 <b>Цена входа:</b> {strategy.entry_price:.2f} USDT
+📈 <b>Текущая прибыль:</b> {current_profit_usdt:+.2f} USDT
+🎯 <b>До Take Profit:</b> +{remaining_to_tp:.2f} USDT
+🛡️ <b>Комиссии:</b> {fees_usdt:.2f} USDT
 """
+            elif hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
+                # 🔹 РЕЖИМ ПРОЦЕНТОВ
+                current_profit_percent = ((current_price - strategy.entry_price) / strategy.entry_price) * 100
+                total_fees_percent = taker_fee * 2 * 100
+                remaining_to_tp = max(0, take_profit_percent - (current_profit_percent - total_fees_percent))
+                current_profit_usdt = position_size_usdt * (current_profit_percent / 100)
+                fees_usdt = position_size_usdt * (total_fees_percent / 100)
+                
+                position_info = f"""
+💼 <b>ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ %)</b>
+💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT
+🎯 <b>Цена входа:</b> {strategy.entry_price:.2f} USDT
+📈 <b>Текущая прибыль:</b> {current_profit_percent:+.2f}% ({current_profit_usdt:+.2f} USDT)
+🎯 <b>До Take Profit:</b> +{remaining_to_tp:.2f}%
+🛡️ <b>Комиссии:</b> {total_fees_percent:.2f}% ({fees_usdt:.2f} USDT)
+"""
+    
         # Информация о размере следующей ставки (если позиция не открыта)
         next_trade_info = ""
         if self.bot.position != 'long':
             next_trade_info = f"💰 <b>Следующая ставка:</b> {position_size_usdt:.2f} USDT ({trade_amount_percent*100:.1f}%)"
+            
         # ПРАВИЛЬНОЕ ФОРМАТИРОВАНИЕ СИГНАЛА
         signal_display = signal.upper()
         if signal == 'buy':
@@ -195,6 +209,7 @@ class TelegramBot:
             signal_display = "🔴 ПРОДАЖА"
         elif signal == 'wait':
             signal_display = "⚪ ОЖИДАНИЕ"
+            
         message = f"""
 📈 <b>ОБНОВЛЕНИЕ РЫНКА</b>
 💱 <b>Пара:</b> {pair_name}
@@ -217,6 +232,7 @@ class TelegramBot:
         else:
             emoji = "🔴"
             action = "ПРОДАЖА"
+            
         # Добавляем EMA в информацию о сделке
         ema_diff_percent = market_data.get('ema_diff_percent', 0) * 100
         # ПРАВИЛЬНОЕ ОПРЕДЕЛЕНИЕ СТАТУСА EMA
@@ -226,24 +242,36 @@ class TelegramBot:
             ema_status = "🔴 ВНИЗ"
         else:
             ema_status = "⚪ НЕЙТРАЛЬНО"
+            
         # Информация о размере позиции
         position_info = ""
         if position_size_usdt > 0:
-            if signal == 'buy':
-                position_info = f"💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT"
-            else:
-                position_info = f"💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT"
+            position_info = f"💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT"
+            
+        # 🔧 ИСПРАВЛЕНИЕ: Информация о режиме TP
+        strategy = self.bot.get_active_strategy()
+        take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
+        take_profit_percent = strategy.settings.get('take_profit_percent', 2.0)
+        
+        tp_info = ""
+        if take_profit_usdt > 0:
+            tp_info = f"🎯 <b>Take Profit:</b> {take_profit_usdt:.2f} USDT"
+        else:
+            tp_info = f"🎯 <b>Take Profit:</b> {take_profit_percent:.1f}%"
+        
         # Информация о прибыли
         profit_info = ""
         if profit_usdt != 0:
             profit_emoji = "📈" if profit_usdt > 0 else "📉"
             profit_info = f"{profit_emoji} <b>Прибыль:</b> {profit_usdt:+.2f} USDT"
+            
         message = f"""
 {emoji} <b>СДЕЛКА {action}</b>
 🎯 <b>Стратегия:</b> {strategy_name}
 💱 <b>Пара:</b> {self.bot.settings.get_active_pair_name()}
 💰 <b>Цена:</b> {market_data['current_price']:.2f} USDT
 {position_info}
+{tp_info}
 📈 <b>EMA:</b> {ema_status} ({ema_diff_percent:+.2f}%)
 🤖 <b>ML сигнал:</b> {ml_signal} ({ml_confidence:.1%})
 {profit_info}
@@ -293,6 +321,18 @@ class TelegramBot:
         balance = self.bot.exchange.get_balance()
         trade_amount_percent = self.bot.settings.settings['trade_amount_percent']
         next_trade_amount = balance['total_usdt'] * trade_amount_percent if balance else 0
+        
+        # 🔧 ИСПРАВЛЕНИЕ: Добавляем информацию о режиме TP
+        strategy = self.bot.get_active_strategy()
+        take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
+        take_profit_percent = strategy.settings.get('take_profit_percent', 2.0)
+        
+        tp_info = ""
+        if take_profit_usdt > 0:
+            tp_info = f"🎯 <b>Take Profit:</b> {take_profit_usdt:.2f} USDT"
+        else:
+            tp_info = f"🎯 <b>Take Profit:</b> {take_profit_percent:.1f}%"
+            
         message = f"""
 🤖 <b>ТОРГОВЫЙ БОТ АКТИВИРОВАН</b>
 ✅ <b>Статус:</b> Бот запущен и работает
@@ -300,6 +340,7 @@ class TelegramBot:
 🎯 <b>Стратегия:</b> {self.bot.settings.get_active_strategy_name()}
 🤖 <b>ML:</b> {'✅ ВКЛЮЧЕН' if self.bot.settings.ml_settings['enabled'] else '❌ ВЫКЛЮЧЕН'}
 💰 <b>Размер ставки:</b> {next_trade_amount:.2f} USDT ({trade_amount_percent*100:.1f}%)
+{tp_info}
 📊 <b>Используйте команды:</b>
 • /start - Главное меню
 • 📊 Статус - Текущее состояние
