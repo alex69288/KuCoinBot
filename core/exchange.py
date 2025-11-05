@@ -226,3 +226,215 @@ class ExchangeManager:
         except Exception as e:
             log_error(f"❌ Ошибка получения информации о рынке {symbol}: {e}")
             return None
+    
+    def fetch_my_trades(self, symbol, limit=100):
+        """Получение истории сделок пользователя"""
+        if not self.connected:
+            return []
+            
+        try:
+            trades = self.exchange.fetch_my_trades(symbol, limit=limit)
+            # Сортируем по времени (от старых к новым)
+            trades.sort(key=lambda x: x['timestamp'])
+            return trades
+        except Exception as e:
+            log_error(f"❌ Ошибка получения истории сделок {symbol}: {e}")
+            return []
+    
+    def get_open_buy_trades_after_last_sell(self, symbol):
+        """
+        Получает все открытые покупки (покупки после последней продажи)
+        Возвращает список покупок и максимальную цену среди них
+        """
+        if not self.connected:
+            return [], 0.0
+        
+        try:
+            trades = self.fetch_my_trades(symbol, limit=100)
+            if not trades:
+                return [], 0.0
+            
+            # Ищем последнюю продажу
+            last_sell_time = 0
+            for trade in reversed(trades):
+                if trade['side'] == 'sell':
+                    last_sell_time = trade['timestamp']
+                    break
+            
+            # Собираем все покупки после последней продажи
+            buy_trades = []
+            for trade in trades:
+                if trade['timestamp'] > last_sell_time and trade['side'] == 'buy':
+                    buy_trades.append(trade)
+            
+            # Если нет покупок после последней продажи, но есть покупки - берем последнюю покупку
+            if not buy_trades and trades:
+                for trade in reversed(trades):
+                    if trade['side'] == 'buy':
+                        buy_trades.append(trade)
+                        break
+            
+            # Находим максимальную цену среди открытых покупок
+            max_price = 0.0
+            if buy_trades:
+                max_price_trade = max(buy_trades, key=lambda t: t.get('price', 0))
+                max_price = max_price_trade.get('price', 0)
+            
+            return buy_trades, max_price
+            
+        except Exception as e:
+            log_error(f"❌ Ошибка получения открытых покупок {symbol}: {e}")
+            return [], 0.0
+    
+    def check_open_position(self, symbol):
+        """
+        Проверка открытой позиции на KuCoin через баланс и историю сделок
+        
+        Возвращает словарь с информацией о позиции:
+        {
+            'has_position': bool,
+            'position_type': 'long' или None,
+            'base_balance': float,  # Баланс базовой валюты (BTC)
+            'quote_balance': float,  # Баланс quote валюты (USDT)
+            'last_trade': dict или None,  # Последняя сделка
+            'entry_price': float или None,  # Средняя цена входа
+            'position_size_usdt': float или None  # Размер позиции в USDT
+        }
+        """
+        if not self.connected:
+            return {
+                'has_position': False,
+                'position_type': None,
+                'base_balance': 0,
+                'quote_balance': 0,
+                'last_trade': None,
+                'entry_price': None,
+                'position_size_usdt': None
+            }
+        
+        try:
+            # Получаем баланс
+            balance = self.exchange.fetch_balance()
+            market = self.exchange.market(symbol)
+            base_currency = market['base']  # BTC
+            quote_currency = market['quote']  # USDT
+            
+            base_balance = balance['free'].get(base_currency, 0) + balance['used'].get(base_currency, 0)
+            quote_balance = balance['free'].get(quote_currency, 0) + balance['used'].get(quote_currency, 0)
+            
+            # Получаем историю сделок
+            trades = self.fetch_my_trades(symbol, limit=100)
+            
+            # Если есть баланс базовой валюты, значит есть позиция
+            has_position = base_balance > 0
+            
+            if not has_position:
+                return {
+                    'has_position': False,
+                    'position_type': None,
+                    'base_balance': base_balance,
+                    'quote_balance': quote_balance,
+                    'last_trade': trades[-1] if trades else None,
+                    'entry_price': None,
+                    'position_size_usdt': None
+                }
+            
+            # Если есть баланс, проверяем последние сделки
+            # Находим последнюю покупку и все покупки после последней продажи
+            buy_trades = []
+            last_sell_time = 0
+            
+            # Ищем последнюю продажу
+            for trade in reversed(trades):
+                if trade['side'] == 'sell':
+                    last_sell_time = trade['timestamp']
+                    break
+            
+            # Собираем все покупки после последней продажи
+            for trade in trades:
+                if trade['timestamp'] > last_sell_time and trade['side'] == 'buy':
+                    buy_trades.append(trade)
+            
+            # Если нет покупок после последней продажи, но есть баланс - берем последнюю покупку
+            if not buy_trades and trades:
+                for trade in reversed(trades):
+                    if trade['side'] == 'buy':
+                        buy_trades.append(trade)
+                        break
+            
+            if not buy_trades:
+                # Если нет покупок в истории, но есть баланс - используем текущую цену как приблизительную
+                ticker = self.get_ticker(symbol)
+                entry_price = ticker['last'] if ticker else None
+                position_size_usdt = base_balance * entry_price if entry_price else None
+                
+                log_info(f"⚠️ Обнаружен баланс {base_balance} {base_currency}, но нет истории покупок. Используем текущую цену.")
+                
+                return {
+                    'has_position': True,
+                    'position_type': 'long',
+                    'base_balance': base_balance,
+                    'quote_balance': quote_balance,
+                    'last_trade': trades[-1] if trades else None,
+                    'entry_price': entry_price,
+                    'position_size_usdt': position_size_usdt
+                }
+            
+            # Находим максимальную цену среди открытых сделок (покупок после последней продажи)
+            # Это защищает от убытков по более дешевым покупкам - все позиции закрываются по максимальной цене + take profit
+            if buy_trades:
+                # Находим максимальную цену покупки
+                max_price_trade = max(buy_trades, key=lambda t: t.get('price', 0))
+                entry_price = max_price_trade.get('price', 0)
+                
+                # Используем последнюю покупку для получения времени
+                last_buy = buy_trades[-1]
+                
+                log_info(f"✅ Обнаружена открытая позиция: {base_balance} {base_currency}")
+                log_info(f"   • Максимальная цена входа (из {len(buy_trades)} покупок): {entry_price:.2f} USDT")
+                if len(buy_trades) > 1:
+                    # Показываем детали по каждой покупке
+                    total_invested = sum(
+                        trade.get('cost', 0) or (trade.get('amount', 0) * trade.get('price', 0))
+                        for trade in buy_trades
+                    )
+                    log_info(f"   • Общая сумма инвестиций: {total_invested:.2f} USDT (из {len(buy_trades)} покупок)")
+                    for i, trade in enumerate(buy_trades, 1):
+                        trade_cost = trade.get('cost', 0) or (trade.get('amount', 0) * trade.get('price', 0))
+                        log_info(f"      Покупка {i}: {trade.get('price', 0):.2f} USDT × {trade.get('amount', 0):.8f} = {trade_cost:.2f} USDT")
+                
+                # 🔧 Размер позиции НЕ рассчитывается здесь - он должен быть из настроек (ставка)
+                # Устанавливаем None, чтобы размер позиции рассчитывался из настроек при восстановлении
+                position_size_usdt = None
+                
+                return {
+                    'has_position': True,
+                    'position_type': 'long',
+                    'base_balance': base_balance,
+                    'quote_balance': quote_balance,
+                    'last_trade': last_buy,
+                    'entry_price': entry_price,
+                    'position_size_usdt': position_size_usdt
+                }
+            else:
+                return {
+                    'has_position': False,
+                    'position_type': None,
+                    'base_balance': base_balance,
+                    'quote_balance': quote_balance,
+                    'last_trade': trades[-1] if trades else None,
+                    'entry_price': None,
+                    'position_size_usdt': None
+                }
+                
+        except Exception as e:
+            log_error(f"❌ Ошибка проверки открытой позиции {symbol}: {e}")
+            return {
+                'has_position': False,
+                'position_type': None,
+                'base_balance': 0,
+                'quote_balance': 0,
+                'last_trade': None,
+                'entry_price': None,
+                'position_size_usdt': None
+            }

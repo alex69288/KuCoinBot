@@ -28,7 +28,18 @@ class SettingsManager:
         self.settings['telegram_token'] = os.getenv('TELEGRAM_BOT_TOKEN', '')
         self.settings['telegram_chat_id'] = os.getenv('TELEGRAM_CHAT_ID', '')
         
+        # Добавляем поля для сохранения настроек стратегий
+        self.ml_settings['last_take_profit_usdt'] = 0.0
+        self.ml_settings['last_take_profit_percent'] = 2.0
+        
+        self.bot = None  # Ссылка на бота для доступа к стратегиям
         self.load_settings()
+
+    def set_bot_reference(self, bot):
+        """Устанавливает ссылку на бота для доступа к стратегиям"""
+        self.bot = bot
+        # 🔧 НЕ загружаем настройки стратегий здесь, так как стратегии еще не созданы
+        # Загрузка будет вызвана после создания стратегий в bot.__init__()
 
     def load_settings(self):
         """Загрузка настроек из файла"""
@@ -41,16 +52,48 @@ class SettingsManager:
                     self.settings.update(saved_settings.get('settings', {}))
                     self.strategy_settings.update(saved_settings.get('strategy_settings', self.strategy_settings))
                     self.trading_pairs.update(saved_settings.get('trading_pairs', self.trading_pairs))
-                    self.ml_settings.update(saved_settings.get('ml_settings', {}))
-                    self.risk_settings.update(saved_settings.get('risk_settings', {}))
+                    self.ml_settings.update(saved_settings.get('ml_settings', self.ml_settings))
+                    self.risk_settings.update(saved_settings.get('risk_settings', self.risk_settings))
                     
                 print("✅ Настройки загружены")
         except Exception as e:
             print(f"❌ Ошибка загрузки настроек: {e}")
 
+    def load_strategy_settings(self):
+        """Загрузка настроек для активной стратегии"""
+        try:
+            # 🔧 ПРОВЕРКА: убеждаемся, что бот и стратегии инициализированы
+            if not self.bot:
+                return
+            if not hasattr(self.bot, 'strategies') or not self.bot.strategies:
+                return
+            
+            strategy = self.bot.get_active_strategy()
+            if strategy:
+                # Восстанавливаем настройки Take Profit из сохраненных
+                last_tp_usdt = self.ml_settings.get('last_take_profit_usdt')
+                last_tp_percent = self.ml_settings.get('last_take_profit_percent')
+                
+                if last_tp_usdt is not None:
+                    strategy.settings['take_profit_usdt'] = last_tp_usdt
+                if last_tp_percent is not None:
+                    strategy.settings['take_profit_percent'] = last_tp_percent
+                
+                print(f"✅ Настройки стратегии загружены: TP_USDT={last_tp_usdt}, TP_%={last_tp_percent}")
+        except Exception as e:
+            print(f"❌ Ошибка загрузки настроек стратегии: {e}")
+
     def save_settings(self):
         """Сохранение настроек в файл"""
         try:
+            # Сохраняем настройки активной стратегии
+            if self.bot:
+                strategy = self.bot.get_active_strategy()
+                if strategy:
+                    # Сохраняем настройки Take Profit стратегии
+                    self.ml_settings['last_take_profit_usdt'] = strategy.settings.get('take_profit_usdt', 0.0)
+                    self.ml_settings['last_take_profit_percent'] = strategy.settings.get('take_profit_percent', 2.0)
+            
             settings_to_save = {
                 'settings': self.settings,
                 'strategy_settings': self.strategy_settings,
@@ -103,3 +146,97 @@ class SettingsManager:
     def is_telegram_configured(self):
         """Проверка настройки Telegram"""
         return bool(self.settings.get('telegram_token') and self.settings.get('telegram_chat_id'))
+
+    def get_take_profit_info(self):
+        """Получение информации о текущих настройках Take Profit"""
+        if self.bot:
+            strategy = self.bot.get_active_strategy()
+            if strategy:
+                take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
+                take_profit_percent = strategy.settings.get('take_profit_percent', 2.0)
+                
+                return {
+                    'take_profit_usdt': take_profit_usdt,
+                    'take_profit_percent': take_profit_percent,
+                    'mode': 'USDT' if take_profit_usdt > 0 else 'percent'
+                }
+        return {
+            'take_profit_usdt': 0.0,
+            'take_profit_percent': 2.0,
+            'mode': 'percent'
+        }
+
+    def save_strategy_settings(self):
+        """Сохранение настроек текущей стратегии"""
+        try:
+            if self.bot:
+                strategy = self.bot.get_active_strategy()
+                if strategy:
+                    # Сохраняем настройки Take Profit
+                    self.ml_settings['last_take_profit_usdt'] = strategy.settings.get('take_profit_usdt', 0.0)
+                    self.ml_settings['last_take_profit_percent'] = strategy.settings.get('take_profit_percent', 2.0)
+                    
+                    # Сохраняем другие настройки стратегии если нужно
+                    self.save_settings()
+                    print("✅ Настройки стратегии сохранены")
+        except Exception as e:
+            print(f"❌ Ошибка сохранения настроек стратегии: {e}")
+
+    def reset_to_defaults(self):
+        """Сброс настроек к значениям по умолчанию"""
+        try:
+            self.settings = DEFAULT_SETTINGS.copy()
+            self.ml_settings = DEFAULT_ML_SETTINGS.copy()
+            self.risk_settings = DEFAULT_RISK_SETTINGS.copy()
+            
+            # Сохраняем Telegram настройки
+            self.settings['telegram_token'] = os.getenv('TELEGRAM_BOT_TOKEN', '')
+            self.settings['telegram_chat_id'] = os.getenv('TELEGRAM_CHAT_ID', '')
+            
+            # Сбрасываем настройки стратегий
+            self.ml_settings['last_take_profit_usdt'] = 0.0
+            self.ml_settings['last_take_profit_percent'] = 2.0
+            
+            self.save_settings()
+            print("✅ Настройки сброшены к значениям по умолчанию")
+            
+            # Обновляем настройки в активной стратегии
+            if self.bot:
+                strategy = self.bot.get_active_strategy()
+                if strategy:
+                    strategy.settings['take_profit_usdt'] = 0.0
+                    strategy.settings['take_profit_percent'] = 2.0
+            
+            return True
+        except Exception as e:
+            print(f"❌ Ошибка сброса настроек: {e}")
+            return False
+
+    def get_settings_summary(self):
+        """Получение сводки всех настроек"""
+        tp_info = self.get_take_profit_info()
+        
+        summary = f"""
+📊 <b>СВОДКА НАСТРОЕК</b>
+
+🎯 <b>Торговля:</b>
+• Пара: {self.get_active_pair_name()}
+• Стратегия: {self.get_active_strategy_name()}
+• Размер ставки: {self.settings.get('trade_amount_percent', 0.1) * 100:.1f}%
+• Режим: {'🟢 ДЕМО' if self.settings.get('demo_mode', True) else '🔴 РЕАЛЬНЫЙ'}
+
+📈 <b>Take Profit:</b>
+• Режим: {tp_info['mode']}
+• Значение: {tp_info['take_profit_usdt'] if tp_info['mode'] == 'USDT' else tp_info['take_profit_percent']} {tp_info['mode']}
+
+⚡ <b>Риски:</b>
+• Макс. позиция: {self.risk_settings.get('max_position_size', 25.0):.1f}%
+• Макс. убыток/день: {self.risk_settings.get('max_daily_loss', 3.0):.1f}%
+• Макс. убыточных: {self.risk_settings.get('max_consecutive_losses', 3)}
+
+🤖 <b>ML:</b>
+• Включен: {'✅ ДА' if self.ml_settings.get('enabled', True) else '❌ НЕТ'}
+• Порог покупки: {self.ml_settings.get('confidence_threshold_buy', 0.4):.1f}
+• Порог продажи: {self.ml_settings.get('confidence_threshold_sell', 0.3):.1f}
+"""
+        return summary

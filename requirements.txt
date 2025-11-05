@@ -8,3 +8,4 @@ joblib
 python-telegram-bot
 matplotlib
 seaborn
+watchdog

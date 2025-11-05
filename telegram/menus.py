@@ -1,281 +1,515 @@
 """
 МЕНЮ TELEGRAM БОТА
 """
-from utils.helpers import format_price, format_percent
+from utils.logger import log_info
 
 class MenuManager:
     def __init__(self, trading_bot):
         self.bot = trading_bot
 
-    def create_keyboard(self, buttons, one_time=False):
-        """Создание клавиатуры"""
-        return {
-            'keyboard': buttons,
-            'resize_keyboard': True,
-            'one_time_keyboard': one_time
-        }
-
-    def create_inline_keyboard(self, buttons):
-        """Создание инлайн-клавиатуры"""
-        return {
-            'inline_keyboard': buttons
-        }
-
-    def create_cancel_keyboard(self):
-        """Клавиатура для отмены ввода"""
-        return self.create_keyboard([['❌ Отменить ввод']], one_time=True)
+    def smart_format(self, value, decimals=4):
+        """Форматирует число, убирая лишние нули в конце"""
+        formatted = f"{value:.{decimals}f}"
+        if '.' in formatted:
+            formatted = formatted.rstrip('0').rstrip('.')
+        return formatted
 
     def send_main_menu(self):
-        """Главное меню"""
-        settings = self.bot.settings
-        current_pair = settings.get_active_pair_name()
-        strategy_name = settings.get_active_strategy_name()
-        trading_status = "✅" if settings.settings['trading_enabled'] else "❌"
-        ml_status = "✅" if settings.ml_settings['enabled'] else "❌"
-        keyboard = [
-            ['📊 Статус', '💼 Инфо аккаунта'],
-            ['📊 Аналитика', '📈 Сделки'],
-            ['⚙️ Настройки', '⚡ Управление'],
-            ['🔄 Обновить', '🚨 Экстренная остановка']
-        ]
-        message = f"""
-🤖 <b>РАСШИРЕННЫЙ ТОРГОВЫЙ БОТ v4.0</b>
-💱 <b>Пара:</b> {current_pair}
-🎯 <b>Стратегия:</b> {strategy_name}
-{trading_status} <b>Торговля:</b> {'ВКЛ' if settings.settings['trading_enabled'] else 'ВЫКЛ'}
-{ml_status} <b>ML:</b> {'ВКЛ' if settings.ml_settings['enabled'] else 'ВЫКЛ'}
-🚀 <b>ВОЗМОЖНОСТИ:</b>
-• 🎯 5 торговых стратегий
-• 💱 Смена пар в 1 клик  
-• 🤖 Гибкие настройки ML
-• ⚡ Централизованное управление
-💡 <b>Команды:</b>
-• ⚙️ Настройки - все параметры бота
-• ⚡ Управление - контроль торговли
-• 📊 Аналитика - статистика эффективности
-"""
-        return message, self.create_keyboard(keyboard)
+        """Главное меню - теперь использует inline-кнопки"""
+        return self.send_main_menu_inline()
 
     def send_settings_menu(self):
-        """Меню настроек"""
-        settings = self.bot.settings
-        current_pair = settings.get_active_pair_name()
-        current_threshold = settings.settings['ema_cross_threshold'] * 100
-        keyboard = [
-            [f"📈 EMA порог: {current_threshold:.2f}%"],
-            [f"💰 Размер позиции: {settings.settings['trade_amount_percent']*100:.1f}%"],
-            [f"🎯 Стратегия: {settings.get_active_strategy_name()}"],
-            [f"💱 Пара: {current_pair}"],
-            ["🤖 ML Настройки"],
-            ["⚙️ Настройки EMA"],
-            ["⚙️ Настройки рисков"],
-            [f"🔄 Обновления: {'✅' if settings.settings['enable_price_updates'] else '❌'}"],
-            ['🏠 Главное меню']
-        ]
+        """Меню настроек с inline-кнопками"""
+        tp_info = self.bot.get_take_profit_info()
+        if tp_info['mode'] == 'USDT':
+            tp_display = f"{self.smart_format(tp_info['take_profit_usdt'], 4)} USDT"
+        else:
+            tp_display = f"{self.smart_format(tp_info['take_profit_percent'], 4)}%"
+
         message = f"""
 ⚙️ <b>НАСТРОЙКИ БОТА</b>
-📈 <b>Стратегия EMA:</b>
-• Порог срабатывания: <b>{current_threshold:.2f}%</b>
-• Размер позиции: <b>{settings.settings['trade_amount_percent']*100:.1f}%</b>
-🎯 <b>Активная стратегия:</b> <b>{settings.get_active_strategy_name()}</b>
-💱 <b>Торговая пара:</b> <b>{current_pair}</b>
-🤖 <b>Machine Learning:</b> {'✅ ВКЛЮЧЕН' if settings.ml_settings['enabled'] else '❌ ВЫКЛЮЧЕН'}
-💡 Нажмите на параметр для изменения
+
+🎯 <b>Текущие настройки:</b>
+• Пара: {self.bot.settings.get_active_pair_name()}
+• Стратегия: {self.bot.settings.get_active_strategy_name()}
+• Размер ставки: {self.bot.settings.settings['trade_amount_percent'] * 100:.1f}%
+• Take Profit: {tp_display}
+• EMA порог: {self.bot.settings.settings['ema_cross_threshold'] * 100:.2f}%
+• Торговля: {'✅ ВКЛ' if self.bot.settings.settings['trading_enabled'] else '❌ ВЫКЛ'}
+• Режим: {'🟢 ДЕМО' if self.bot.settings.settings['demo_mode'] else '🔴 РЕАЛЬНЫЙ'}
+
+💡 <b>Выберите категорию:</b>
 """
-        return message, self.create_keyboard(keyboard)
+
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': f'💱 Пара', 'callback_data': 'settings_pairs'},
+                    {'text': f'🎯 Стратегия', 'callback_data': 'settings_strategy'}
+                ],
+                [
+                    {'text': f'💰 Размер: {self.bot.settings.settings["trade_amount_percent"] * 100:.1f}%', 'callback_data': 'settings_trade_amount'},
+                    {'text': f'📈 EMA: {self.bot.settings.settings["ema_cross_threshold"] * 100:.2f}%', 'callback_data': 'settings_ema_threshold'}
+                ],
+                [
+                    {'text': '🤖 ML Настройки', 'callback_data': 'settings_ml'},
+                    {'text': '⚙️ EMA Настройки', 'callback_data': 'settings_ema'}
+                ],
+                [
+                    {'text': '⚙️ Риск-менеджмент', 'callback_data': 'settings_risk'},
+                    {'text': f'🔄 Обновления: {"✅" if self.bot.settings.settings["enable_price_updates"] else "❌"}', 'callback_data': 'settings_toggle_updates'}
+                ],
+                [
+                    {'text': '🏠 Главное меню', 'callback_data': 'main_menu'}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
 
     def send_ema_settings_menu(self):
-        """Меню настроек EMA стратегии - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
-        settings = self.bot.settings
+        """Меню настроек EMA стратегии с УМНЫМ ФОРМАТИРОВАНИЕМ"""
         strategy = self.bot.get_active_strategy()
-        if hasattr(strategy, 'settings'):
-            ema_settings = strategy.settings
-        else:
-            ema_settings = {}
-
-        # 🔹 ПРАВИЛЬНОЕ ОПРЕДЕЛЕНИЕ РЕЖИМА TAKE PROFIT
-        take_profit_usdt = ema_settings.get('take_profit_usdt', 0.0)
-        take_profit_percent = ema_settings.get('take_profit_percent', 2.0)
         
-        # Если установлен USDT TP > 0 - режим USDT, иначе проценты
+        take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
+        take_profit_percent = strategy.settings.get('take_profit_percent', 2.0)
+        
+        # Определяем режим и форматируем значение
         if take_profit_usdt > 0:
-            take_profit_display = f"{take_profit_usdt:.2f} USDT"
+            tp_display = f"{self.smart_format(take_profit_usdt, 4)} USDT"
             tp_mode = "USDT"
         else:
-            take_profit_display = f"{take_profit_percent:.1f}%"
-            tp_mode = "проценты"
-
-        stop_loss = ema_settings.get('stop_loss_percent', 1.5)
-        trailing_stop = ema_settings.get('trailing_stop', False)
-        min_hold_time = ema_settings.get('min_hold_time', 300) // 60
-
-        keyboard = [
-            [f"🎯 Take Profit: {take_profit_display}"],
-            [f"🔄 TP режим: {tp_mode}"],
-            [f"🛑 Stop Loss: {stop_loss:.1f}%"],
-            [f"📉 Trailing Stop: {'✅ ВКЛ' if trailing_stop else '❌ ВЫКЛ'}"],
-            [f"⏰ Min Hold Time: {min_hold_time} мин"],
-            ['🔙 Назад к настройкам']
-        ]
+            tp_display = f"{self.smart_format(take_profit_percent, 4)}%"
+            tp_mode = "%"
+        
+        trailing_stop_status = "✅ ВКЛ" if strategy.settings.get('trailing_stop', False) else "❌ ВЫКЛ"
+        stop_loss = strategy.settings.get('stop_loss_percent', 1.5)
+        min_hold_time = strategy.settings.get('min_hold_time', 300) // 60
 
         message = f"""
 ⚙️ <b>НАСТРОЙКИ EMA СТРАТЕГИИ</b>
-🎯 <b>Take Profit:</b> <b>{take_profit_display}</b>
-🔄 <b>Режим TP:</b> <b>{tp_mode}</b>
-🛑 <b>Stop Loss:</b> <b>{stop_loss:.1f}%</b>
-📉 <b>Trailing Stop:</b> {'✅ ВКЛ' if trailing_stop else '❌ ВЫКЛ'}
-⏰ <b>Min Hold Time:</b> <b>{min_hold_time} мин</b>
 
-💡 <b>Совет:</b> Нажмите "🔄 TP режим", чтобы переключить между процентами и USDT.
+🎯 <b>Take Profit:</b> {tp_display}
+🛑 <b>Stop Loss:</b> {self.smart_format(stop_loss, 1)}%
+📉 <b>Trailing Stop:</b> {trailing_stop_status}
+⏰ <b>Min Hold Time:</b> {min_hold_time} мин
+🔄 <b>TP режим:</b> {tp_mode}
+
+💡 <b>Выберите параметр для настройки:</b>
 """
-        return message, self.create_keyboard(keyboard)
+        
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': f'🎯 TP: {tp_display}', 'callback_data': 'ema_tp'},
+                    {'text': f'🛑 SL: {self.smart_format(stop_loss, 1)}%', 'callback_data': 'ema_sl'}
+                ],
+                [
+                    {'text': f'📉 Trailing: {trailing_stop_status}', 'callback_data': 'ema_trailing'},
+                    {'text': f'⏰ Hold: {min_hold_time} мин', 'callback_data': 'ema_hold_time'}
+                ],
+                [
+                    {'text': f'🔄 TP режим: {tp_mode}', 'callback_data': 'ema_tp_mode'},
+                    {'text': '🔙 Назад', 'callback_data': 'settings'}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
 
     def send_strategy_menu(self):
-        """Меню выбора стратегии"""
-        settings = self.bot.settings
-        keyboard = []
-        for strategy_id, strategy_name in settings.strategy_settings['available_strategies'].items():
-            prefix = "✅" if strategy_id == settings.strategy_settings['active_strategy'] else "⚪"
-            keyboard.append([f"{prefix} {strategy_name}"])
-        keyboard.append(['🔙 Назад к настройкам'])
-        message = f"""
-🎯 <b>ВЫБОР ТОРГОВОЙ СТРАТЕГИИ</b>
-💡 Активная стратегия:
-<b>{settings.get_active_strategy_name()}</b>
-📊 Доступные стратегии:
-• 📈 EMA + ML - Основная стратегия с AI
-• ⚡ Price Action - По движению цены
-• 🎯 MACD + RSI - Комбо индикаторы
-• 📊 Bollinger Bands - Торговля в каналах
-• 🔄 Гибридная - Комбинация стратегий
+        """Меню выбора стратегии с inline-кнопками"""
+        current_strategy = self.bot.settings.strategy_settings['active_strategy']
+        
+        message = """
+🎯 <b>ВЫБОР СТРАТЕГИИ</b>
+
+💡 <b>Доступные стратегии:</b>
+• 📈 EMA + ML - Комбинация EMA кроссовера и Machine Learning
+• ⚡ Price Action - Торговля по чистому движению цены
+• 🎯 MACD + RSI - Комбинация индикаторов MACD и RSI
+• 📊 Bollinger Bands - Торговля на отскоках от границ Bollinger Bands
+
+Выберите стратегию:
 """
-        return message, self.create_keyboard(keyboard)
+
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': f"{'✅' if current_strategy == 'ema_ml' else ''} 📈 EMA + ML", 'callback_data': 'strategy_ema_ml'},
+                    {'text': f"{'✅' if current_strategy == 'price_action' else ''} ⚡ Price Action", 'callback_data': 'strategy_price_action'}
+                ],
+                [
+                    {'text': f"{'✅' if current_strategy == 'macd_rsi' else ''} 🎯 MACD + RSI", 'callback_data': 'strategy_macd_rsi'},
+                    {'text': f"{'✅' if current_strategy == 'bollinger' else ''} 📊 Bollinger", 'callback_data': 'strategy_bollinger'}
+                ],
+                [
+                    {'text': '🔙 Назад к настройкам', 'callback_data': 'settings'}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
 
     def send_pairs_menu(self):
-        """Меню выбора торговой пары"""
-        settings = self.bot.settings
-        keyboard = []
-        pairs_list = list(settings.trading_pairs['available_pairs'].items())
-        for i in range(0, len(pairs_list), 2):
-            row = []
-            for j in range(2):
-                if i + j < len(pairs_list):
-                    pair_id, pair_name = pairs_list[i + j]
-                    prefix = "✅" if pair_id == settings.trading_pairs['active_pair'] else "⚪"
-                    row.append(f"{prefix} {pair_name}")
-            keyboard.append(row)
-        keyboard.append(['🔙 Назад к настройкам'])
-        current_pair = settings.trading_pairs['active_pair']
-        current_name = settings.get_active_pair_name()
-        message = f"""
+        """Меню выбора торговой пары с inline-кнопками"""
+        current_pair = self.bot.settings.trading_pairs['active_pair']
+        
+        message = """
 💱 <b>ВЫБОР ТОРГОВОЙ ПАРЫ</b>
-💰 Активная пара:
-<b>{current_pair} - {current_name}</b>
-💡 Выберите торговую пару для мониторинга и торговли.
+
+💡 <b>Доступные пары:</b>
+• ₿ Bitcoin (BTC/USDT)
+• Ξ Ethereum (ETH/USDT) 
+• ◎ Solana (SOL/USDT)
+• ₳ Cardano (ADA/USDT)
+• ● Polkadot (DOT/USDT)
+• 🔗 Chainlink (LINK/USDT)
+
+Выберите торговую пару:
 """
-        return message, self.create_keyboard(keyboard)
+
+        pairs = {
+            'BTC/USDT': '₿ Bitcoin',
+            'ETH/USDT': 'Ξ Ethereum',
+            'SOL/USDT': '◎ Solana',
+            'ADA/USDT': '₳ Cardano',
+            'DOT/USDT': '● Polkadot',
+            'LINK/USDT': '🔗 Chainlink'
+        }
+        
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': f"{'✅' if current_pair == 'BTC/USDT' else ''} ₿ Bitcoin", 'callback_data': 'pair_BTC/USDT'},
+                    {'text': f"{'✅' if current_pair == 'ETH/USDT' else ''} Ξ Ethereum", 'callback_data': 'pair_ETH/USDT'}
+                ],
+                [
+                    {'text': f"{'✅' if current_pair == 'SOL/USDT' else ''} ◎ Solana", 'callback_data': 'pair_SOL/USDT'},
+                    {'text': f"{'✅' if current_pair == 'ADA/USDT' else ''} ₳ Cardano", 'callback_data': 'pair_ADA/USDT'}
+                ],
+                [
+                    {'text': f"{'✅' if current_pair == 'DOT/USDT' else ''} ● Polkadot", 'callback_data': 'pair_DOT/USDT'},
+                    {'text': f"{'✅' if current_pair == 'LINK/USDT' else ''} 🔗 Chainlink", 'callback_data': 'pair_LINK/USDT'}
+                ],
+                [
+                    {'text': '🔙 Назад к настройкам', 'callback_data': 'settings'}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
 
     def send_ml_settings_menu(self):
-        """Меню настроек ML"""
-        settings = self.bot.settings
-        ml_status = "✅ ВКЛЮЧЕН" if settings.ml_settings['enabled'] else "❌ ВЫКЛЮЧЕН"
-        keyboard = [
-            [f"🤖 ML: {ml_status}"],
-            [f"🎯 Порог покупки: {settings.ml_settings['confidence_threshold_buy']:.1f}"],
-            [f"🎯 Порог продажи: {settings.ml_settings['confidence_threshold_sell']:.1f}"],
-            ["🔄 Переобучить модель"],
-            ['🔙 Назад к настройкам']
-        ]
+        """Меню настроек Machine Learning"""
+        ml_enabled = self.bot.settings.ml_settings['enabled']
+        buy_threshold = self.bot.settings.ml_settings['confidence_threshold_buy']
+        sell_threshold = self.bot.settings.ml_settings['confidence_threshold_sell']
+
         message = f"""
 🤖 <b>НАСТРОЙКИ MACHINE LEARNING</b>
-📊 <b>Текущий статус:</b> <b>{ml_status}</b>
-🎯 <b>Пороги уверенности:</b>
-• Покупка: >< <b>{settings.ml_settings['confidence_threshold_buy']:.1f}</b>
-• Продажа: <> <b>{settings.ml_settings['confidence_threshold_sell']:.1f}</b>
-💡 Объяснение:
-ML модель фильтрует сигналы стратегии. Чем выше порог, тем строже фильтрация.
-"""
-        return message, self.create_keyboard(keyboard)
 
-    def send_risk_settings_menu(self):
-        """Меню настроек управления рисками"""
-        risk_settings = self.bot.settings.risk_settings
-        max_pos = risk_settings.get('max_position_size', 25.0)
-        max_daily_loss = risk_settings.get('max_daily_loss', 3.0)
-        max_consec = risk_settings.get('max_consecutive_losses', 3)
-        stop_loss = risk_settings.get('stop_loss', 1.5)
-        take_profit = risk_settings.get('take_profit', 3.0)
-        keyboard = [
-            [f"💼 Макс. позиция: {max_pos:.1f}%"],
-            [f"📉 Макс. убыток/день: {max_daily_loss:.1f}%"],
-            [f"🔴 Макс. убыточных: {max_consec}"],
-            [f"🛑 Stop Loss: {stop_loss:.1f}%"],
-            [f"🎯 Take Profit: {take_profit:.1f}%"],
-            ['🔙 Назад к настройкам']
-        ]
-        message = f"""
-⚡ <b>НАСТРОЙКИ УПРАВЛЕНИЯ РИСКАМИ</b>
-💼 <b>Макс. размер позиции:</b> <b>{max_pos:.1f}%</b>
-📉 <b>Макс. убыток за день:</b> <b>{max_daily_loss:.1f}%</b>
-🔴 <b>Макс. убыточных подряд:</b> <b>{max_consec}</b>
-🛑 <b>Stop Loss по умолчанию:</b> <b>{stop_loss:.1f}%</b>
-🎯 <b>Take Profit по умолчанию:</b> <b>{take_profit:.1f}%</b>
-💡 Нажмите на параметр для изменения.
+🎯 <b>Текущие настройки:</b>
+• ML: {'✅ ВКЛЮЧЕН' if ml_enabled else '❌ ВЫКЛЮЧЕН'}
+• Порог покупки: {buy_threshold:.1f}
+• Порог продажи: {sell_threshold:.1f}
+
+💡 <b>Настройки ML модели:</b>
+• Порог покупки - минимальная уверенность ML для сигнала покупки
+• Порог продажи - минимальная уверенность ML для сигнала продажи
+• Чем выше значения, тем строже фильтрация сигналов
+
+Выберите параметр для настройки:
 """
-        return message, self.create_keyboard(keyboard)
+
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': f'🤖 ML: {"✅ ВКЛ" if ml_enabled else "❌ ВЫКЛ"}', 'callback_data': 'ml_toggle'},
+                    {'text': '🔄 Переобучить', 'callback_data': 'ml_retrain'}
+                ],
+                [
+                    {'text': f'🎯 Покупка: {buy_threshold:.1f}', 'callback_data': 'ml_buy_threshold'},
+                    {'text': f'🎯 Продажа: {sell_threshold:.1f}', 'callback_data': 'ml_sell_threshold'}
+                ],
+                [
+                    {'text': '🔙 Назад', 'callback_data': 'settings'}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
 
     def send_trading_control_menu(self):
         """Меню управления торговлей"""
-        settings = self.bot.settings
-        trading_status = "✅ ВКЛЮЧЕНА" if settings.settings['trading_enabled'] else "❌ ОСТАНОВЛЕНА"
-        signals_status = "✅ ВКЛЮЧЕНЫ" if settings.settings['enable_trade_signals'] else "❌ ВЫКЛЮЧЕНЫ"
-        demo_status = "🟢 ДЕМО" if settings.settings['demo_mode'] else "🔴 РЕАЛЬНЫЙ"
-        keyboard = [
-            [f"📊 Торговля: {trading_status}"],
-            [f"🎯 Сигналы: {signals_status}"],
-            [f"🔧 Режим: {demo_status}"],
-            ["🔄 Перезагрузить бот", "🛑 Экстренная остановка"],
-            ['🏠 Главное меню']
-        ]
+        trading_enabled = self.bot.settings.settings['trading_enabled']
+        trade_signals = self.bot.settings.settings['enable_trade_signals']
+        demo_mode = self.bot.settings.settings['demo_mode']
+
         message = f"""
 ⚡ <b>УПРАВЛЕНИЕ ТОРГОВЛЕЙ</b>
-📊 <b>Статус торговли:</b> <b>{trading_status}</b>
-🎯 <b>Торговые сигналы:</b> <b>{signals_status}</b>
-🔧 <b>Режим работы:</b> <b>{demo_status}</b>
-💡 Возможности:
-• Включить/выключить автоматическую торговлю
-• Остановить все операции
-• Переключить демо/режим
-• Перезагрузить бота
+
+🎯 <b>Текущий статус:</b>
+• Торговля: {'✅ ВКЛЮЧЕНА' if trading_enabled else '❌ ОСТАНОВЛЕНА'}
+• Сигналы: {'✅ ВКЛЮЧЕНЫ' if trade_signals else '❌ ВЫКЛЮЧЕНЫ'}
+• Режим: {'🟢 ДЕМО-РЕЖИМ' if demo_mode else '🔴 РЕАЛЬНАЯ ТОРГОВЛЯ'}
+
+⚠️ <b>Внимание:</b>
+• В демо-режиме сделки не исполняются на бирже
+• В реальном режиме будьте осторожны - бот торгует реальными деньгами
+
+Выберите действие:
 """
-        return message, self.create_keyboard(keyboard)
+
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': f'📊 Торговля: {"✅" if trading_enabled else "❌"}', 'callback_data': 'control_toggle_trading'},
+                    {'text': f'🎯 Сигналы: {"✅" if trade_signals else "❌"}', 'callback_data': 'control_toggle_signals'}
+                ],
+                [
+                    {'text': f'🔧 Режим: {"🟢 ДЕМО" if demo_mode else "🔴"}', 'callback_data': 'control_toggle_demo'},
+                    {'text': '🧪 Торговля в демо-режиме', 'callback_data': 'control_demo_trade'}
+                ],
+                [
+                    {'text': '🔄 Перезагрузить', 'callback_data': 'control_restart'},
+                    {'text': '🚨 Экстренная остановка', 'callback_data': 'control_emergency'}
+                ],
+                [
+                    {'text': '🏠 Главное меню', 'callback_data': 'main_menu'}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
+
+    def send_risk_settings_menu(self):
+        """Меню настроек рисков"""
+        max_position = self.bot.settings.risk_settings.get('max_position_size', 25.0)
+        max_daily_loss = self.bot.settings.risk_settings.get('max_daily_loss', 3.0)
+        max_consecutive = self.bot.settings.risk_settings.get('max_consecutive_losses', 3)
+
+        message = f"""
+⚡ <b>НАСТРОЙКИ РИСК-МЕНЕДЖМЕНТА</b>
+
+🎯 <b>Текущие лимиты:</b>
+• Макс. размер позиции: {max_position:.1f}%
+• Макс. убыток в день: {max_daily_loss:.1f}%
+• Макс. убыточных подряд: {max_consecutive}
+
+💡 <b>Рекомендации:</b>
+• Макс. позиция: 5-25% от баланса
+• Макс. убыток: 2-5% в день
+• Убыточные: 3-5 сделок подряд
+
+Выберите параметр для настройки:
+"""
+
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': f'💼 Позиция: {max_position:.1f}%', 'callback_data': 'risk_max_position'},
+                    {'text': f'📉 Убыток/день: {max_daily_loss:.1f}%', 'callback_data': 'risk_max_loss'}
+                ],
+                [
+                    {'text': f'🔴 Убыточных: {max_consecutive}', 'callback_data': 'risk_max_consecutive'}
+                ],
+                [
+                    {'text': '🔙 Назад', 'callback_data': 'settings'}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
 
     def send_analytics_menu(self):
         """Меню аналитики"""
-        metrics = self.bot.metrics.get_summary()
         message = f"""
-📊 <b>ДЕТАЛЬНАЯ АНАЛИТИКА</b>
-📈 <b>ОСНОВНЫЕ МЕТРИКИ:</b>
-• Всего сделок: <b>{metrics['total_trades']}</b>
-• Win Rate: <b>{metrics['win_rate']:.1f}%</b>
-• Profit Factor: <b>{metrics['profit_factor']:.2f}</b>
-• Общая прибыль: <b>{metrics['total_profit']:.2f} USDT</b>
-💰 <b>СТАТИСТИКА СДЕЛОК:</b>
-• Прибыльных: <b>{metrics['winning_trades']}</b>
-• Убыточных: <b>{metrics['losing_trades']}</b>
-• Средняя прибыль: <b>{metrics['average_win']:.2f} USDT</b>
-• Средний убыток: <b>{metrics['average_loss']:.2f} USDT</b>
-🎯 <b>РЕКОРДЫ:</b>
-• Лучшая сделка: <b>{metrics['best_trade']:.2f} USDT</b>
-• Худшая сделка: <b>{metrics['worst_trade']:.2f} USDT</b>
-• Серия побед: <b>{metrics['consecutive_wins']}</b>
-• Серия поражений: <b>{metrics['consecutive_losses']}</b>
-⚡ <b>РИСКИ:</b>
-• Макс просадка: <b>{metrics['max_drawdown']:.2f}%</b>
-• Текущая просадка: <b>{metrics['current_drawdown']:.2f}%</b>
+📊 <b>АНАЛИТИКА И ОТЧЕТЫ</b>
+
+📈 <b>Общая статистика:</b>
+• Всего сделок: {self.bot.metrics.total_trades}
+• Win Rate: {self.bot.metrics.win_rate:.1f}%
+• Прибыль: {self.bot.metrics.total_profit:.2f}% ({self.bot.metrics.total_profit_usdt:.2f} USDT)
+• Profit Factor: {self.bot.metrics.profit_factor:.2f}
+• Макс. просадка: {self.bot.metrics.max_drawdown:.2f}%
+
+💡 <b>Доступные отчеты:</b>
+• Детальный отчет - полная статистика торговли
+• Графики - визуализация данных (в разработке)
+• Очистка статистики - сброс всех метрик
+
+Выберите действие:
 """
-        keyboard = [
-            ['📈 Детальный отчет', '📊 Графики'],
-            ['🧹 Очистить статистика', '🏠 Главное меню']
-        ]
-        return message, self.create_keyboard(keyboard)
+
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': '📈 Детальный отчет', 'callback_data': 'analytics_detailed'},
+                    {'text': '📊 Графики', 'callback_data': 'analytics_charts'}
+                ],
+                [
+                    {'text': '🧹 Очистить статистику', 'callback_data': 'analytics_clear'}
+                ],
+                [
+                    {'text': '🔄 Обновить', 'callback_data': 'analytics'},
+                    {'text': '🏠 Главное меню', 'callback_data': 'main_menu'}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
+
+    def send_trade_history(self):
+        """История сделок"""
+        if not self.bot.metrics.trade_history:
+            message = "📊 <b>ИСТОРИЯ СДЕЛОК</b>\n\nИстория сделок пуста."
+        else:
+            recent_trades = self.bot.metrics.trade_history[-10:]  # Последние 10 сделок
+            trade_list = []
+            
+            for trade in recent_trades:
+                emoji = "🟢" if trade['profit'] > 0 else "🔴"
+                profit_str = f"+{trade['profit']:.2f}%" if trade['profit'] > 0 else f"{trade['profit']:.2f}%"
+                time_str = trade['timestamp'].strftime("%H:%M") if hasattr(trade['timestamp'], 'strftime') else "N/A"
+                
+                trade_list.append(
+                    f"{emoji} {time_str} {trade['signal'].upper()} {trade['symbol']} - {profit_str}"
+                )
+            
+            trade_history_text = "\n".join(trade_list)
+            
+            message = f"""
+📊 <b>ИСТОРИЯ СДЕЛОК</b>
+
+🕐 <b>Последние 10 сделок:</b>
+{trade_history_text}
+
+📈 <b>Общая статистика:</b>
+• Всего сделок: {self.bot.metrics.total_trades}
+• Win Rate: {self.bot.metrics.win_rate:.1f}%
+• Прибыль: {self.bot.metrics.total_profit:.2f}% ({self.bot.metrics.total_profit_usdt:.2f} USDT)
+"""
+        
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': '🔄 Обновить', 'callback_data': 'trades'},
+                    {'text': '🏠 Главное меню', 'callback_data': 'main_menu'}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
+
+    def send_account_info(self):
+        """Информация об аккаунте"""
+        balance = self.bot.exchange.get_balance()
+        if not balance:
+            message = "❌ Не удалось получить информацию о балансе"
+        else:
+            # Получаем информацию о Take Profit
+            tp_info = self.bot.get_take_profit_info()
+            if tp_info['mode'] == 'USDT':
+                tp_display = f"{self.smart_format(tp_info['take_profit_usdt'], 4)} USDT"
+            else:
+                tp_display = f"{self.smart_format(tp_info['take_profit_percent'], 4)}%"
+
+            message = f"""
+💼 <b>ИНФОРМАЦИЯ ОБ АККАУНТЕ</b>
+
+💰 <b>Баланс:</b>
+• USDT: {balance['total_usdt']:.2f}
+  ├ Свободно: {balance['free_usdt']:.2f}
+  └ Занято: {balance['used_usdt']:.2f}
+  
+• BTC: {balance['total_btc']:.6f}
+  ├ Свободно: {balance['free_btc']:.6f}
+  └ Занято: {balance.get('used_btc', 0):.6f}
+
+🎯 <b>Торговые настройки:</b>
+• Размер ставки: {self.bot.settings.settings['trade_amount_percent'] * 100:.1f}%
+• Take Profit: {tp_display}
+• Следующая ставка: {balance['free_usdt'] * self.bot.settings.settings['trade_amount_percent']:.2f} USDT
+
+📊 <b>Статистика:</b>
+• Сделок: {self.bot.metrics.total_trades}
+• Win Rate: {self.bot.metrics.win_rate:.1f}%
+• Прибыль: {self.bot.metrics.total_profit:.2f}% ({self.bot.metrics.total_profit_usdt:.2f} USDT)
+"""
+        
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': '🔄 Обновить', 'callback_data': 'account_info'},
+                    {'text': '🏠 Главное меню', 'callback_data': 'main_menu'}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
+
+    def send_main_menu_inline(self):
+        """Главное меню с inline-кнопками"""
+        market_data = self.bot.exchange.get_market_data(
+            self.bot.settings.trading_pairs['active_pair']
+        )
+        
+        current_price = market_data['current_price'] if market_data else 0
+        position_status = "🟢 ОТКРЫТА" if self.bot.position == 'long' else "⚪ ОЖИДАНИЕ"
+        
+        tp_info = self.bot.get_take_profit_info()
+        if tp_info['mode'] == 'USDT':
+            tp_display = f"{self.smart_format(tp_info['take_profit_usdt'], 4)} USDT"
+        else:
+            tp_display = f"{self.smart_format(tp_info['take_profit_percent'], 4)}%"
+
+        message = f"""
+🤖 <b>ГЛАВНОЕ МЕНЮ ТОРГОВОГО БОТА</b>
+
+💱 <b>Текущая пара:</b> {self.bot.settings.get_active_pair_name()}
+💰 <b>Цена:</b> {current_price:.2f} USDT
+🎯 <b>Стратегия:</b> {self.bot.settings.get_active_strategy_name()}
+💼 <b>Позиция:</b> {position_status}
+🎯 <b>Take Profit:</b> {tp_display}
+
+📊 <b>Статистика:</b>
+• Сделок: {self.bot.metrics.total_trades}
+• Win Rate: {self.bot.metrics.win_rate:.1f}%
+• Прибыль: {self.bot.metrics.total_profit:.2f}% ({self.bot.metrics.total_profit_usdt:.2f} USDT)
+
+💡 <b>Выберите действие:</b>
+"""
+
+        inline_keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': '📊 Статус', 'callback_data': 'status'},
+                    {'text': '💼 Аккаунт', 'callback_data': 'account_info'}
+                ],
+                [
+                    {'text': '📈 Сделки', 'callback_data': 'trades'},
+                    {'text': '📊 Аналитика', 'callback_data': 'analytics'}
+                ],
+                [
+                    {'text': '⚙️ Настройки', 'callback_data': 'settings'},
+                    {'text': '⚡ Управление', 'callback_data': 'control'}
+                ],
+                [
+                    {'text': '🔄 Обновить', 'callback_data': 'refresh'},
+                    {'text': '🌐 Открыть приложение', 'web_app': {'url': 'https://your-domain.com/webapp'}}
+                ]
+            ]
+        }
+
+        return message, inline_keyboard
+
+    def create_cancel_keyboard(self):
+        """Клавиатура для отмены ввода с кнопкой главного меню"""
+        return {
+            'keyboard': [
+                ['❌ Отменить ввод', '🏠 Главное меню']
+            ],
+            'resize_keyboard': True,
+            'one_time_keyboard': True
+        }

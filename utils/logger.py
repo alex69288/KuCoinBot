@@ -54,3 +54,22 @@ def log_warning(message):
 def log_debug(message):
     """Логирование отладочной информации"""
     logger.debug(message)
+
+def log_separator(char="=", length=80):
+    """Вывод разделительной линии для лучшей читаемости"""
+    logger.info(char * length)
+
+def log_section(title, char="=", length=80):
+    """Вывод заголовка секции с разделителями"""
+    padding = (length - len(title) - 4) // 2
+    separator = char * length
+    header = f"{char * padding} {title} {char * padding}"
+    if len(header) < length:
+        header += char
+    logger.info(separator)
+    logger.info(header)
+    logger.info(separator)
+
+def log_empty_line():
+    """Вывод пустой строки для разделения"""
+    logger.info("")

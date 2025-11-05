@@ -44,8 +44,13 @@ class BaseStrategy(ABC):
     def update_position_info(self, signal, price):
         """Обновление информации о позиции"""
         if signal == 'buy':
+            # 🔧 КРИТИЧНО: Если позиция уже существует, берем МАКСИМАЛЬНУЮ цену
+            # Это гарантирует, что при закрытии позиции будет прибыль относительно всех покупок
+            if self.position == 'long' and self.entry_price > 0:
+                self.entry_price = max(self.entry_price, price)
+            else:
+                self.entry_price = price
             self.position = 'long'
-            self.entry_price = price
             self.position_opened_at = time.time()
         elif signal == 'sell':
             self.position = None

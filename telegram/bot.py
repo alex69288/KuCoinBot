@@ -30,6 +30,8 @@ class TelegramBot:
             return
         # Запускаем слушатель сообщений
         self.start_message_listener()
+        # Устанавливаем команды бота в меню (синяя кнопка слева от поля ввода)
+        self.set_bot_commands()
         log_info("✅ Telegram бот успешно инициализирован")
 
     def test_connection(self):
@@ -52,6 +54,7 @@ class TelegramBot:
         """Отправка сообщения в Telegram с повторными попытками"""
         if not self.token or not self.chat_id:
             return False
+        
         for attempt in range(retry_count + 1):
             try:
                 url = f"https://api.telegram.org/bot{self.token}/sendMessage"
@@ -61,11 +64,16 @@ class TelegramBot:
                     'parse_mode': 'HTML',
                     'disable_web_page_preview': True
                 }
+                
+                # Используем только переданные кнопки (inline или reply)
+                # Reply-кнопка главного меню установлена отдельно при старте
                 if reply_markup:
                     payload['reply_markup'] = reply_markup
+                
                 # Увеличиваем таймаут для проблемных соединений
                 timeout = 20 if attempt > 0 else 10
                 response = requests.post(url, json=payload, timeout=timeout)
+                
                 if response.status_code == 200:
                     self.connection_issues = 0  # Сбрасываем счетчик проблем
                     return True
@@ -84,6 +92,48 @@ class TelegramBot:
         if self.connection_issues >= 3:
             log_error("🚨 Множественные ошибки подключения к Telegram")
         return False
+    
+    def set_bot_commands(self):
+        """Устанавливает команды бота в меню команд (синяя кнопка слева от поля ввода)"""
+        try:
+            # Удаляем reply-клавиатуру, если она была установлена ранее
+            self.remove_reply_keyboard()
+            
+            # Устанавливаем команды бота
+            url = f"https://api.telegram.org/bot{self.token}/setMyCommands"
+            commands = [
+                {'command': 'start', 'description': 'Главное меню'},
+            ]
+            payload = {'commands': commands}
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code == 200:
+                log_info("✅ Команды бота установлены в меню (синяя кнопка слева)")
+            else:
+                log_error(f"❌ Ошибка установки команд: {response.text}")
+            return True
+        except Exception as e:
+            log_error(f"❌ Ошибка установки команд бота: {e}")
+            return False
+    
+    def remove_reply_keyboard(self):
+        """Удаляет reply-клавиатуру, чтобы команды бота отображались корректно"""
+        try:
+            url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+            payload = {
+                'chat_id': self.chat_id,
+                'text': '🤖 <b>Бот готов к работе!</b>\n\nИспользуйте синюю кнопку "Меню" слева от поля ввода или команду /start',
+                'parse_mode': 'HTML',
+                'reply_markup': {
+                    'remove_keyboard': True
+                }
+            }
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code == 200:
+                log_info("✅ Reply-клавиатура удалена, команды бота активны")
+            return True
+        except Exception as e:
+            log_error(f"❌ Ошибка удаления клавиатуры: {e}")
+            return False
 
     def start_message_listener(self):
         """Запуск слушателя сообщений"""
@@ -109,11 +159,16 @@ class TelegramBot:
                                 ).start()
                             # Обработка callback от inline кнопок
                             if "callback_query" in update:
-                                callback_data = update["callback_query"]["data"]
+                                callback_query = update["callback_query"]
+                                callback_data = callback_query.get("data")
+                                callback_id = callback_query.get("id")
                                 log_info(f"📨 Получен callback: {callback_data}")
+                                # Отвечаем на callback сразу
+                                self.answer_callback_query(callback_id)
+                                # Обрабатываем callback
                                 threading.Thread(
                                     target=self.message_handler.handle_callback,
-                                    args=(callback_data,),
+                                    args=(callback_data, callback_query),
                                     daemon=True
                                 ).start()
                 except requests.exceptions.Timeout:
@@ -122,6 +177,60 @@ class TelegramBot:
                     log_error(f"❌ Ошибка в слушателе команд: {e}")
                     time.sleep(10)  # Увеличили паузу при ошибках
         threading.Thread(target=listener, daemon=True).start()
+
+    def answer_callback_query(self, callback_id, text=None, show_alert=False):
+        """Ответ на callback query (для inline-кнопок)"""
+        try:
+            url = f"https://api.telegram.org/bot{self.token}/answerCallbackQuery"
+            payload = {
+                'callback_query_id': callback_id,
+                'show_alert': show_alert
+            }
+            if text:
+                payload['text'] = text
+            response = requests.post(url, json=payload, timeout=10)
+            return response.status_code == 200
+        except Exception as e:
+            log_error(f"❌ Ошибка ответа на callback: {e}")
+            return False
+
+    def edit_message_text(self, chat_id, message_id, text, reply_markup=None):
+        """Редактирование сообщения с обработкой ошибок"""
+        try:
+            url = f"https://api.telegram.org/bot{self.token}/editMessageText"
+            payload = {
+                'chat_id': chat_id,
+                'message_id': message_id,
+                'text': text,
+                'parse_mode': 'HTML',
+                'disable_web_page_preview': True
+            }
+            if reply_markup:
+                payload['reply_markup'] = reply_markup
+            response = requests.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                return True
+            else:
+                # Если сообщение слишком старое или не найдено, отправляем новое
+                error_data = response.json()
+                if error_data.get('error_code') == 400 and 'message can\'t be edited' in error_data.get('description', '').lower():
+                    log_info("⚠️ Сообщение слишком старое для редактирования, отправляем новое")
+                    # Отправляем новое сообщение вместо редактирования
+                    return self.send_message(text, reply_markup)
+                return False
+        except Exception as e:
+            log_error(f"❌ Ошибка редактирования сообщения: {e}")
+            # При ошибке отправляем новое сообщение
+            return self.send_message(text, reply_markup)
+
+    def smart_format(self, value, decimals=4):
+        """Форматирует число, убирая лишние нули в конце"""
+        formatted = f"{value:.{decimals}f}"
+        # Убираем лишние нули после запятой
+        if '.' in formatted:
+            formatted = formatted.rstrip('0').rstrip('.')
+        return formatted
 
     def send_market_update(self, market_data, signal, ml_confidence, ml_signal):
         """Отправка обновления рынка с расширенной информацией о позиции - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
@@ -148,67 +257,70 @@ class TelegramBot:
         
         # Расширенная информация о позиции
         position_info = ""
+        # 🔧 ИСПРАВЛЕНИЕ: Проверяем, что позиция действительно открыта и имеет корректные данные
         if self.bot.position == 'long':
             strategy = self.bot.get_active_strategy()
             current_price = market_data['current_price']
             
-            # 💰 ИСПОЛЬЗУЕМ ФИКСИРОВАННЫЙ РАЗМЕР ПОЗИЦИИ ИЗ СТРАТЕГИИ
-            if hasattr(strategy, 'position_size_usdt') and strategy.position_size_usdt > 0:
-                position_size_usdt = strategy.position_size_usdt
-            elif hasattr(self.bot, 'current_position_size_usdt') and self.bot.current_position_size_usdt > 0:
-                position_size_usdt = self.bot.current_position_size_usdt
-            else:
-                position_size_usdt = total_usdt * trade_amount_percent if balance else 0
-                
-            # 🔧 ИСПРАВЛЕНИЕ: Правильное отображение в зависимости от режима
-            take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
-            take_profit_percent = strategy.settings.get('take_profit_percent', 2.0)
-            taker_fee = strategy.settings.get('taker_fee', 0.001)
+            # 🔧 ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: убеждаемся, что позиция действительно открыта
+            # Проверяем наличие цены входа и размера позиции
+            has_entry_price = hasattr(strategy, 'entry_price') and strategy.entry_price > 0
+            has_position_size = (hasattr(strategy, 'position_size_usdt') and strategy.position_size_usdt > 0) or \
+                                (hasattr(self.bot, 'current_position_size_usdt') and self.bot.current_position_size_usdt > 0)
             
-            if take_profit_usdt > 0 and hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
-                # 🔹 РЕЖИМ USDT (с поддержкой маленьких значений)
-                current_profit_usdt = (current_price - strategy.entry_price) / strategy.entry_price * position_size_usdt
-                fees_usdt = position_size_usdt * taker_fee * 2
-                remaining_to_tp = max(0, take_profit_usdt - (current_profit_usdt - fees_usdt))
+            if not has_entry_price or not has_position_size:
+                # Если нет данных о позиции, не показываем её как открытую
+                log_info("⚠️ Позиция помечена как 'long', но отсутствуют данные о цене входа или размере. Не показываем позицию.")
+                position_info = ""
+            else:
+                # 💰 ИСПОЛЬЗУЕМ ФИКСИРОВАННЫЙ РАЗМЕР ПОЗИЦИИ ИЗ СТРАТЕГИИ
+                if hasattr(strategy, 'position_size_usdt') and strategy.position_size_usdt > 0:
+                    position_size_usdt = strategy.position_size_usdt
+                elif hasattr(self.bot, 'current_position_size_usdt') and self.bot.current_position_size_usdt > 0:
+                    position_size_usdt = self.bot.current_position_size_usdt
+                else:
+                    position_size_usdt = total_usdt * trade_amount_percent if balance else 0
+                    
+                # 🔧 ИСПРАВЛЕНИЕ: Правильное отображение в зависимости от режима
+                take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
+                take_profit_percent = strategy.settings.get('take_profit_percent', 2.0)
+                taker_fee = strategy.settings.get('taker_fee', 0.001)
                 
-                # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
-                profit_format = ".4f" if abs(current_profit_usdt) < 0.1 else ".2f"
-                tp_format = ".4f" if take_profit_usdt < 0.1 else ".2f"
-                remaining_format = ".4f" if remaining_to_tp < 0.1 else ".2f"
-                fees_format = ".4f" if fees_usdt < 0.1 else ".2f"
-                
-                position_info = f"""
+                if take_profit_usdt > 0 and hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
+                    # 🔹 РЕЖИМ USDT (с поддержкой маленьких значений)
+                    current_profit_usdt = (current_price - strategy.entry_price) / strategy.entry_price * position_size_usdt
+                    fees_usdt = position_size_usdt * taker_fee * 2
+                    net_profit_usdt = current_profit_usdt - fees_usdt
+                    remaining_to_tp = max(0, take_profit_usdt - (current_profit_usdt - fees_usdt))
+                    
+                    # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+                    position_info = f"""
 💼 <b>ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ USDT)</b>
 💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT
 🎯 <b>Цена входа:</b> {strategy.entry_price:.2f} USDT
-📈 <b>Текущая прибыль:</b> {current_profit_usdt:{profit_format}} USDT
-🎯 <b>До Take Profit:</b> +{remaining_to_tp:{remaining_format}} USDT
-🎯 <b>Цель TP:</b> {take_profit_usdt:{tp_format}} USDT
-🛡️ <b>Комиссии:</b> {fees_usdt:{fees_format}} USDT
+📈 <b>Текущая прибыль:</b> {self.smart_format(current_profit_usdt, 4)} USDT
+🎯 <b>До Take Profit:</b> +{self.smart_format(remaining_to_tp, 2)} USDT
+🎯 <b>Цель TP:</b> {self.smart_format(take_profit_usdt, 4)} USDT
+🛡️ <b>Комиссии:</b> {self.smart_format(fees_usdt, 4)} USDT
 """
-            elif hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
-                # 🔹 РЕЖИМ ПРОЦЕНТОВ (с поддержкой маленьких значений)
-                current_profit_percent = ((current_price - strategy.entry_price) / strategy.entry_price) * 100
-                total_fees_percent = taker_fee * 2 * 100
-                remaining_to_tp = max(0, take_profit_percent - (current_profit_percent - total_fees_percent))
-                current_profit_usdt = position_size_usdt * (current_profit_percent / 100)
-                fees_usdt = position_size_usdt * (total_fees_percent / 100)
-                
-                # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
-                profit_format = ".4f" if abs(current_profit_percent) < 0.1 else ".2f"
-                tp_format = ".4f" if take_profit_percent < 0.1 else ".2f"
-                remaining_format = ".4f" if remaining_to_tp < 0.1 else ".2f"
-                fees_percent_format = ".4f" if total_fees_percent < 0.1 else ".2f"
-                fees_usdt_format = ".4f" if fees_usdt < 0.1 else ".2f"
-                
-                position_info = f"""
+                elif hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
+                    # 🔹 РЕЖИМ ПРОЦЕНТОВ (с поддержкой маленьких значений)
+                    current_profit_percent = ((current_price - strategy.entry_price) / strategy.entry_price) * 100
+                    total_fees_percent = taker_fee * 2 * 100
+                    net_profit_percent = current_profit_percent - total_fees_percent
+                    remaining_to_tp = max(0, take_profit_percent - (current_profit_percent - total_fees_percent))
+                    current_profit_usdt = position_size_usdt * (current_profit_percent / 100)
+                    fees_usdt = position_size_usdt * (total_fees_percent / 100)
+                    
+                    # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ:
+                    position_info = f"""
 💼 <b>ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ %)</b>
 💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT
 🎯 <b>Цена входа:</b> {strategy.entry_price:.2f} USDT
-📈 <b>Текущая прибыль:</b> {current_profit_percent:{profit_format}}% ({current_profit_usdt:.4f} USDT)
-🎯 <b>До Take Profit:</b> +{remaining_to_tp:{remaining_format}}%
-🎯 <b>Цель TP:</b> {take_profit_percent:{tp_format}}%
-🛡️ <b>Комиссии:</b> {total_fees_percent:{fees_percent_format}}% ({fees_usdt:{fees_usdt_format}} USDT)
+📈 <b>Текущая прибыль:</b> {self.smart_format(current_profit_percent, 4)}% ({self.smart_format(current_profit_usdt, 4)} USDT)
+🎯 <b>До Take Profit:</b> +{self.smart_format(remaining_to_tp, 2)}%
+🎯 <b>Цель TP:</b> {self.smart_format(take_profit_percent, 4)}%
+🛡️ <b>Комиссии:</b> {self.smart_format(total_fees_percent, 2)}% ({self.smart_format(fees_usdt, 4)} USDT)
 """
     
         # Информация о размере следующей ставки (если позиция не открыта)
@@ -270,21 +382,18 @@ class TelegramBot:
         
         tp_info = ""
         if take_profit_usdt > 0:
-            # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
-            tp_format = ".4f" if take_profit_usdt < 0.1 else ".2f"
-            tp_info = f"🎯 <b>Take Profit:</b> {take_profit_usdt:{tp_format}} USDT"
+            # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+            tp_info = f"🎯 <b>Take Profit:</b> {self.smart_format(take_profit_usdt, 4)} USDT"
         else:
-            # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
-            tp_format = ".4f" if take_profit_percent < 0.1 else ".2f"
-            tp_info = f"🎯 <b>Take Profit:</b> {take_profit_percent:{tp_format}}%"
+            # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+            tp_info = f"🎯 <b>Take Profit:</b> {self.smart_format(take_profit_percent, 4)}%"
     
         # Информация о прибыли
         profit_info = ""
         if profit_usdt != 0:
             profit_emoji = "📈" if profit_usdt > 0 else "📉"
-            # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ ПРИБЫЛИ
-            profit_format = ".4f" if abs(profit_usdt) < 0.1 else ".2f"
-            profit_info = f"{profit_emoji} <b>Прибыль:</b> {profit_usdt:{profit_format}} USDT"
+            # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+            profit_info = f"{profit_emoji} <b>Прибыль:</b> {self.smart_format(profit_usdt, 4)} USDT"
             
         message = f"""
 {emoji} <b>СДЕЛКА {action}</b>
@@ -328,13 +437,11 @@ class TelegramBot:
         
         tp_info = ""
         if take_profit_usdt > 0:
-            # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
-            tp_format = ".4f" if take_profit_usdt < 0.1 else ".2f"
-            tp_info = f"🎯 <b>Take Profit:</b> {take_profit_usdt:{tp_format}} USDT"
+            # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+            tp_info = f"🎯 <b>Take Profit:</b> {self.smart_format(take_profit_usdt, 4)} USDT"
         else:
-            # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
-            tp_format = ".4f" if take_profit_percent < 0.1 else ".2f"
-            tp_info = f"🎯 <b>Take Profit:</b> {take_profit_percent:{tp_format}}%"
+            # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+            tp_info = f"🎯 <b>Take Profit:</b> {self.smart_format(take_profit_percent, 4)}%"
             
         message = f"""
 💰 <b>ОБНОВЛЕНИЕ БАЛАНСА</b>
@@ -367,13 +474,11 @@ class TelegramBot:
         
         tp_info = ""
         if take_profit_usdt > 0:
-            # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
-            tp_format = ".4f" if take_profit_usdt < 0.1 else ".2f"
-            tp_info = f"🎯 <b>Take Profit:</b> {take_profit_usdt:{tp_format}} USDT"
+            # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+            tp_info = f"🎯 <b>Take Profit:</b> {self.smart_format(take_profit_usdt, 4)} USDT"
         else:
-            # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
-            tp_format = ".4f" if take_profit_percent < 0.1 else ".2f"
-            tp_info = f"🎯 <b>Take Profit:</b> {take_profit_percent:{tp_format}}%"
+            # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+            tp_info = f"🎯 <b>Take Profit:</b> {self.smart_format(take_profit_percent, 4)}%"
             
         message = f"""
 🤖 <b>ТОРГОВЫЙ БОТ АКТИВИРОВАН</b>
@@ -392,8 +497,53 @@ class TelegramBot:
 """
         self.send_message(message)
 
+    def _calculate_profit_info_fallback(self, strategy, current_price):
+        """Fallback метод для расчета информации о прибыли - УМНОЕ ФОРМАТИРОВАНИЕ"""
+        take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
+        take_profit_percent = strategy.settings.get('take_profit_percent', 2.0)
+        taker_fee = strategy.settings.get('taker_fee', 0.001)
+        position_size = getattr(strategy, 'position_size_usdt', 0)
+        
+        if take_profit_usdt > 0:
+            current_profit_usdt = (current_price - strategy.entry_price) / strategy.entry_price * position_size
+            fees_usdt = position_size * taker_fee * 2
+            net_profit_usdt = current_profit_usdt - fees_usdt
+            remaining_to_tp = max(0, take_profit_usdt - net_profit_usdt)
+            
+            # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+            return {
+                'mode': 'USDT',
+                'current_profit': net_profit_usdt,
+                'current_profit_formatted': f"{self.smart_format(net_profit_usdt, 4)} USDT",
+                'take_profit': take_profit_usdt,
+                'take_profit_formatted': f"{self.smart_format(take_profit_usdt, 4)} USDT",
+                'remaining_to_tp': remaining_to_tp,
+                'remaining_formatted': f"+{self.smart_format(remaining_to_tp, 2)} USDT",
+                'fees': fees_usdt
+            }
+        else:
+            current_profit_percent = ((current_price - strategy.entry_price) / strategy.entry_price) * 100
+            total_fees_percent = taker_fee * 2 * 100
+            net_profit_percent = current_profit_percent - total_fees_percent
+            remaining_to_tp = max(0, take_profit_percent - net_profit_percent)
+            current_profit_usdt = position_size * (net_profit_percent / 100)
+            
+            # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+            return {
+                'mode': 'percent',
+                'current_profit': net_profit_percent,
+                'current_profit_formatted': f"{self.smart_format(net_profit_percent, 4)}%",
+                'current_profit_usdt': current_profit_usdt,
+                'current_profit_usdt_formatted': f"{self.smart_format(current_profit_usdt, 4)} USDT",
+                'take_profit': take_profit_percent,
+                'take_profit_formatted': f"{self.smart_format(take_profit_percent, 4)}%",
+                'remaining_to_tp': remaining_to_tp,
+                'remaining_formatted': f"+{self.smart_format(remaining_to_tp, 2)}%",
+                'fees': total_fees_percent
+            }
+
     def send_detailed_position_info(self):
-        """Отправка детальной информации о позиции с поддержкой маленьких значений"""
+        """Отправка детальной информации о позиции с УМНЫМ форматированием"""
         if not self.bot.position == 'long':
             return
             
@@ -420,7 +570,7 @@ class TelegramBot:
 📈 <b>Текущая прибыль:</b> {profit_info['current_profit_formatted']}
 🎯 <b>Take Profit:</b> {profit_info['take_profit_formatted']}
 📊 <b>До Take Profit:</b> {profit_info['remaining_formatted']}
-🛡️ <b>Комиссии:</b> {profit_info['fees']:.4f} USDT
+🛡️ <b>Комиссии:</b> {self.smart_format(profit_info['fees'], 4)} USDT
 ⏰ <b>Открыта:</b> {datetime.fromtimestamp(strategy.position_opened_at).strftime('%H:%M:%S') if hasattr(strategy, 'position_opened_at') else 'N/A'}
 """
         else:
@@ -432,58 +582,7 @@ class TelegramBot:
 📈 <b>Текущая прибыль:</b> {profit_info['current_profit_formatted']} ({profit_info.get('current_profit_usdt_formatted', 'N/A')})
 🎯 <b>Take Profit:</b> {profit_info['take_profit_formatted']}
 📊 <b>До Take Profit:</b> {profit_info['remaining_formatted']}
-🛡️ <b>Комиссии:</b> {profit_info['fees']:.4f}%
+🛡️ <b>Комиссии:</b> {self.smart_format(profit_info['fees'], 2)}%
 ⏰ <b>Открыта:</b> {datetime.fromtimestamp(strategy.position_opened_at).strftime('%H:%M:%S') if hasattr(strategy, 'position_opened_at') else 'N/A'}
 """
         self.send_message(message)
-
-    def _calculate_profit_info_fallback(self, strategy, current_price):
-        """Fallback метод для расчета информации о прибыли"""
-        take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
-        take_profit_percent = strategy.settings.get('take_profit_percent', 2.0)
-        taker_fee = strategy.settings.get('taker_fee', 0.001)
-        position_size = getattr(strategy, 'position_size_usdt', 0)
-        
-        if take_profit_usdt > 0:
-            current_profit_usdt = (current_price - strategy.entry_price) / strategy.entry_price * position_size
-            fees_usdt = position_size * taker_fee * 2
-            net_profit_usdt = current_profit_usdt - fees_usdt
-            remaining_to_tp = max(0, take_profit_usdt - net_profit_usdt)
-            
-            profit_format = ".4f" if abs(net_profit_usdt) < 0.1 else ".2f"
-            tp_format = ".4f" if take_profit_usdt < 0.1 else ".2f"
-            remaining_format = ".4f" if remaining_to_tp < 0.1 else ".2f"
-            
-            return {
-                'mode': 'USDT',
-                'current_profit': net_profit_usdt,
-                'current_profit_formatted': f"{net_profit_usdt:{profit_format}} USDT",
-                'take_profit': take_profit_usdt,
-                'take_profit_formatted': f"{take_profit_usdt:{tp_format}} USDT",
-                'remaining_to_tp': remaining_to_tp,
-                'remaining_formatted': f"{remaining_to_tp:{remaining_format}} USDT",
-                'fees': fees_usdt
-            }
-        else:
-            current_profit_percent = ((current_price - strategy.entry_price) / strategy.entry_price) * 100
-            total_fees_percent = taker_fee * 2 * 100
-            net_profit_percent = current_profit_percent - total_fees_percent
-            remaining_to_tp = max(0, take_profit_percent - net_profit_percent)
-            current_profit_usdt = position_size * (net_profit_percent / 100)
-            
-            profit_format = ".4f" if abs(net_profit_percent) < 0.1 else ".2f"
-            tp_format = ".4f" if take_profit_percent < 0.1 else ".2f"
-            remaining_format = ".4f" if remaining_to_tp < 0.1 else ".2f"
-            
-            return {
-                'mode': 'percent',
-                'current_profit': net_profit_percent,
-                'current_profit_formatted': f"{net_profit_percent:{profit_format}}%",
-                'current_profit_usdt': current_profit_usdt,
-                'current_profit_usdt_formatted': f"{current_profit_usdt:.4f} USDT",
-                'take_profit': take_profit_percent,
-                'take_profit_formatted': f"{take_profit_percent:{tp_format}}%",
-                'remaining_to_tp': remaining_to_tp,
-                'remaining_formatted': f"{remaining_to_tp:{remaining_format}}%",
-                'fees': total_fees_percent
-            }

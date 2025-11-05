@@ -12,10 +12,10 @@ class EmaMlStrategy(BaseStrategy):
             description="Комбинация EMA кроссовера и Machine Learning с TP/SL и учетом комиссий"
         )
         self.default_settings = {
-            'ema_threshold': 0.005,
+            'ema_threshold': 0.0025,         # 0.25% по умолчанию
             'ml_confidence_buy': 0.4,
             'ml_confidence_sell': 0.3,
-            'take_profit_percent': 2.0,      # Take Profit по умолчанию в процентах
+            'take_profit_percent': 0.05,    # 0.05% по умолчанию (учитываются комиссии)
             'take_profit_usdt': 0.0,         # 0 = режим процентов, >0 = режим USDT
             'stop_loss_percent': 1.5,
             'trailing_stop': False,
@@ -25,6 +25,26 @@ class EmaMlStrategy(BaseStrategy):
             'taker_fee': 0.001,              # KuCoin taker fee = 0.1%
         }
         self.settings = self.default_settings.copy()
+        
+        # 🔧 ЗАГРУЖАЕМ СОХРАНЕННЫЕ НАСТРОЙКИ ПРИ ИНИЦИАЛИЗАЦИИ
+        try:
+            from config.settings import SettingsManager
+            # Создаем временный менеджер настроек для загрузки
+            temp_settings = SettingsManager()
+            last_tp_usdt = temp_settings.ml_settings.get('last_take_profit_usdt')
+            last_tp_percent = temp_settings.ml_settings.get('last_take_profit_percent')
+            
+            if last_tp_usdt is not None and last_tp_usdt > 0:
+                self.settings['take_profit_usdt'] = last_tp_usdt
+                self.settings['take_profit_percent'] = 0.0
+                log_info(f"✅ Загружен сохраненный Take Profit: {last_tp_usdt:.4f} USDT")
+            elif last_tp_percent is not None and last_tp_percent != 2.0:
+                self.settings['take_profit_percent'] = last_tp_percent
+                log_info(f"✅ Загружен сохраненный Take Profit: {last_tp_percent:.4f}%")
+                
+        except Exception as e:
+            log_info(f"⚠️ Не удалось загрузить сохраненные настройки TP: {e}")
+    
         self.position_opened_at = None
         self.entry_price = 0
         self.highest_price_since_entry = 0
@@ -119,21 +139,25 @@ class EmaMlStrategy(BaseStrategy):
             if current_price > self.highest_price_since_entry:
                 self.highest_price_since_entry = current_price
 
-            # 🔧 ДИАГНОСТИЧЕСКОЕ ЛОГИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ
+            # 🔧 ДИАГНОСТИЧЕСКОЕ ЛОГИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ ЗНАЧЕНИЙ (только при близости к TP или проблемах)
+            # Логируем только если близко к TP (в пределах 0.02%) или убыток более 0.5%
             if take_profit_usdt > 0:
                 # Режим USDT
                 remaining_to_tp = max(0, take_profit_usdt - net_profit_usdt)
-                if remaining_to_tp < 0.1:
-                    log_info(f"📊 Диагностика TP (USDT): прибыль {net_profit_usdt:.4f} USDT, до TP {remaining_to_tp:.4f} USDT")
-                else:
-                    log_info(f"📊 Диагностика TP (USDT): прибыль {net_profit_usdt:.2f} USDT, до TP {remaining_to_tp:.2f} USDT")
+                if remaining_to_tp < take_profit_usdt * 0.4 or net_profit_usdt < -0.005:  # Близко к TP или убыток
+                    if remaining_to_tp < 0.1:
+                        log_info(f"📊 Диагностика TP (USDT): прибыль {net_profit_usdt:.4f} USDT, до TP {remaining_to_tp:.4f} USDT")
+                    else:
+                        log_info(f"📊 Диагностика TP (USDT): прибыль {net_profit_usdt:.2f} USDT, до TP {remaining_to_tp:.2f} USDT")
             else:
                 # Режим процентов
                 remaining_to_tp = max(0, take_profit_percent - net_profit_percent)
-                if remaining_to_tp < 0.1:
-                    log_info(f"📊 Диагностика TP (%): прибыль {net_profit_percent:.4f}%, до TP {remaining_to_tp:.4f}%")
-                else:
-                    log_info(f"📊 Диагностика TP (%): прибыль {net_profit_percent:.2f}%, до TP {remaining_to_tp:.2f}%")
+                # Логируем только если близко к TP (в пределах 40% от TP) или убыток более 0.5%
+                if remaining_to_tp < take_profit_percent * 0.4 or net_profit_percent < -0.5:
+                    if remaining_to_tp < 0.1:
+                        log_info(f"📊 Диагностика TP (%): прибыль {net_profit_percent:.4f}%, до TP {remaining_to_tp:.4f}%")
+                    else:
+                        log_info(f"📊 Диагностика TP (%): прибыль {net_profit_percent:.2f}%, до TP {remaining_to_tp:.2f}%")
 
             return 'wait'
 
@@ -141,6 +165,11 @@ class EmaMlStrategy(BaseStrategy):
         elif (ema_diff > self.settings['ema_threshold'] and
               ml_confidence > self.settings['ml_confidence_buy'] and
               self.position != 'long'):
+
+            # 🔧 ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: убеждаемся, что позиция действительно не открыта
+            if self.position == 'long':
+                log_info(f"⚠️ Стратегия: попытка открыть позицию, но position уже 'long'. entry_price={self.entry_price:.2f}")
+                return 'wait'
 
             if self.last_signal_time > 0 and (current_time - self.last_signal_time) < self.settings['min_trade_interval']:
                 return 'wait'
@@ -267,3 +296,39 @@ class EmaMlStrategy(BaseStrategy):
                 'remaining_formatted': f"{remaining_to_tp:{remaining_format}}%",
                 'fees': total_fees_percent
             }
+
+    def save_settings_to_manager(self):
+        """Сохранение настроек в менеджер настроек"""
+        try:
+            from config.settings import SettingsManager
+            # Получаем текущий менеджер настроек
+            settings_manager = SettingsManager()
+            
+            # Сохраняем настройки Take Profit
+            settings_manager.ml_settings['last_take_profit_usdt'] = self.settings.get('take_profit_usdt', 0.0)
+            settings_manager.ml_settings['last_take_profit_percent'] = self.settings.get('take_profit_percent', 2.0)
+            
+            # Сохраняем настройки
+            settings_manager.save_settings()
+            log_info("💾 Настройки стратегии сохранены")
+            
+        except Exception as e:
+            log_info(f"⚠️ Не удалось сохранить настройки стратегии: {e}")
+
+    def update_take_profit_settings(self, take_profit_usdt=None, take_profit_percent=None):
+        """Обновление настроек Take Profit с сохранением"""
+        if take_profit_usdt is not None:
+            self.settings['take_profit_usdt'] = take_profit_usdt
+        if take_profit_percent is not None:
+            self.settings['take_profit_percent'] = take_profit_percent
+            
+        # Сохраняем настройки
+        self.save_settings_to_manager()
+
+    def reset_to_defaults(self):
+        """Сброс настроек к значениям по умолчанию"""
+        self.settings = self.default_settings.copy()
+        log_info("🔄 Настройки стратегии сброшены к значениям по умолчанию")
+        
+        # Сохраняем сброшенные настройки
+        self.save_settings_to_manager()

@@ -16,7 +16,7 @@ from strategies.ema_ml import EmaMlStrategy
 from strategies.price_action import PriceActionStrategy
 from strategies.macd_rsi import MacdRsiStrategy
 from strategies.bollinger import BollingerStrategy
-from utils.logger import log_info, log_error
+from utils.logger import log_info, log_error, log_separator, log_section, log_empty_line
 
 class AdvancedTradingBot:
     def __init__(self):
@@ -36,8 +36,17 @@ class AdvancedTradingBot:
         self.current_position_size_usdt = 0
         # Время последней сделки (для защиты от частых сделок)
         self.last_trade_time = 0
+        
+        # 🔧 УСТАНАВЛИВАЕМ ССЫЛКУ НА БОТА В НАСТРОЙКАХ ДО ИНИЦИАЛИЗАЦИИ TELEGRAM
+        self.settings.set_bot_reference(self)
+        
         # Сразу запускаем Telegram для мгновенного отклика
-        self.telegram = TelegramBot(self)
+        # 🔧 ИНИЦИАЛИЗИРУЕМ telegram ДАЖЕ ЕСЛИ ОШИБКА (чтобы избежать AttributeError)
+        try:
+            self.telegram = TelegramBot(self)
+        except Exception as e:
+            log_error(f"❌ Ошибка инициализации Telegram бота: {e}")
+            self.telegram = None  # Устанавливаем None, чтобы избежать AttributeError
         # Стратегии (быстрая инициализация)
         self.strategies = {
             'ema_ml': EmaMlStrategy(),
@@ -45,6 +54,9 @@ class AdvancedTradingBot:
             'macd_rsi': MacdRsiStrategy(),
             'bollinger': BollingerStrategy()
         }
+        
+        # 🔧 ЗАГРУЖАЕМ НАСТРОЙКИ СТРАТЕГИЙ ПОСЛЕ ИХ СОЗДАНИЯ
+        self.settings.load_strategy_settings()
 
         # 🔴 ТОРГОВЛЯ ВСЕГДА ОТКЛЮЧЕНА ПРИ ЗАПУСКЕ (даже если была включена ранее)
         self.settings.settings['trading_enabled'] = False
@@ -88,20 +100,26 @@ class AdvancedTradingBot:
     def execute_trading_cycle(self):
         """Выполнение одного цикла торговли"""
         try:
+            log_empty_line()
+            log_separator("-", 80)
+            
             # 🔧 ПРОВЕРКА: разрешена ли торговля
             if not self.settings.settings.get('trading_enabled', False):
                 log_info("⏸️ Торговля отключена в настройках")
+                log_separator("-", 80)
                 return
             # 🔧 ПРОВЕРКА: достаточно ли средств
             balance = self.exchange.get_balance()
             if not balance or balance['free_usdt'] < 0.1:  # Минимум 0.1 USDT
                 log_info("❌ Недостаточно средств для торговли (минимум 0.1 USDT)")
+                log_separator("-", 80)
                 return
             # Получаем рыночные данные
             symbol = self.settings.trading_pairs['active_pair']
             market_data = self.exchange.get_market_data(symbol)
             if not market_data:
                 log_info("❌ Не удалось получить рыночные данные")
+                log_separator("-", 80)
                 return
             # Получаем ML предсказание (если модель готова)
             ml_confidence, ml_signal = 0.5, "⚪ ML ЗАГРУЗКА"
@@ -110,6 +128,7 @@ class AdvancedTradingBot:
             # Получаем сигнал от активной стратегии
             strategy = self.get_active_strategy()
             # 💰 РАСЧЕТ РАЗМЕРА ПОЗИЦИИ С УЧЕТОМ МИНИМАЛЬНОГО ОБЪЕМА
+            log_section("РАСЧЕТ РАЗМЕРА СТАВКИ", "-", 80)
             trade_amount_percent = self.settings.settings['trade_amount_percent']
             initial_position_size_usdt = balance['free_usdt'] * trade_amount_percent
             # 🔧 РАСЧЕТ МИНИМАЛЬНОГО РАЗМЕРА СТАВКИ ДЛЯ ДАННОЙ ПАРЫ
@@ -125,10 +144,12 @@ class AdvancedTradingBot:
                     log_info(f"💰 Увеличиваем ставку до минимальной: {position_size_usdt:.2f} USDT")
                 else:
                     log_info(f"❌ Недостаточно средств для минимальной ставки. Нужно: {min_position_usdt:.2f} USDT, есть: {balance['free_usdt']:.2f} USDT")
+                    log_separator("-", 80)
                     return
             # 🔧 ПРОВЕРКА МИНИМАЛЬНОГО ОБЪЕМА KUCOIN (0.1 USDT)
             if position_size_usdt < 0.1:
                 log_info(f"⚠️ Размер ставки {position_size_usdt:.2f} USDT меньше минимального 0.1 USDT KuCoin")
+                log_separator("-", 80)
                 return
             signal = strategy.calculate_signal(
                 market_data, 
@@ -137,7 +158,8 @@ class AdvancedTradingBot:
                 position_size_usdt=position_size_usdt
             )
             # 🔍 ДИАГНОСТИЧЕСКОЕ ЛОГИРОВАНИЕ
-            log_info("🔍 === ДИАГНОСТИКА ТОРГОВОГО ЦИКЛА ===")
+            log_empty_line()
+            log_section("ДИАГНОСТИКА ТОРГОВОГО ЦИКЛА", "=", 80)
             log_info(f"📊 РЫНОЧНЫЕ ДАННЫЕ: цена={market_data['current_price']:.2f}, EMA_diff={market_data.get('ema_diff_percent', 0):.4f}")
             log_info(f"🤖 ML ДАННЫЕ: confidence={ml_confidence:.3f}, signal='{ml_signal}'")
             log_info(f"💰 БАЛАНС: свободно={balance['free_usdt']:.2f} USDT, ставка={position_size_usdt:.2f} USDT")
@@ -146,6 +168,7 @@ class AdvancedTradingBot:
                 ema_threshold = strategy.settings.get('ema_threshold', 0.005)
                 ml_buy_threshold = strategy.settings.get('ml_confidence_buy', 0.4)
                 log_info(f"⚙️ ПАРАМЕТРЫ СТРАТЕГИИ: EMA_threshold={ema_threshold:.4f}, ML_buy_threshold={ml_buy_threshold:.2f}")
+            log_empty_line()
             # Проверяем риски
             risk_ok, risk_message = self.risk_manager.check_trade_risk(
                 signal, 
@@ -154,6 +177,7 @@ class AdvancedTradingBot:
                 market_data
             )
             log_info(f"⚡ ПРОВЕРКА РИСКОВ: risk_ok={risk_ok}, message='{risk_message}'")
+            log_empty_line()
             # 🔧 ИСПРАВЛЕННАЯ ЛОГИКА ПРОВЕРКИ СИГНАЛОВ
             should_execute = False
             execution_reason = ""
@@ -179,9 +203,26 @@ class AdvancedTradingBot:
                 else:
                     execution_reason = f"Несовпадение сигнала и позиции (signal: {signal}, position: {self.position})"
                     log_info(f"🔍 СИГНАЛ ПРОПУЩЕН: {execution_reason}")
+                    # 🔧 ИСПРАВЛЕНИЕ: Если сигнал 'buy', а position уже 'long', это ошибка состояния
+                    # Возможно, позиция была восстановлена из файла, но на бирже её нет
+                    if signal == 'buy' and self.position == 'long':
+                        log_info("⚠️ Обнаружено несоответствие: сигнал 'buy', но position='long'. Проверяем состояние...")
+                        # Проверяем открытые ордера на бирже
+                        open_orders = self.exchange.get_open_orders(symbol)
+                        if len(open_orders) == 0:
+                            # На бирже нет открытых ордеров - сбрасываем состояние
+                            log_info("⚠️ На бирже нет открытых позиций. Сбрасываем внутреннее состояние.")
+                            self.position = None
+                            self.current_position_size_usdt = 0
+                            self.entry_price = 0
+                            strategy = self.get_active_strategy()
+                            strategy.position = None
+                            strategy.position_size_usdt = 0
+                            self.save_position_state()
             else:
                 execution_reason = f"Риски не пройдены или сигнал 'wait' (risk_ok: {risk_ok}, signal: {signal})"
             # Исполняем сделку если все проверки пройдены
+            log_section("РЕШЕНИЕ О СДЕЛКЕ", "-", 80)
             if should_execute:
                 log_info(f"🚀 ВЫПОЛНЯЕМ СДЕЛКУ: {signal} - {execution_reason}")
                 self.execute_trade(signal, market_data, ml_confidence, ml_signal, position_size_usdt)
@@ -190,22 +231,39 @@ class AdvancedTradingBot:
                 self.last_trade_time = time.time()
             else:
                 log_info(f"🔍 СДЕЛКА НЕ ВЫПОЛНЕНА: {execution_reason}")
+            log_empty_line()
             # Отправляем обновление рынка
             self.telegram.send_market_update(market_data, signal, ml_confidence, ml_signal)
+            log_separator("-", 80)
         except Exception as e:
             log_error(f"❌ Ошибка в торговом цикле: {e}")
 
     def execute_trade(self, signal, market_data, ml_confidence, ml_signal, position_size_usdt):
         """Исполнение сделки с информацией о размере позиции"""
         try:
+            log_empty_line()
+            log_section(f"ИСПОЛНЕНИЕ СДЕЛКИ: {signal.upper()}", "=", 80)
             strategy = self.get_active_strategy()
             symbol = self.settings.trading_pairs['active_pair']
             current_price = market_data['current_price']
             if signal == 'buy' and self.position != 'long':
                 # Логика покупки
-                self.position = 'long'
-                # ❗ ФИКСИРУЕМ РАЗМЕР ПОЗИЦИИ В USDT ПРИ ОТКРЫТИИ!
-                self.current_position_size_usdt = position_size_usdt
+                # 🔧 ИСПРАВЛЕНИЕ: НЕ устанавливаем position до успешного создания ордера
+                
+                # 🔧 ПРОВЕРЯЕМ РЕАЛЬНОЕ СОСТОЯНИЕ ПОЗИЦИИ НА БИРЖЕ (для случая, если позиция уже есть)
+                # Получаем все открытые покупки (покупки после последней продажи)
+                existing_buy_trades = []
+                max_existing_price = 0.0
+                existing_position_size = 0
+                if not self.settings.settings['demo_mode']:
+                    existing_buy_trades, max_existing_price = self.exchange.get_open_buy_trades_after_last_sell(symbol)
+                    if existing_buy_trades:
+                        log_info(f"🔍 Обнаружены открытые покупки после последней продажи: {len(existing_buy_trades)} покупок")
+                        log_info(f"   • Максимальная цена среди открытых покупок: {max_existing_price:.2f} USDT")
+                        # Получаем размер существующей позиции
+                        position_info = self.exchange.check_open_position(symbol)
+                        existing_position_size = position_info.get('position_size_usdt', 0)
+                
                 if not self.settings.settings['demo_mode']:
                     # Реальная торговля
                     amount = position_size_usdt / current_price  # Расчет количества монет
@@ -214,17 +272,86 @@ class AdvancedTradingBot:
                     )
                     if not order:
                         log_info(f"❌ Ошибка создания ордера: {message}")
+                        # 🔧 Сбрасываем position, если он был установлен ошибочно
+                        if self.position == 'long':
+                            self.position = None
+                            self.current_position_size_usdt = 0
+                            self.save_position_state()
                         return
                     log_info(f"✅ Реальный ордер создан: {order['id']}")
-                    # В реальной торговле используем цену исполнения ордера
-                    executed_price = current_price
+                    # 🔧 В реальной торговле получаем ЦЕНУ ИСПОЛНЕНИЯ из ответа биржи
+                    # CCXT может вернуть: 'average' (средняя цена), или можно рассчитать как cost/filled
+                    executed_price = None
+                    if 'average' in order and order['average']:
+                        executed_price = order['average']
+                        log_info(f"   📊 Цена исполнения из ордера (average): {executed_price:.2f} USDT")
+                    elif 'cost' in order and 'filled' in order and order['filled'] > 0:
+                        executed_price = order['cost'] / order['filled']
+                        log_info(f"   📊 Цена исполнения рассчитана (cost/filled): {executed_price:.2f} USDT")
+                    
+                    # Если цена не найдена в ответе, пытаемся получить детальную информацию об ордере
+                    if not executed_price:
+                        try:
+                            order_details = self.exchange.get_order_status(order['id'], symbol)
+                            if order_details:
+                                if 'average' in order_details and order_details['average']:
+                                    executed_price = order_details['average']
+                                    log_info(f"   📊 Цена исполнения из деталей ордера (average): {executed_price:.2f} USDT")
+                                elif 'cost' in order_details and 'filled' in order_details and order_details['filled'] > 0:
+                                    executed_price = order_details['cost'] / order_details['filled']
+                                    log_info(f"   📊 Цена исполнения из деталей ордера (cost/filled): {executed_price:.2f} USDT")
+                        except Exception as e:
+                            log_error(f"   ⚠️ Ошибка получения деталей ордера: {e}")
+                    
+                    # Если всё ещё нет цены, используем текущую цену как fallback
+                    if not executed_price:
+                        executed_price = current_price
+                        log_info(f"   ⚠️ Цена исполнения не найдена, используем текущую цену: {executed_price:.2f} USDT")
+                    
+                    # 🔧 КРИТИЧНО: Если есть открытые покупки (после последней продажи), берем МАКСИМАЛЬНУЮ цену
+                    # среди всех открытых покупок включая новую покупку
+                    # Это гарантирует, что при закрытии позиции будет прибыль относительно всех открытых покупок
+                    if max_existing_price > 0:
+                        final_entry_price = max(max_existing_price, executed_price)
+                        log_info(f"   🔼 Максимальная цена среди открытых покупок: {max_existing_price:.2f} USDT")
+                        log_info(f"   🔼 Новая покупка: {executed_price:.2f} USDT")
+                        log_info(f"   ✅ Используем МАКСИМАЛЬНУЮ цену входа (из всех открытых покупок): {final_entry_price:.2f} USDT")
+                        executed_price = final_entry_price
+                        # Обновляем размер позиции (суммируем с существующей)
+                        position_size_usdt = existing_position_size + position_size_usdt
+                        log_info(f"   📊 Общий размер позиции: {position_size_usdt:.2f} USDT")
+                    elif existing_buy_trades:
+                        # Если есть покупки, но не удалось получить максимальную цену - используем текущую максимальную
+                        prices = [t.get('price', 0) for t in existing_buy_trades if t.get('price', 0) > 0]
+                        if prices:
+                            max_price = max(prices)
+                            final_entry_price = max(max_price, executed_price)
+                            log_info(f"   🔼 Максимальная цена из открытых покупок: {max_price:.2f} USDT")
+                            log_info(f"   🔼 Новая покупка: {executed_price:.2f} USDT")
+                            log_info(f"   ✅ Используем МАКСИМАЛЬНУЮ цену входа: {final_entry_price:.2f} USDT")
+                            executed_price = final_entry_price
+                            # 🔧 Размер позиции остается фиксированным (размер одной ставки)
+                            log_info(f"   📊 Размер позиции остается фиксированным (размер ставки): {position_size_usdt:.2f} USDT")
+                    
+                    # 🔧 ТОЛЬКО ПОСЛЕ УСПЕШНОГО СОЗДАНИЯ ОРДЕРА устанавливаем position
+                    self.position = 'long'
+                    self.current_position_size_usdt = position_size_usdt
                 else:
                     # Демо-режим
                     order = {'id': 'demo_buy', 'status': 'closed'}
                     message = f"ДЕМО-РЕЖИМ | Размер ставки: {position_size_usdt:.2f} USDT"
                     executed_price = current_price
                     log_info("✅ Демо-покупка выполнена")
+                    # 🔧 В демо-режиме тоже устанавливаем position только после успешной симуляции
+                    self.position = 'long'
+                    self.current_position_size_usdt = position_size_usdt
                     
+                # 🔧 УСТАНАВЛИВАЕМ entry_price В БОТЕ (критично для сохранения состояния)
+                # Цена входа берется из МАКСИМАЛЬНОЙ цены среди всех покупок (не средняя!)
+                # Это гарантирует, что при закрытии позиции будет прибыль относительно всех покупок
+                self.entry_price = executed_price
+                self.last_trade_time = time.time()
+                
                 # Обновляем информацию о позиции в стратегии
                 strategy.update_position_info(signal, executed_price)
                 # 🔧 СОХРАНЯЕМ РАЗМЕР ПОЗИЦИИ В СТРАТЕГИИ
@@ -242,6 +369,10 @@ class AdvancedTradingBot:
                 }
                 self.metrics.update_metrics(trade_result)
                 self.risk_manager.update_after_trade(trade_result)
+                
+                # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ПОСЛЕ ИЗМЕНЕНИЯ
+                self.settings.save_settings()
+                
                 # Сохраняем состояние позиции в файл
                 self.save_position_state()
                 # Отправляем уведомление
@@ -249,6 +380,9 @@ class AdvancedTradingBot:
                     signal, market_data, ml_confidence, ml_signal, 
                     strategy.name, message, position_size_usdt
                 )
+                log_separator("=", 80)
+                log_info("✅ СДЕЛКА ПОКУПКИ ЗАВЕРШЕНА")
+                log_separator("=", 80)
             elif signal == 'sell' and self.position == 'long':
                 # 🔧 ИСПРАВЛЕНИЕ: Расчет прибыли в правильном режиме
                 profit_percent = 0
@@ -302,6 +436,10 @@ class AdvancedTradingBot:
                 }
                 self.metrics.update_metrics(trade_result)
                 self.risk_manager.update_after_trade(trade_result)
+                
+                # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ПОСЛЕ ИЗМЕНЕНИЯ
+                self.settings.save_settings()
+                
                 # Сбрасываем позицию
                 self.position = None
                 self.current_position_size_usdt = 0
@@ -315,8 +453,12 @@ class AdvancedTradingBot:
                     signal, market_data, ml_confidence, ml_signal,
                     strategy.name, message, strategy.position_size_usdt, profit_usdt
                 )
+                log_separator("=", 80)
+                log_info(f"✅ СДЕЛКА ПРОДАЖИ ЗАВЕРШЕНА | Прибыль: {profit_usdt:+.2f} USDT ({profit_percent:+.2f}%)")
+                log_separator("=", 80)
         except Exception as e:
             log_error(f"❌ Ошибка исполнения сделки: {e}")
+            log_separator("=", 80)
 
     def get_min_amount(self, symbol):
         """Получение минимального количества для торговой пары"""
@@ -339,13 +481,17 @@ class AdvancedTradingBot:
 
     def run(self):
         """Основной цикл работы бота - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
-        log_info("🚀 ЗАПУСК ОСНОВНОГО ЦИКЛА БОТА")
+        log_empty_line()
+        log_separator("=", 80)
+        log_section("ЗАПУСК ОСНОВНОГО ЦИКЛА БОТА", "=", 80)
+        log_separator("=", 80)
+        log_empty_line()
         last_balance_check = time.time()
         cycle_count = 0
         while self.is_running:
             try:
                 cycle_count += 1
-                log_info(f"🔄 Цикл #{cycle_count} запущен")
+                log_info(f"🔄 ЦИКЛ #{cycle_count}")
                 if self.settings.settings.get('trading_enabled', False):
                     log_info("🔍 Выполняем торговый цикл...")
                     self.execute_trading_cycle()
@@ -355,9 +501,12 @@ class AdvancedTradingBot:
                 # Проверяем баланс каждые 5 минут
                 current_time = time.time()
                 if current_time - last_balance_check > 300:  # 5 минут
+                    log_empty_line()
+                    log_separator("-", 80)
                     log_info("💰 Проверка баланса...")
                     self.telegram.send_balance_update()
                     last_balance_check = current_time
+                    log_separator("-", 80)
                 log_info(f"💤 Пауза 30 секунд перед следующим циклом...")
                 time.sleep(30)
             except KeyboardInterrupt:
@@ -373,46 +522,215 @@ class AdvancedTradingBot:
     def stop(self):
         """Остановка бота"""
         self.is_running = False
+        # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ПРИ ОСТАНОВКЕ
+        self.settings.save_settings()
         log_info("🛑 Бот остановлен")
 
     # 📁 МЕТОДЫ СОХРАНЕНИЯ И ЗАГРУЗКИ СОСТОЯНИЯ ПОЗИЦИИ
     def save_position_state(self):
         """Сохраняет состояние позиции в файл"""
         strategy = self.get_active_strategy()
+        # 🔧 ИСПОЛЬЗУЕМ entry_price ИЗ СТРАТЕГИИ, ЕСЛИ В БОТЕ ОН НУЛЕВОЙ (для обратной совместимости)
+        entry_price_to_save = self.entry_price if self.entry_price > 0 else getattr(strategy, 'entry_price', 0)
+        
         state = {
             'position': self.position,
-            'entry_price': self.entry_price,
+            'entry_price': entry_price_to_save,
             'position_size_usdt': self.current_position_size_usdt,
             'symbol': self.settings.trading_pairs['active_pair'],
             'opened_at': self.last_trade_time,
-            'strategy_position_size_usdt': getattr(strategy, 'position_size_usdt', 0)
+            'strategy_position_size_usdt': getattr(strategy, 'position_size_usdt', 0),
+            'strategy_entry_price': getattr(strategy, 'entry_price', 0)  # Сохраняем также entry_price из стратегии
         }
         with open('position_state.json', 'w') as f:
             json.dump(state, f, indent=2)
         log_info("💾 Состояние позиции сохранено в файл")
 
     def load_position_state(self):
-        """Загружает состояние позиции из файла"""
+        """Загружает состояние позиции из файла и проверяет реальные позиции на KuCoin"""
         try:
+            symbol = self.settings.trading_pairs['active_pair']
+            strategy = self.get_active_strategy()
+            position_loaded_from_file = False
+            
+            # Сначала пытаемся загрузить из файла
             if os.path.exists('position_state.json'):
                 with open('position_state.json', 'r') as f:
                     state = json.load(f)
                 # Проверяем, что это та же торговая пара
-                if state.get('symbol') == self.settings.trading_pairs['active_pair']:
+                if state.get('symbol') == symbol:
                     self.position = state.get('position')
-                    self.entry_price = state.get('entry_price', 0)
+                    # 🔧 ПРИОРИТЕТ: используем entry_price из стратегии, если он есть, иначе из бота
+                    strategy_entry_price = state.get('strategy_entry_price', 0)
+                    bot_entry_price = state.get('entry_price', 0)
+                    self.entry_price = strategy_entry_price if strategy_entry_price > 0 else bot_entry_price
                     self.current_position_size_usdt = state.get('position_size_usdt', 0)
                     self.last_trade_time = state.get('opened_at', 0)
                     
-                    # 🔧 ВОССТАНАВЛИВАЕМ РАЗМЕР ПОЗИЦИИ В СТРАТЕГИИ
-                    strategy = self.get_active_strategy()
+                    # 🔧 ВОССТАНАВЛИВАЕМ ПОЛНОЕ СОСТОЯНИЕ В СТРАТЕГИИ (критично!)
                     strategy_position_size = state.get('strategy_position_size_usdt', 0)
-                    if strategy_position_size > 0:
-                        strategy.position_size_usdt = strategy_position_size
                     
-                    if self.position == 'long':
-                        log_info(f"✅ Восстановлена открытая позиция: вход {self.entry_price:.2f} USDT, размер {self.current_position_size_usdt:.2f} USDT")
+                    if self.position == 'long' and self.entry_price > 0:
+                        # Восстанавливаем позицию в стратегии
+                        strategy.position = 'long'
+                        strategy.entry_price = self.entry_price
+                        strategy.position_size_usdt = strategy_position_size if strategy_position_size > 0 else self.current_position_size_usdt
+                        # Восстанавливаем время открытия, если оно есть
+                        if self.last_trade_time > 0:
+                            if hasattr(strategy, 'position_opened_at'):
+                                strategy.position_opened_at = self.last_trade_time
+                            if hasattr(strategy, 'highest_price_since_entry'):
+                                strategy.highest_price_since_entry = self.entry_price
+                        
+                        log_info(f"✅ Восстановлена открытая позиция из файла: вход {self.entry_price:.2f} USDT, размер {strategy.position_size_usdt:.2f} USDT")
+                        log_info(f"✅ Состояние стратегии восстановлено: position={strategy.position}, entry_price={strategy.entry_price:.2f}")
+                        position_loaded_from_file = True
+                    elif self.position == 'long':
+                        # Если позиция помечена как 'long', но нет entry_price - это проблема
+                        log_error(f"⚠️ Позиция помечена как 'long', но entry_price={self.entry_price}. Проверяем реальное состояние на бирже...")
+                        self.position = None
+                        self.entry_price = 0
+                        self.current_position_size_usdt = 0
+                        strategy.position = None
+                        strategy.entry_price = 0
+                        strategy.position_size_usdt = 0
+                    elif strategy_position_size > 0:
+                        # Если есть размер позиции, но нет полных данных - сбрасываем
+                        strategy.position_size_usdt = strategy_position_size
                 else:
                     log_info("🔄 Торговая пара изменилась — игнорируем старое состояние позиции")
+            
+            # 🔍 КРИТИЧНО: ВСЕГДА проверяем реальное состояние на KUCOIN и обновляем цену входа
+            # Это гарантирует, что используется максимальная цена среди открытых покупок (после последней продажи)
+            if self.exchange.connected:
+                log_info("🔍 Проверяю открытые позиции на KuCoin...")
+                
+                # Получаем все открытые покупки (после последней продажи) и максимальную цену
+                existing_buy_trades, max_existing_price = self.exchange.get_open_buy_trades_after_last_sell(symbol)
+                
+                position_info = self.exchange.check_open_position(symbol)
+                
+                if position_info.get('has_position'):
+                    # Обнаружена реальная открытая позиция на бирже
+                    self.position = position_info['position_type']
+                    
+                    # 🔧 КРИТИЧНО: Используем максимальную цену среди открытых покупок (после последней продажи)
+                    # Это гарантирует правильную цену входа, даже если в файле была сохранена старая цена
+                    if max_existing_price > 0:
+                        self.entry_price = max_existing_price
+                        log_info(f"   ✅ Обновлена цена входа на максимальную среди открытых покупок: {self.entry_price:.2f} USDT")
+                        if existing_buy_trades:
+                            log_info(f"   📊 Найдено открытых покупок после последней продажи: {len(existing_buy_trades)}")
+                    elif position_info.get('entry_price'):
+                        # Если не удалось получить через новый метод, используем из check_open_position
+                        self.entry_price = position_info['entry_price']
+                        log_info(f"   ⚠️ Используется цена входа из check_open_position: {self.entry_price:.2f} USDT")
+                    else:
+                        # Если цена не найдена, но есть позиция - используем сохраненную из файла (если есть)
+                        if self.entry_price == 0:
+                            log_error("⚠️ Не удалось определить цену входа из истории сделок")
+                    
+                    # 🔧 КРИТИЧНО: Размер позиции всегда рассчитывается из настроек (ставка), а не из суммы покупок
+                    # Размер позиции = размер одной ставки из настроек (но не меньше минимального)
+                    balance = self.exchange.get_balance()
+                    if balance:
+                        trade_amount_percent = self.settings.settings['trade_amount_percent']
+                        initial_position_size_usdt = balance['free_usdt'] * trade_amount_percent
+                        # Получаем минимальный размер ставки
+                        min_amount = self.get_min_amount(symbol)
+                        market_data_check = self.exchange.get_market_data(symbol)
+                        if market_data_check:
+                            min_position_usdt = min_amount * market_data_check['current_price']
+                            # Используем расчетный размер или минимальный (если расчетный меньше)
+                            calculated_position_size = max(initial_position_size_usdt, min_position_usdt)
+                            # Но не меньше 0.1 USDT (минимум KuCoin)
+                            self.current_position_size_usdt = max(calculated_position_size, 0.1)
+                            log_info(f"   📊 Размер позиции рассчитан из настроек: {self.current_position_size_usdt:.2f} USDT")
+                            log_info(f"      (ставка: {trade_amount_percent*100:.1f}% = {initial_position_size_usdt:.2f} USDT, минимум: {min_position_usdt:.2f} USDT)")
+                        else:
+                            # Если не удалось получить рыночные данные, используем расчетный размер или минимальный
+                            self.current_position_size_usdt = max(initial_position_size_usdt, 0.1)
+                            log_info(f"   📊 Размер позиции (из расчетного): {self.current_position_size_usdt:.2f} USDT")
+                    else:
+                        # Если не удалось получить баланс, используем минимальный размер
+                        self.current_position_size_usdt = 0.1  # Минимум KuCoin
+                        log_info(f"   ⚠️ Не удалось получить баланс, используем минимальный размер: {self.current_position_size_usdt:.2f} USDT")
+                    
+                    # Используем время последней сделки, если есть
+                    last_trade = position_info.get('last_trade')
+                    if last_trade and last_trade.get('timestamp'):
+                        self.last_trade_time = last_trade['timestamp']
+                    else:
+                        self.last_trade_time = int(time.time() * 1000)  # Текущее время в миллисекундах
+                    
+                    # Восстанавливаем позицию в стратегии
+                    strategy.position = self.position
+                    strategy.entry_price = self.entry_price
+                    strategy.position_size_usdt = self.current_position_size_usdt
+                    log_info(f"   📊 Размер позиции установлен в стратегии: {strategy.position_size_usdt:.2f} USDT")
+                    
+                    # Восстанавливаем время открытия
+                    if self.last_trade_time > 0:
+                        if hasattr(strategy, 'position_opened_at'):
+                            strategy.position_opened_at = self.last_trade_time
+                        if hasattr(strategy, 'highest_price_since_entry'):
+                            strategy.highest_price_since_entry = self.entry_price
+                    
+                    # Сохраняем восстановленное состояние (с правильной максимальной ценой)
+                    self.save_position_state()
+                    
+                    log_info(f"✅ Обнаружена и восстановлена открытая позиция на KuCoin:")
+                    log_info(f"   • Баланс: {position_info['base_balance']:.8f} {symbol.split('/')[0]}")
+                    log_info(f"   • Цена входа (максимальная среди открытых покупок): {self.entry_price:.2f} USDT")
+                    log_info(f"   • Размер позиции: {self.current_position_size_usdt:.2f} USDT")
+                elif position_info.get('has_position') and not position_info.get('entry_price'):
+                    # Есть баланс, но не удалось определить цену входа
+                    log_info(f"⚠️ Обнаружен баланс {position_info['base_balance']:.8f} {symbol.split('/')[0]}, но не удалось определить цену входа из истории сделок")
+                else:
+                    # Нет открытой позиции на бирже
+                    if self.position is None:
+                        log_info("✅ Нет открытых позиций на KuCoin")
+                    else:
+                        # В файле была позиция, но на бирже её нет - сбрасываем
+                        log_info("⚠️ Позиция в файле не соответствует реальному состоянию на бирже. Сбрасываем состояние.")
+                        self.position = None
+                        self.entry_price = 0
+                        self.current_position_size_usdt = 0
+                        strategy.position = None
+                        strategy.entry_price = 0
+                        strategy.position_size_usdt = 0
+                        self.save_position_state()
+                        
         except Exception as e:
             log_error(f"❌ Ошибка загрузки состояния позиции: {e}")
+
+    def save_strategy_settings(self):
+        """Сохраняет настройки стратегии"""
+        try:
+            self.settings.save_strategy_settings()
+            log_info("💾 Настройки стратегии сохранены")
+        except Exception as e:
+            log_error(f"❌ Ошибка сохранения настроек стратегии: {e}")
+
+    def get_take_profit_info(self):
+        """Получение информации о текущих настройках Take Profit"""
+        return self.settings.get_take_profit_info()
+
+    def reset_settings_to_default(self):
+        """Сброс настроек к значениям по умолчанию"""
+        try:
+            success = self.settings.reset_to_defaults()
+            if success:
+                log_info("🔄 Настройки сброшены к значениям по умолчанию")
+                # Обновляем настройки в активной стратегии
+                strategy = self.get_active_strategy()
+                if strategy:
+                    strategy.settings['take_profit_usdt'] = 0.0
+                    strategy.settings['take_profit_percent'] = 2.0
+                return True
+            else:
+                log_error("❌ Не удалось сбросить настройки")
+                return False
+        except Exception as e:
+            log_error(f"❌ Ошибка сброса настроек: {e}")
+            return False
