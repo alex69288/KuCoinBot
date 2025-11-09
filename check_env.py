@@ -6,9 +6,9 @@ import sys
 
 def check_environment():
     """Проверяет наличие всех необходимых переменных окружения"""
-    print("=" * 60)
-    print("🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ")
-    print("=" * 60)
+    print("=" * 60, flush=True)
+    print("🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ", flush=True)
+    print("=" * 60, flush=True)
     
     required_vars = {
         'KUCOIN_API_KEY': 'API ключ KuCoin',
@@ -26,38 +26,38 @@ def check_environment():
     missing = []
     present = []
     
-    print("\n📋 Обязательные переменные:")
+    print("\n📋 Обязательные переменные:", flush=True)
     for var, description in required_vars.items():
         value = os.getenv(var)
         if value:
             present.append(var)
             # Показываем только первые 4 символа для безопасности
             masked_value = value[:4] + '*' * (len(value) - 4) if len(value) > 4 else '***'
-            print(f"✅ {var}: {masked_value}")
+            print(f"✅ {var}: {masked_value}", flush=True)
         else:
             missing.append(var)
-            print(f"❌ {var}: НЕ УСТАНОВЛЕНА")
+            print(f"❌ {var}: НЕ УСТАНОВЛЕНА", flush=True)
     
-    print("\n📋 Опциональные переменные:")
+    print("\n📋 Опциональные переменные:", flush=True)
     for var, description in optional_vars.items():
         value = os.getenv(var)
         if value:
-            print(f"✅ {var}: {value}")
+            print(f"✅ {var}: {value}", flush=True)
         else:
-            print(f"⚠️  {var}: не установлена (будет использовано значение по умолчанию)")
+            print(f"⚠️  {var}: не установлена (будет использовано значение по умолчанию)", flush=True)
     
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 60, flush=True)
     
     if missing:
-        print(f"❌ ОШИБКА: Не установлены {len(missing)} обязательные переменные:")
+        print(f"❌ ОШИБКА: Не установлены {len(missing)} обязательные переменные:", flush=True)
         for var in missing:
-            print(f"   - {var}")
-        print("\nНастройте переменные окружения в панели Amvera:")
-        print("https://amvera.ru/")
+            print(f"   - {var}", flush=True)
+        print("\nНастройте переменные окружения в панели Amvera:", flush=True)
+        print("https://amvera.ru/", flush=True)
         return False
     else:
-        print(f"✅ ВСЕ ОБЯЗАТЕЛЬНЫЕ ПЕРЕМЕННЫЕ УСТАНОВЛЕНЫ")
-        print(f"✅ Найдено переменных: {len(present)}")
+        print(f"✅ ВСЕ ОБЯЗАТЕЛЬНЫЕ ПЕРЕМЕННЫЕ УСТАНОВЛЕНЫ", flush=True)
+        print(f"✅ Найдено переменных: {len(present)}", flush=True)
         return True
 
 if __name__ == "__main__":
