@@ -33,13 +33,19 @@ def main():
     
     # Импортируем и запускаем основное приложение
     try:
+        print("📦 Импорт главного модуля приложения...", flush=True)
         from main_with_webapp import main as app_main
+        print("✅ Главный модуль импортирован", flush=True)
+        
+        print("🚀 Запуск приложения...", flush=True)
         app_main()
         return 0
     except Exception as e:
-        print(f"\n❌ КРИТИЧЕСКАЯ ОШИБКА: {e}", flush=True)
+        print(f"\n❌ КРИТИЧЕСКАЯ ОШИБКА В START.PY: {e}", flush=True)
+        print("=" * 60, flush=True)
         import traceback
         traceback.print_exc()
+        print("=" * 60, flush=True)
         return 1
 
 if __name__ == "__main__":
