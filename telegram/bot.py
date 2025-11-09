@@ -47,6 +47,8 @@ class TelegramBot:
         self.start_message_listener()
         # Устанавливаем команды бота в меню (синяя кнопка слева от поля ввода)
         self.set_bot_commands()
+        # Отправляем кнопку Web App
+        self.send_webapp_button()
         # Отправляем приветственное сообщение один раз при запуске
         self.send_startup_message()
         log_info("✅ Telegram бот успешно инициализирован")
@@ -164,6 +166,56 @@ class TelegramBot:
             return True
         except Exception as e:
             log_error(f"❌ Ошибка удаления клавиатуры: {e}")
+            return False
+    
+    def send_webapp_button(self):
+        """Отправляет кнопку для открытия Web App"""
+        try:
+            webapp_url = os.getenv('WEBAPP_URL', 'https://your-server.com')
+            message = """
+🌐 <b>Web App доступен!</b>
+
+Откройте полнофункциональный веб-интерфейс для управления ботом.
+
+<b>Возможности Web App:</b>
+📊 Мониторинг в реальном времени
+⚙️ Управление настройками
+📈 Детальная статистика
+💰 Информация о балансе
+🎯 Управление позициями
+
+<i>Нажмите кнопку ниже для открытия</i>
+"""
+            
+            reply_markup = {
+                "inline_keyboard": [[
+                    {
+                        "text": "🚀 Открыть Web App",
+                        "web_app": {"url": webapp_url}
+                    }
+                ]]
+            }
+            
+            url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+            payload = {
+                'chat_id': self.chat_id,
+                'text': message,
+                'parse_mode': 'HTML',
+                'reply_markup': reply_markup
+            }
+            
+            timeout = 15 if self.use_proxy else 8
+            response = requests.post(url, json=payload, timeout=timeout, proxies=self.proxies)
+            
+            if response.status_code == 200:
+                log_info("✅ Кнопка Web App отправлена")
+                return True
+            else:
+                log_error(f"❌ Ошибка отправки кнопки Web App: {response.text}")
+                return False
+                
+        except Exception as e:
+            log_error(f"❌ Ошибка отправки кнопки Web App: {e}")
             return False
     
     def send_startup_message(self):

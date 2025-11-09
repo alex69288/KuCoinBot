@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KuCoin Trading Bot</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--tg-theme-bg-color, #ffffff);
+      color: var(--tg-theme-text-color, #000000);
+      padding: 16px;
+      padding-bottom: 80px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+      border-radius: 12px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .status-running {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .status-stopped {
+      background: #f44336;
+      color: white;
+    }
+
+    .card {
+      background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: var(--tg-theme-text-color, #000000);
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--tg-theme-hint-color, #ccc);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      color: var(--tg-theme-hint-color, #999);
+      font-size: 14px;
+    }
+
+    .info-value {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .positive {
+      color: #4CAF50;
+    }
+
+    .negative {
+      color: #f44336;
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--tg-theme-bg-color, #ffffff);
+      padding: 16px;
+      border-top: 1px solid var(--tg-theme-hint-color, #ccc);
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn:active {
+      opacity: 0.7;
+    }
+
+    .btn-start {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-stop {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-refresh {
+      background: var(--tg-theme-button-color, #3390ec);
+      color: var(--tg-theme-button-text-color, #ffffff);
+    }
+
+    .loader {
+      text-align: center;
+      padding: 40px;
+      color: var(--tg-theme-hint-color, #999);
+    }
+
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .metric-card {
+      background: var(--tg-theme-bg-color, #ffffff);
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--tg-theme-hint-color, #999);
+    }
+
+    .last-update {
+      text-align: center;
+      color: var(--tg-theme-hint-color, #999);
+      font-size: 12px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h1>🤖 Trading Bot</h1>
+    <div id="statusBadge" class="status-badge">Загрузка...</div>
+  </div>
+
+  <div id="errorContainer"></div>
+  <div id="content" class="loader">Загрузка данных...</div>
+
+  <div class="controls">
+    <button id="btnStart" class="btn btn-start" onclick="startBot()">▶️ Запустить</button>
+    <button id="btnStop" class="btn btn-stop" onclick="stopBot()">⏹️ Остановить</button>
+    <button id="btnRefresh" class="btn btn-refresh" onclick="loadData()">🔄</button>
+  </div>
+
+  <script>
+    // Инициализация Telegram Web App
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    // Применяем тему Telegram
+    document.body.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
+    document.body.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
+    document.body.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#999999');
+    document.body.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#3390ec');
+    document.body.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
+    document.body.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f0f0f0');
+
+    // API конфигурация
+    const API_URL = 'http://localhost:8000/api';  // Замените на ваш URL
+    const initData = tg.initData;
+
+    let currentData = null;
+
+    // Загрузка данных
+    async function loadData() {
+      try {
+        showError('');
+
+        // Получаем статус бота
+        const statusResponse = await fetch(`${API_URL}/status?init_data=${encodeURIComponent(initData)}`);
+        if (!statusResponse.ok) {
+          throw new Error(`HTTP ${statusResponse.status}: ${statusResponse.statusText}`);
+        }
+        const status = await statusResponse.json();
+
+        // Получаем данные рынка
+        const marketResponse = await fetch(`${API_URL}/market?init_data=${encodeURIComponent(initData)}`);
+        const market = await marketResponse.ok ? await marketResponse.json() : null;
+
+        currentData = { status, market };
+        renderData();
+      } catch (error) {
+        console.error('Ошибка загрузки данных:', error);
+        showError(`Ошибка загрузки: ${error.message}`);
+      }
+    }
+
+    // Отображение данных
+    function renderData() {
+      if (!currentData) return;
+
+      const { status, market } = currentData;
+
+      // Обновляем статус
+      const statusBadge = document.getElementById('statusBadge');
+      if (status.is_running) {
+        statusBadge.textContent = '🟢 Работает';
+        statusBadge.className = 'status-badge status-running';
+      } else {
+        statusBadge.textContent = '🔴 Остановлен';
+        statusBadge.className = 'status-badge status-stopped';
+      }
+
+      // Формируем HTML контента
+      let html = '';
+
+      // Баланс
+      if (status.balance) {
+        html += `
+                    <div class="card">
+                        <h2>💰 Баланс</h2>
+                        <div class="info-row">
+                            <span class="info-label">USDT</span>
+                            <span class="info-value">${formatNumber(status.balance.usdt || 0)} USDT</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Общий (USDT)</span>
+                            <span class="info-value">${formatNumber(status.balance.total_usdt || 0)} USDT</span>
+                        </div>
+                    </div>
+                `;
+      }
+
+      // Позиция
+      if (status.position) {
+        html += `
+                    <div class="card">
+                        <h2>📊 Текущая позиция</h2>
+                        <div class="info-row">
+                            <span class="info-label">Статус</span>
+                            <span class="info-value">${status.position.position || 'Нет позиции'}</span>
+                        </div>
+                        ${status.position.entry_price ? `
+                        <div class="info-row">
+                            <span class="info-label">Цена входа</span>
+                            <span class="info-value">${formatNumber(status.position.entry_price)} USDT</span>
+                        </div>
+                        ` : ''}
+                        ${status.position.amount ? `
+                        <div class="info-row">
+                            <span class="info-label">Количество</span>
+                            <span class="info-value">${formatNumber(status.position.amount)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+      }
+
+      // Рыночные данные
+      if (market) {
+        const priceChange = market.price_change_24h || 0;
+        const priceChangeClass = priceChange >= 0 ? 'positive' : 'negative';
+
+        html += `
+                    <div class="card">
+                        <h2>💹 Рынок (${market.symbol})</h2>
+                        <div class="info-row">
+                            <span class="info-label">Текущая цена</span>
+                            <span class="info-value">${formatNumber(market.current_price)} USDT</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Изменение 24ч</span>
+                            <span class="info-value ${priceChangeClass}">${priceChange > 0 ? '+' : ''}${formatNumber(priceChange)}%</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Максимум 24ч</span>
+                            <span class="info-value">${formatNumber(market.high_24h)} USDT</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Минимум 24ч</span>
+                            <span class="info-value">${formatNumber(market.low_24h)} USDT</span>
+                        </div>
+                    </div>
+                `;
+      }
+
+      // Настройки
+      if (status.settings) {
+        html += `
+                    <div class="card">
+                        <h2>⚙️ Настройки</h2>
+                        <div class="info-row">
+                            <span class="info-label">Торговая пара</span>
+                            <span class="info-value">${status.settings.active_pair}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Стратегия</span>
+                            <span class="info-value">${status.settings.active_strategy}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Риск на сделку</span>
+                            <span class="info-value">${status.settings.risk_per_trade}%</span>
+                        </div>
+                    </div>
+                `;
+      }
+
+      // Метрики
+      if (status.metrics) {
+        const winRate = status.metrics.total_trades > 0
+          ? (status.metrics.winning_trades / status.metrics.total_trades * 100).toFixed(1)
+          : 0;
+
+        html += `
+                    <div class="card">
+                        <h2>📈 Статистика</h2>
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-value">${status.metrics.total_trades}</div>
+                                <div class="metric-label">Всего сделок</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value ${status.metrics.total_profit >= 0 ? 'positive' : 'negative'}">
+                                    ${status.metrics.total_profit >= 0 ? '+' : ''}${formatNumber(status.metrics.total_profit)}
+                                </div>
+                                <div class="metric-label">Прибыль USDT</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value positive">${status.metrics.winning_trades}</div>
+                                <div class="metric-label">Прибыльных</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value negative">${status.metrics.losing_trades}</div>
+                                <div class="metric-label">Убыточных</div>
+                            </div>
+                        </div>
+                        <div class="info-row" style="margin-top: 12px;">
+                            <span class="info-label">Винрейт</span>
+                            <span class="info-value">${winRate}%</span>
+                        </div>
+                    </div>
+                `;
+      }
+
+      // Время обновления
+      html += `<div class="last-update">Обновлено: ${new Date().toLocaleTimeString('ru-RU')}</div>`;
+
+      document.getElementById('content').innerHTML = html;
+    }
+
+    // Запуск бота
+    async function startBot() {
+      try {
+        const response = await fetch(`${API_URL}/bot/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ init_data: initData })
+        });
+
+        const result = await response.json();
+        tg.showAlert(result.message);
+        loadData();
+      } catch (error) {
+        tg.showAlert(`Ошибка: ${error.message}`);
+      }
+    }
+
+    // Остановка бота
+    async function stopBot() {
+      try {
+        const response = await fetch(`${API_URL}/bot/stop`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ init_data: initData })
+        });
+
+        const result = await response.json();
+        tg.showAlert(result.message);
+        loadData();
+      } catch (error) {
+        tg.showAlert(`Ошибка: ${error.message}`);
+      }
+    }
+
+    // Показать ошибку
+    function showError(message) {
+      const container = document.getElementById('errorContainer');
+      if (message) {
+        container.innerHTML = `<div class="error">${message}</div>`;
+      } else {
+        container.innerHTML = '';
+      }
+    }
+
+    // Форматирование чисел
+    function formatNumber(num) {
+      if (num === null || num === undefined) return '0';
+      return parseFloat(num).toLocaleString('ru-RU', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 8
+      });
+    }
+
+    // Загружаем данные при загрузке страницы
+    loadData();
+
+    // Автообновление каждые 5 секунд
+    setInterval(loadData, 5000);
+  </script>
+</body>
+
+</html>

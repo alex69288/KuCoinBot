@@ -10,3 +10,6 @@ python-telegram-bot
 matplotlib
 seaborn
 watchdog
+fastapi
+uvicorn[standard]
+pydantic
