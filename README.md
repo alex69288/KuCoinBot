@@ -40,8 +40,8 @@ pip install -r requirements.txt
 
 ```env
 KUCOIN_API_KEY=your_api_key
-KUCOIN_API_SECRET=your_secret
-KUCOIN_API_PASSPHRASE=your_passphrase
+KUCOIN_SECRET_KEY=your_secret
+KUCOIN_PASSPHRASE=your_passphrase
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
 ```

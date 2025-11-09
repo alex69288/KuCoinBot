@@ -31,8 +31,8 @@
 | Переменная | Где взять |
 |------------|-----------|
 | **KUCOIN_API_KEY** | [KuCoin → Настройки → API](https://www.kucoin.com/account/api) |
-| **KUCOIN_API_SECRET** | [KuCoin → Настройки → API](https://www.kucoin.com/account/api) |
-| **KUCOIN_API_PASSPHRASE** | [KuCoin → Настройки → API](https://www.kucoin.com/account/api) |
+| **KUCOIN_SECRET_KEY** | [KuCoin → Настройки → API](https://www.kucoin.com/account/api) |
+| **KUCOIN_PASSPHRASE** | [KuCoin → Настройки → API](https://www.kucoin.com/account/api) |
 | **TELEGRAM_BOT_TOKEN** | [Создать через @BotFather](https://t.me/BotFather) |
 | **TELEGRAM_CHAT_ID** | [Узнать через @userinfobot](https://t.me/userinfobot) |
 
@@ -57,8 +57,8 @@
 В логах должно быть:
 ```
 ✅ KUCOIN_API_KEY: установлена
-✅ KUCOIN_API_SECRET: установлена
-✅ KUCOIN_API_PASSPHRASE: установлена
+✅ KUCOIN_SECRET_KEY: установлена
+✅ KUCOIN_PASSPHRASE: установлена
 ✅ TELEGRAM_BOT_TOKEN: установлена
 ✅ TELEGRAM_CHAT_ID: установлена
 

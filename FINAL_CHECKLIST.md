@@ -53,8 +53,8 @@
 🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ
 ------------------------------------------------------------
 ❌ KUCOIN_API_KEY: НЕ УСТАНОВЛЕНА
-❌ KUCOIN_API_SECRET: НЕ УСТАНОВЛЕНА
-❌ KUCOIN_API_PASSPHRASE: НЕ УСТАНОВЛЕНА
+❌ KUCOIN_SECRET_KEY: НЕ УСТАНОВЛЕНА
+❌ KUCOIN_PASSPHRASE: НЕ УСТАНОВЛЕНА
 ❌ TELEGRAM_BOT_TOKEN: НЕ УСТАНОВЛЕНА
 ❌ TELEGRAM_CHAT_ID: НЕ УСТАНОВЛЕНА
 
@@ -70,8 +70,8 @@
 | Переменная | Где получить |
 |------------|--------------|
 | `KUCOIN_API_KEY` | https://www.kucoin.com/account/api |
-| `KUCOIN_API_SECRET` | https://www.kucoin.com/account/api |
-| `KUCOIN_API_PASSPHRASE` | https://www.kucoin.com/account/api |
+| `KUCOIN_SECRET_KEY` | https://www.kucoin.com/account/api |
+| `KUCOIN_PASSPHRASE` | https://www.kucoin.com/account/api |
 | `TELEGRAM_BOT_TOKEN` | https://t.me/BotFather |
 | `TELEGRAM_CHAT_ID` | https://t.me/userinfobot |
 
@@ -89,8 +89,8 @@
 🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ
 ------------------------------------------------------------
 ✅ KUCOIN_API_KEY: установлена
-✅ KUCOIN_API_SECRET: установлена
-✅ KUCOIN_API_PASSPHRASE: установлена
+✅ KUCOIN_SECRET_KEY: установлена
+✅ KUCOIN_PASSPHRASE: установлена
 ✅ TELEGRAM_BOT_TOKEN: установлена
 ✅ TELEGRAM_CHAT_ID: установлена
 

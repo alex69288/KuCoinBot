@@ -21,12 +21,12 @@
 ```
 
 ```
-Переменная: KUCOIN_API_SECRET
+Переменная: KUCOIN_SECRET_KEY
 Значение: ваш_api_secret_от_kucoin
 ```
 
 ```
-Переменная: KUCOIN_API_PASSPHRASE
+Переменная: KUCOIN_PASSPHRASE
 Значение: ваш_api_passphrase_от_kucoin
 ```
 
@@ -87,8 +87,8 @@
 
 📋 Обязательные переменные:
 ✅ KUCOIN_API_KEY: установлена
-✅ KUCOIN_API_SECRET: установлена
-✅ KUCOIN_API_PASSPHRASE: установлена
+✅ KUCOIN_SECRET_KEY: установлена
+✅ KUCOIN_PASSPHRASE: установлена
 ✅ TELEGRAM_BOT_TOKEN: установлена
 ✅ TELEGRAM_CHAT_ID: установлена
 

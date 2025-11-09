@@ -20,8 +20,8 @@ def main():
         print("\n❌ Не удалось запустить бот: не настроены переменные окружения")
         print("\nНастройте переменные в панели Amvera:")
         print("1. KUCOIN_API_KEY")
-        print("2. KUCOIN_API_SECRET")
-        print("3. KUCOIN_API_PASSPHRASE")
+        print("2. KUCOIN_SECRET_KEY")
+        print("3. KUCOIN_PASSPHRASE")
         print("4. TELEGRAM_BOT_TOKEN")
         print("5. TELEGRAM_CHAT_ID")
         return 1

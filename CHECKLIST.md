@@ -59,8 +59,8 @@ git commit -m "Ready for Amvera deployment"
 - [ ] Репозиторий подключен
 - [ ] Переменные окружения добавлены:
   - [ ] `KUCOIN_API_KEY`
-  - [ ] `KUCOIN_API_SECRET`
-  - [ ] `KUCOIN_API_PASSPHRASE`
+  - [ ] `KUCOIN_SECRET_KEY`
+  - [ ] `KUCOIN_PASSPHRASE`
   - [ ] `TELEGRAM_BOT_TOKEN`
   - [ ] `TELEGRAM_CHAT_ID`
   - [ ] `PORT=8000`

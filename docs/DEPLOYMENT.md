@@ -75,8 +75,8 @@ web: uvicorn webapp.server:app --host 0.0.0.0 --port $PORT
    - Railway автоматически определит Python проект
    - Добавьте переменные окружения:
      - `KUCOIN_API_KEY`
-     - `KUCOIN_API_SECRET`
-     - `KUCOIN_API_PASSPHRASE`
+     - `KUCOIN_SECRET_KEY`
+     - `KUCOIN_PASSPHRASE`
      - `TELEGRAM_BOT_TOKEN`
      - `TELEGRAM_CHAT_ID`
 

@@ -12,8 +12,8 @@ def check_environment():
     
     required_vars = {
         'KUCOIN_API_KEY': 'API ключ KuCoin',
-        'KUCOIN_API_SECRET': 'API секрет KuCoin',
-        'KUCOIN_API_PASSPHRASE': 'API парольная фраза KuCoin',
+        'KUCOIN_SECRET_KEY': 'API секрет KuCoin',
+        'KUCOIN_PASSPHRASE': 'API парольная фраза KuCoin',
         'TELEGRAM_BOT_TOKEN': 'Токен Telegram бота',
         'TELEGRAM_CHAT_ID': 'ID чата Telegram'
     }

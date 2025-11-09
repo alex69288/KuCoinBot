@@ -66,8 +66,8 @@ git push -u origin main
 
 ```env
 KUCOIN_API_KEY=your_api_key_here
-KUCOIN_API_SECRET=your_api_secret_here
-KUCOIN_API_PASSPHRASE=your_passphrase_here
+KUCOIN_SECRET_KEY=your_api_secret_here
+KUCOIN_PASSPHRASE=your_passphrase_here
 TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
 TELEGRAM_CHAT_ID=123456789
 PORT=8000
@@ -206,7 +206,7 @@ Amvera **автоматически** пересоберет и перезапу
 ### Используйте переменные окружения Amvera для:
 
 - ✅ `KUCOIN_API_KEY`
-- ✅ `KUCOIN_API_SECRET`
+- ✅ `KUCOIN_SECRET_KEY`
 - ✅ `TELEGRAM_BOT_TOKEN`
 
 Файл `.gitignore` уже настроен для исключения приватных данных.

@@ -21,8 +21,8 @@
 | Переменная | Где получить | Обязательна |
 |------------|--------------|-------------|
 | `KUCOIN_API_KEY` | [KuCoin API](https://www.kucoin.com/account/api) | ✅ Да |
-| `KUCOIN_API_SECRET` | [KuCoin API](https://www.kucoin.com/account/api) | ✅ Да |
-| `KUCOIN_API_PASSPHRASE` | [KuCoin API](https://www.kucoin.com/account/api) | ✅ Да |
+| `KUCOIN_SECRET_KEY` | [KuCoin API](https://www.kucoin.com/account/api) | ✅ Да |
+| `KUCOIN_PASSPHRASE` | [KuCoin API](https://www.kucoin.com/account/api) | ✅ Да |
 | `TELEGRAM_BOT_TOKEN` | [BotFather](https://t.me/BotFather) | ✅ Да |
 | `TELEGRAM_CHAT_ID` | [UserInfo Bot](https://t.me/userinfobot) | ✅ Да |
 | `PORT` | - | ❌ Нет (по умолчанию: 8000) |
@@ -42,7 +42,7 @@
 🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ
 ------------------------------------------------------------
 ❌ KUCOIN_API_KEY: НЕ УСТАНОВЛЕНА
-❌ KUCOIN_API_SECRET: НЕ УСТАНОВЛЕНА
+❌ KUCOIN_SECRET_KEY: НЕ УСТАНОВЛЕНА
 ...
 ❌ ОШИБКА: Не установлены 5 обязательные переменные
 ```
@@ -55,8 +55,8 @@
 🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ
 ------------------------------------------------------------
 ✅ KUCOIN_API_KEY: установлена
-✅ KUCOIN_API_SECRET: установлена
-✅ KUCOIN_API_PASSPHRASE: установлена
+✅ KUCOIN_SECRET_KEY: установлена
+✅ KUCOIN_PASSPHRASE: установлена
 ✅ TELEGRAM_BOT_TOKEN: установлена
 ✅ TELEGRAM_CHAT_ID: установлена
 

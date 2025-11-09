@@ -35,8 +35,8 @@ def test_check_env_without_vars():
     saved_vars = {}
     required_vars = [
         'KUCOIN_API_KEY',
-        'KUCOIN_API_SECRET', 
-        'KUCOIN_API_PASSPHRASE',
+        'KUCOIN_SECRET_KEY', 
+        'KUCOIN_PASSPHRASE',
         'TELEGRAM_BOT_TOKEN',
         'TELEGRAM_CHAT_ID'
     ]
