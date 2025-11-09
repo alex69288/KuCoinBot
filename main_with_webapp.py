@@ -22,7 +22,8 @@ def start_webapp_server(bot):
         set_trading_bot(bot)
         
         # Получаем порт из переменной окружения (для облачных платформ)
-        port = int(os.getenv('PORT', 8000))
+        # Amvera по умолчанию использует порт 80
+        port = int(os.getenv('PORT', 80))
         
         log_info(f"🌐 Запуск Web App сервера на http://0.0.0.0:{port}")
         log_info("📱 Web App будет доступен через Telegram")
@@ -73,10 +74,11 @@ def main():
         # Проверяем, что сервер запущен
         try:
             import requests
-            response = requests.get("http://localhost:8000/api/health", timeout=2)
+            port = int(os.getenv('PORT', 80))
+            response = requests.get(f"http://localhost:{port}/api/health", timeout=2)
             if response.status_code == 200:
                 log_info("✅ Web App сервер успешно запущен")
-                log_info("🌐 API доступен: http://localhost:8000")
+                log_info(f"🌐 API доступен: http://localhost:{port}")
                 log_info("📱 Откройте Web App через кнопку в Telegram боте")
             else:
                 log_error("⚠️ Web App сервер запущен, но вернул неожиданный статус")
