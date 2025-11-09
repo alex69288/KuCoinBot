@@ -13,4 +13,4 @@ build:
 run:
   scriptName: main_with_webapp.py
   persistenceMount: /data
-  containerPort: 80
+  containerPort: 8000
