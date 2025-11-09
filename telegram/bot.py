@@ -463,7 +463,7 @@ class TelegramBot:
 💼 <b>ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ %)</b>
 {positions_count_text}💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT
 🎯 <b>Цена входа (TP):</b> {entry_price_for_tp:.2f} USDT
-📈 <b>Текущая прибыль:</b> {self.smart_format(current_profit_percent, 4)}% ({self.smart_format(current_profit_usdt, 4)} USDT)
+📈 <b>Текущая прибыль:</b> {current_profit_percent:.2f}% ({self.smart_format(current_profit_usdt, 4)} USDT)
 🎯 <b>До Take Profit:</b> +{self.smart_format(remaining_to_tp, 2)}%
 🎯 <b>Цель TP:</b> {self.smart_format(take_profit_percent, 4)}%
 🛡️ <b>Комиссии:</b> {self.smart_format(total_fees_percent, 2)}% ({self.smart_format(fees_usdt, 4)} USDT)
@@ -680,7 +680,7 @@ class TelegramBot:
             return {
                 'mode': 'percent',
                 'current_profit': net_profit_percent,
-                'current_profit_formatted': f"{self.smart_format(net_profit_percent, 4)}%",
+                'current_profit_formatted': f"{net_profit_percent:.2f}%",
                 'current_profit_usdt': current_profit_usdt,
                 'current_profit_usdt_formatted': f"{self.smart_format(current_profit_usdt, 4)} USDT",
                 'take_profit': take_profit_percent,
