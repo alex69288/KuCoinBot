@@ -1,0 +1,67 @@
+"""
+Проверка переменных окружения для Amvera
+"""
+import os
+import sys
+
+def check_environment():
+    """Проверяет наличие всех необходимых переменных окружения"""
+    print("=" * 60)
+    print("🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ")
+    print("=" * 60)
+    
+    required_vars = {
+        'KUCOIN_API_KEY': 'API ключ KuCoin',
+        'KUCOIN_API_SECRET': 'API секрет KuCoin',
+        'KUCOIN_API_PASSPHRASE': 'API парольная фраза KuCoin',
+        'TELEGRAM_BOT_TOKEN': 'Токен Telegram бота',
+        'TELEGRAM_CHAT_ID': 'ID чата Telegram'
+    }
+    
+    optional_vars = {
+        'PORT': 'Порт для Web App',
+        'WEBAPP_URL': 'URL Web App'
+    }
+    
+    missing = []
+    present = []
+    
+    print("\n📋 Обязательные переменные:")
+    for var, description in required_vars.items():
+        value = os.getenv(var)
+        if value:
+            present.append(var)
+            # Показываем только первые 4 символа для безопасности
+            masked_value = value[:4] + '*' * (len(value) - 4) if len(value) > 4 else '***'
+            print(f"✅ {var}: {masked_value}")
+        else:
+            missing.append(var)
+            print(f"❌ {var}: НЕ УСТАНОВЛЕНА")
+    
+    print("\n📋 Опциональные переменные:")
+    for var, description in optional_vars.items():
+        value = os.getenv(var)
+        if value:
+            print(f"✅ {var}: {value}")
+        else:
+            print(f"⚠️  {var}: не установлена (будет использовано значение по умолчанию)")
+    
+    print("\n" + "=" * 60)
+    
+    if missing:
+        print(f"❌ ОШИБКА: Не установлены {len(missing)} обязательные переменные:")
+        for var in missing:
+            print(f"   - {var}")
+        print("\nНастройте переменные окружения в панели Amvera:")
+        print("https://amvera.ru/")
+        return False
+    else:
+        print(f"✅ ВСЕ ОБЯЗАТЕЛЬНЫЕ ПЕРЕМЕННЫЕ УСТАНОВЛЕНЫ")
+        print(f"✅ Найдено переменных: {len(present)}")
+        return True
+
+if __name__ == "__main__":
+    if check_environment():
+        sys.exit(0)
+    else:
+        sys.exit(1)
