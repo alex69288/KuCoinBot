@@ -1,6 +1,7 @@
 ccxt
 python-dotenv
 requests
+requests[socks]
 pandas
 numpy
 scikit-learn

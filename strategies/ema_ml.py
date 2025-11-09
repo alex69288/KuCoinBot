@@ -3,7 +3,7 @@
 """
 import time
 from .base_strategy import BaseStrategy
-from utils.logger import log_info
+from utils.logger import log_info, log_error
 
 class EmaMlStrategy(BaseStrategy):
     def __init__(self):
@@ -12,6 +12,8 @@ class EmaMlStrategy(BaseStrategy):
             description="Комбинация EMA кроссовера и Machine Learning с TP/SL и учетом комиссий"
         )
         self.default_settings = {
+            'ema_fast_period': 9,            # Быстрая EMA (по умолчанию 9)
+            'ema_slow_period': 21,           # Медленная EMA (по умолчанию 21)
             'ema_threshold': 0.0025,         # 0.25% по умолчанию
             'ml_confidence_buy': 0.4,
             'ml_confidence_sell': 0.3,
@@ -33,6 +35,12 @@ class EmaMlStrategy(BaseStrategy):
             temp_settings = SettingsManager()
             last_tp_usdt = temp_settings.ml_settings.get('last_take_profit_usdt')
             last_tp_percent = temp_settings.ml_settings.get('last_take_profit_percent')
+            last_sl_percent = temp_settings.ml_settings.get('last_stop_loss_percent', 1.5)  # 🔧 Загружаем Stop Loss
+            
+            # Загружаем EMA настройки
+            last_ema_fast = temp_settings.ml_settings.get('last_ema_fast_period', 9)
+            last_ema_slow = temp_settings.ml_settings.get('last_ema_slow_period', 21)
+            last_ema_threshold = temp_settings.ml_settings.get('last_ema_threshold', 0.0025)
             
             if last_tp_usdt is not None and last_tp_usdt > 0:
                 self.settings['take_profit_usdt'] = last_tp_usdt
@@ -41,9 +49,25 @@ class EmaMlStrategy(BaseStrategy):
             elif last_tp_percent is not None and last_tp_percent != 2.0:
                 self.settings['take_profit_percent'] = last_tp_percent
                 log_info(f"✅ Загружен сохраненный Take Profit: {last_tp_percent:.4f}%")
+            
+            # 🔧 Загружаем Stop Loss
+            if last_sl_percent is not None:
+                self.settings['stop_loss_percent'] = last_sl_percent
+                log_info(f"✅ Загружен сохраненный Stop Loss: {last_sl_percent:.2f}%")
+            
+            # Загружаем EMA настройки
+            if last_ema_fast is not None:
+                self.settings['ema_fast_period'] = last_ema_fast
+                log_info(f"✅ Загружен сохраненный EMA Fast: {last_ema_fast}")
+            if last_ema_slow is not None:
+                self.settings['ema_slow_period'] = last_ema_slow
+                log_info(f"✅ Загружен сохраненный EMA Slow: {last_ema_slow}")
+            if last_ema_threshold is not None:
+                self.settings['ema_threshold'] = last_ema_threshold
+                log_info(f"✅ Загружен сохраненный EMA Threshold: {last_ema_threshold*100:.2f}%")
                 
         except Exception as e:
-            log_info(f"⚠️ Не удалось загрузить сохраненные настройки TP: {e}")
+            log_info(f"⚠️ Не удалось загрузить сохраненные настройки: {e}")
     
         self.position_opened_at = None
         self.entry_price = 0
@@ -110,14 +134,20 @@ class EmaMlStrategy(BaseStrategy):
             # Stop Loss (в процентах для обоих режимов)
             stop_loss = self.settings.get('stop_loss_percent', 1.5)
             current_profit_percent = ((current_price - self.entry_price) / self.entry_price) * 100
+            # 🔧 ИСПРАВЛЕНИЕ: Stop Loss проверяется по валовой прибыли (цене), а не по чистой
+            # Комиссии учитываются только при отображении результата
             net_profit_percent_sl = current_profit_percent - (taker_fee * 2 * 100)
             
-            if net_profit_percent_sl <= -stop_loss:
+            # 🔧 ОТЛАДКА: Логируем значения для диагностики
+            # log_info(f"🔍 Stop Loss проверка: текущая прибыль={current_profit_percent:.2f}%, stop_loss={stop_loss:.2f}%, условие={current_profit_percent <= -stop_loss}")
+            
+            # Проверяем Stop Loss по валовой прибыли (падение цены на stop_loss%)
+            if current_profit_percent <= -stop_loss:
                 # 🔧 ФОРМАТИРОВАНИЕ ДЛЯ МАЛЕНЬКИХ УБЫТКОВ
                 if abs(net_profit_percent_sl) < 0.1:
-                    log_info(f"🛑 Stop Loss сработал: {net_profit_percent_sl:.4f}%")
+                    log_info(f"🛑 Stop Loss сработал: {net_profit_percent_sl:.4f}% (цена упала на {abs(current_profit_percent):.2f}%, установлен SL: {stop_loss:.2f}%)")
                 else:
-                    log_info(f"🛑 Stop Loss сработал: {net_profit_percent_sl:.2f}%")
+                    log_info(f"🛑 Stop Loss сработал: {net_profit_percent_sl:.2f}% (цена упала на {abs(current_profit_percent):.2f}%, установлен SL: {stop_loss:.2f}%)")
                 self.last_signal_time = current_time
                 return 'sell'
 
@@ -297,19 +327,30 @@ class EmaMlStrategy(BaseStrategy):
                 'fees': total_fees_percent
             }
 
-    def save_settings_to_manager(self):
-        """Сохранение настроек в менеджер настроек"""
+    def save_settings_to_manager(self, settings_manager=None):
+        """Сохранение настроек в менеджер настроек
+        
+        Args:
+            settings_manager: Опциональный менеджер настроек. Если не указан, создается новый (не рекомендуется).
+        """
         try:
-            from config.settings import SettingsManager
-            # Получаем текущий менеджер настроек
-            settings_manager = SettingsManager()
+            # 🔧 ИСПОЛЬЗУЕМ ПЕРЕДАННЫЙ МЕНЕДЖЕР НАСТРОЕК ИЛИ СОЗДАЕМ НОВЫЙ (для обратной совместимости)
+            if settings_manager is None:
+                from config.settings import SettingsManager
+                settings_manager = SettingsManager()
             
             # Сохраняем настройки Take Profit
             settings_manager.ml_settings['last_take_profit_usdt'] = self.settings.get('take_profit_usdt', 0.0)
             settings_manager.ml_settings['last_take_profit_percent'] = self.settings.get('take_profit_percent', 2.0)
+            settings_manager.ml_settings['last_stop_loss_percent'] = self.settings.get('stop_loss_percent', 1.5)
+            
+            # Сохраняем EMA настройки
+            settings_manager.ml_settings['last_ema_fast_period'] = self.settings.get('ema_fast_period', 9)
+            settings_manager.ml_settings['last_ema_slow_period'] = self.settings.get('ema_slow_period', 21)
+            settings_manager.ml_settings['last_ema_threshold'] = self.settings.get('ema_threshold', 0.0025)
             
             # Сохраняем настройки
-            settings_manager.save_settings()
+            settings_manager.save_settings(sync_from_strategy=False)  # Не синхронизируем, так как мы уже обновили ml_settings
             log_info("💾 Настройки стратегии сохранены")
             
         except Exception as e:
@@ -331,4 +372,34 @@ class EmaMlStrategy(BaseStrategy):
         log_info("🔄 Настройки стратегии сброшены к значениям по умолчанию")
         
         # Сохраняем сброшенные настройки
+        self.save_settings_to_manager()
+    
+    def set_scalping_settings(self):
+        """Установка оптимальных настроек для скальпинга (частые сделки)"""
+        # Быстрые EMA для более чувствительных сигналов
+        self.settings['ema_fast_period'] = 5   # Быстрая EMA (было 9)
+        self.settings['ema_slow_period'] = 13  # Медленная EMA (было 21)
+        
+        # Низкий порог для большего количества сигналов
+        self.settings['ema_threshold'] = 0.001  # 0.1% (было 0.25%)
+        
+        # Маленький Take Profit для быстрых выходов
+        self.settings['take_profit_percent'] = 0.03  # 0.03% (было 0.05%)
+        self.settings['take_profit_usdt'] = 0.0  # Используем проценты
+        
+        # Более строгий Stop Loss для скальпинга
+        self.settings['stop_loss_percent'] = 1.0  # 1.0% (было 1.5%)
+        
+        # Короткое время удержания для частых сделок
+        self.settings['min_hold_time'] = 60  # 1 минута (было 5 минут)
+        self.settings['min_trade_interval'] = 30  # 30 секунд (было 60)
+        
+        log_info("⚡ Установлены настройки для скальпинга (частые сделки)")
+        log_info(f"   📊 EMA: {self.settings['ema_fast_period']}/{self.settings['ema_slow_period']}")
+        log_info(f"   🎯 Threshold: {self.settings['ema_threshold']*100:.2f}%")
+        log_info(f"   💰 Take Profit: {self.settings['take_profit_percent']:.3f}%")
+        log_info(f"   🛑 Stop Loss: {self.settings['stop_loss_percent']:.1f}%")
+        log_info(f"   ⏰ Min Hold Time: {self.settings['min_hold_time']} сек")
+        
+        # Сохраняем настройки
         self.save_settings_to_manager()

@@ -46,17 +46,9 @@ class RiskManager:
                     f"🚨 Высокая волатильность: {volatility:.1f}%"
                 ))
         
-        # 5. Проверка стоп-лосса и тейк-профита
-        if signal_type == 'buy':
-            stop_loss_pct = self.risk_settings['stop_loss']
-            take_profit_pct = self.risk_settings['take_profit']
-            risk_reward = take_profit_pct / stop_loss_pct
-            
-            if risk_reward < self.risk_settings.get('risk_reward_ratio', 1.5):
-                checks.append((
-                    False,
-                    f"🚨 Плохое соотношение риск/прибыль: {risk_reward:.1f}"
-                ))
+        # 5. Проверка стоп-лосса и тейк-профита (теперь берем из стратегии)
+        # 🔧 УДАЛЕНО: stop_loss и take_profit теперь только в настройках стратегии
+        # Проверка соотношения риск/прибыль должна быть в стратегии
         
         # Если есть критические ошибки - возвращаем первую
         critical_errors = [check for check in checks if not check[0]]

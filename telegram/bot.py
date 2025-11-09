@@ -4,6 +4,7 @@ TELEGRAM БОТ ДЛЯ УПРАВЛЕНИЯ - ИСПРАВЛЕННАЯ ВЕРС�
 import requests
 import threading
 import time
+import os
 from datetime import datetime
 from utils.logger import log_info, log_error
 from .menus import MenuManager
@@ -19,6 +20,20 @@ class TelegramBot:
         self.last_update_id = 0
         self.connection_issues = 0
         self.last_balance = None  # Для отслеживания изменений баланса
+        
+        # Настройка прокси для Telegram (если указано в .env)
+        self.proxies = None
+        self.use_proxy = False
+        proxy_url = os.getenv('PROXY_URL')
+        if proxy_url:
+            self.proxies = {
+                'http': proxy_url,
+                'https': proxy_url,
+            }
+            self.use_proxy = True
+            # Скрываем чувствительные данные при логировании
+            safe_proxy = proxy_url.split('@')[-1] if '@' in proxy_url else proxy_url
+            log_info(f"🔒 Telegram использует прокси: {safe_proxy}")
         # Проверяем настройки Telegram
         if not self.token or not self.chat_id:
             log_error("❌ Telegram не настроен: отсутствует token или chat_id в .env файле")
@@ -32,13 +47,17 @@ class TelegramBot:
         self.start_message_listener()
         # Устанавливаем команды бота в меню (синяя кнопка слева от поля ввода)
         self.set_bot_commands()
+        # Отправляем приветственное сообщение один раз при запуске
+        self.send_startup_message()
         log_info("✅ Telegram бот успешно инициализирован")
 
     def test_connection(self):
         """Проверка подключения к Telegram API"""
         try:
             url = f"https://api.telegram.org/bot{self.token}/getMe"
-            response = requests.get(url, timeout=15)
+            # Увеличиваем таймаут для прокси, уменьшаем для прямого подключения
+            timeout = 20 if self.use_proxy else 10
+            response = requests.get(url, timeout=timeout, proxies=self.proxies)
             if response.status_code == 200:
                 bot_info = response.json()
                 if bot_info['ok']:
@@ -70,12 +89,22 @@ class TelegramBot:
                 if reply_markup:
                     payload['reply_markup'] = reply_markup
                 
-                # Увеличиваем таймаут для проблемных соединений
-                timeout = 20 if attempt > 0 else 10
-                response = requests.post(url, json=payload, timeout=timeout)
+                # Адаптивный таймаут: больше для прокси и повторных попыток
+                if self.use_proxy:
+                    timeout = 25 if attempt > 0 else 15
+                else:
+                    timeout = 15 if attempt > 0 else 8
+                response = requests.post(url, json=payload, timeout=timeout, proxies=self.proxies)
                 
                 if response.status_code == 200:
                     self.connection_issues = 0  # Сбрасываем счетчик проблем
+                    # Возвращаем message_id из ответа для последующего редактирования
+                    try:
+                        result = response.json()
+                        if result.get('ok') and 'result' in result:
+                            return result['result'].get('message_id')
+                    except:
+                        pass
                     return True
                 else:
                     log_error(f"❌ Ошибка отправки в Telegram (попытка {attempt + 1}): {response.text}")
@@ -85,9 +114,10 @@ class TelegramBot:
                 log_error(f"🔌 Ошибка соединения с Telegram (попытка {attempt + 1})")
             except Exception as e:
                 log_error(f"❌ Ошибка отправки в Telegram (попытка {attempt + 1}): {e}")
-            # Пауза перед повторной попыткой
+            # Пауза перед повторной попыткой (короче для прямого подключения)
             if attempt < retry_count:
-                time.sleep(2)
+                pause = 3 if self.use_proxy else 1
+                time.sleep(pause)
         self.connection_issues += 1
         if self.connection_issues >= 3:
             log_error("🚨 Множественные ошибки подключения к Telegram")
@@ -105,7 +135,8 @@ class TelegramBot:
                 {'command': 'start', 'description': 'Главное меню'},
             ]
             payload = {'commands': commands}
-            response = requests.post(url, json=payload, timeout=10)
+            timeout = 15 if self.use_proxy else 8
+            response = requests.post(url, json=payload, timeout=timeout, proxies=self.proxies)
             if response.status_code == 200:
                 log_info("✅ Команды бота установлены в меню (синяя кнопка слева)")
             else:
@@ -121,19 +152,29 @@ class TelegramBot:
             url = f"https://api.telegram.org/bot{self.token}/sendMessage"
             payload = {
                 'chat_id': self.chat_id,
-                'text': '🤖 <b>Бот готов к работе!</b>\n\nИспользуйте синюю кнопку "Меню" слева от поля ввода или команду /start',
-                'parse_mode': 'HTML',
+                'text': ' ',  # Минимальный текст для удаления клавиатуры
                 'reply_markup': {
                     'remove_keyboard': True
                 }
             }
-            response = requests.post(url, json=payload, timeout=10)
+            timeout = 15 if self.use_proxy else 8
+            response = requests.post(url, json=payload, timeout=timeout, proxies=self.proxies)
             if response.status_code == 200:
                 log_info("✅ Reply-клавиатура удалена, команды бота активны")
             return True
         except Exception as e:
             log_error(f"❌ Ошибка удаления клавиатуры: {e}")
             return False
+    
+    def send_startup_message(self):
+        """Отправляет приветственное сообщение один раз при запуске бота"""
+        if not self.token or not self.chat_id:
+            return
+        try:
+            message = '🤖 <b>Бот готов к работе!</b>\n\nИспользуйте синюю кнопку "Меню" слева от поля ввода или команду /start'
+            self.send_message(message)
+        except Exception as e:
+            log_error(f"❌ Ошибка отправки приветственного сообщения: {e}")
 
     def start_message_listener(self):
         """Запуск слушателя сообщений"""
@@ -142,19 +183,24 @@ class TelegramBot:
             while self.bot.is_running:
                 try:
                     url = f"https://api.telegram.org/bot{self.token}/getUpdates"
-                    params = {'offset': self.last_update_id + 1, 'timeout': 20}  # Увеличили таймаут
-                    response = requests.get(url, params=params, timeout=25)  # Увеличили общий таймаут
+                    # Long polling таймаут (время ожидания новых сообщений на сервере)
+                    polling_timeout = 15 if self.use_proxy else 10
+                    # HTTP таймаут (должен быть больше polling_timeout)
+                    http_timeout = polling_timeout + 10
+                    params = {'offset': self.last_update_id + 1, 'timeout': polling_timeout}
+                    response = requests.get(url, params=params, timeout=http_timeout, proxies=self.proxies)
                     data = response.json()
                     if data["ok"] and data["result"]:
                         for update in data["result"]:
                             self.last_update_id = update["update_id"]
                             if "message" in update and "text" in update["message"]:
                                 message_text = update["message"]["text"]
+                                message_chat_id = update["message"]["chat"]["id"]
                                 log_info(f"📨 Получена команда: {message_text}")
                                 # Обрабатываем сообщение в отдельном потоке
                                 threading.Thread(
                                     target=self.message_handler.handle_message,
-                                    args=(message_text,),
+                                    args=(message_text, message_chat_id),
                                     daemon=True
                                 ).start()
                             # Обработка callback от inline кнопок
@@ -172,10 +218,12 @@ class TelegramBot:
                                     daemon=True
                                 ).start()
                 except requests.exceptions.Timeout:
+                    # Таймаут - это нормально для long polling, просто продолжаем
                     continue
                 except Exception as e:
                     log_error(f"❌ Ошибка в слушателе команд: {e}")
-                    time.sleep(10)  # Увеличили паузу при ошибках
+                    # Меньше пауза для быстрого восстановления
+                    time.sleep(3)
         threading.Thread(target=listener, daemon=True).start()
 
     def answer_callback_query(self, callback_id, text=None, show_alert=False):
@@ -188,7 +236,8 @@ class TelegramBot:
             }
             if text:
                 payload['text'] = text
-            response = requests.post(url, json=payload, timeout=10)
+            timeout = 15 if self.use_proxy else 8
+            response = requests.post(url, json=payload, timeout=timeout, proxies=self.proxies)
             return response.status_code == 200
         except Exception as e:
             log_error(f"❌ Ошибка ответа на callback: {e}")
@@ -207,7 +256,8 @@ class TelegramBot:
             }
             if reply_markup:
                 payload['reply_markup'] = reply_markup
-            response = requests.post(url, json=payload, timeout=10)
+            timeout = 15 if self.use_proxy else 8
+            response = requests.post(url, json=payload, timeout=timeout, proxies=self.proxies)
             
             if response.status_code == 200:
                 return True
@@ -257,6 +307,8 @@ class TelegramBot:
         
         # Расширенная информация о позиции
         position_info = ""
+        open_positions_count = 0
+        log_info(f"📊 Telegram send_market_update: начало, position={self.bot.position}")
         # 🔧 ИСПРАВЛЕНИЕ: Проверяем, что позиция действительно открыта и имеет корректные данные
         if self.bot.position == 'long':
             strategy = self.bot.get_active_strategy()
@@ -268,44 +320,135 @@ class TelegramBot:
             has_position_size = (hasattr(strategy, 'position_size_usdt') and strategy.position_size_usdt > 0) or \
                                 (hasattr(self.bot, 'current_position_size_usdt') and self.bot.current_position_size_usdt > 0)
             
+            # 🔧 ПОЛУЧАЕМ КОЛИЧЕСТВО ОТКРЫТЫХ ПОЗИЦИЙ И РАССЧИТЫВАЕМ РАЗМЕР СТАВКИ
+            open_buy_trades = []
+            all_open_trades = []
+            open_positions_count = 0
             if not has_entry_price or not has_position_size:
                 # Если нет данных о позиции, не показываем её как открытую
                 log_info("⚠️ Позиция помечена как 'long', но отсутствуют данные о цене входа или размере. Не показываем позицию.")
                 position_info = ""
+                open_positions_count = 0
             else:
-                # 💰 ИСПОЛЬЗУЕМ ФИКСИРОВАННЫЙ РАЗМЕР ПОЗИЦИИ ИЗ СТРАТЕГИИ
-                if hasattr(strategy, 'position_size_usdt') and strategy.position_size_usdt > 0:
-                    position_size_usdt = strategy.position_size_usdt
-                elif hasattr(self.bot, 'current_position_size_usdt') and self.bot.current_position_size_usdt > 0:
-                    position_size_usdt = self.bot.current_position_size_usdt
+                # 🔧 ПОДСЧЕТ ОТКРЫТЫХ ПОЗИЦИЙ - ИСПОЛЬЗУЕМ position_state.json КАК ОСНОВНОЙ ИСТОЧНИК
+                # Причина: KuCoin API не возвращает старые сделки (history только ~1 сделка)
+                import json
+                import os
+                try:
+                    state_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'position_state.json')
+                    if os.path.exists(state_file):
+                        with open(state_file, 'r') as f:
+                            position_state = json.load(f)
+                        
+                        # Считаем открытые позиции по НОВОЙ структуре (массив positions)
+                        open_positions_count = 0
+                        total_position_size_all_pairs = 0
+                        
+                        for pair_symbol, pair_data in position_state.items():
+                            # Новая структура: проверяем массив positions
+                            positions = pair_data.get('positions', [])
+                            
+                            if positions:
+                                # Количество открытых позиций = длина массива
+                                pair_positions_count = len(positions)
+                                pair_total_size = pair_data.get('total_position_size_usdt', 0)
+                                
+                                open_positions_count += pair_positions_count
+                                total_position_size_all_pairs += pair_total_size
+                                
+                                log_info(f"📊 Telegram: Пара {pair_symbol} имеет {pair_positions_count} позиций, общий размер: {pair_total_size:.2f} USDT")
+                                
+                                # Логируем каждую позицию
+                                for pos in positions:
+                                    pos_id = pos.get('id', 'unknown')
+                                    pos_price = pos.get('entry_price', 0)
+                                    pos_size = pos.get('position_size_usdt', 0)
+                                    is_legacy = pos.get('is_legacy', False)
+                                    log_info(f"   - Позиция {pos_id}: {pos_size:.2f} USDT @ {pos_price:.2f} {'(legacy)' if is_legacy else ''}")
+                        
+                        log_info(f"📊 Telegram: Всего открытых позиций по всем парам: {open_positions_count}")
+                        
+                        # Для текущей пары берем данные из position_state
+                        current_pair_data = position_state.get(symbol, {})
+                        position_size_for_current = current_pair_data.get('position_size_usdt', 0)
+                    else:
+                        log_info(f"📊 Telegram: Файл position_state.json не найден")
+                        open_positions_count = 1 if has_entry_price and has_position_size else 0
+                        total_position_size_all_pairs = 0
+                except Exception as e:
+                    log_error(f"❌ Ошибка чтения position_state.json: {e}")
+                    open_positions_count = 1 if has_entry_price and has_position_size else 0
+                    total_position_size_all_pairs = 0
+                
+                # 💰 РАСЧЕТ РАЗМЕРА СТАВКИ
+                log_info(f"📊 Telegram: Проверка количества позиций для расчета ставки: {open_positions_count}")
+                
+                # Если открыто 2+ позиций, показываем сумму всех ставок из position_state
+                if open_positions_count >= 2:
+                    position_size_usdt = total_position_size_all_pairs
+                    log_info(f"📊 Открыто позиций: {open_positions_count}, сумма всех ставок: {position_size_usdt:.2f} USDT")
                 else:
-                    position_size_usdt = total_usdt * trade_amount_percent if balance else 0
+                    # Одна позиция - берем размер из стратегии или position_state
+                    if hasattr(strategy, 'position_size_usdt') and strategy.position_size_usdt > 0:
+                        position_size_usdt = strategy.position_size_usdt
+                    elif hasattr(self.bot, 'current_position_size_usdt') and self.bot.current_position_size_usdt > 0:
+                        position_size_usdt = self.bot.current_position_size_usdt
+                    else:
+                        position_size_usdt = total_usdt * trade_amount_percent if balance else 0
                     
+                    log_info(f"📊 Одна позиция, размер ставки: {position_size_usdt:.2f} USDT")
+                    
+                # 🔧 ОПРЕДЕЛЕНИЕ ЦЕНЫ ВХОДА ДЛЯ TP
+                # Если открыто 2+ позиций, используем МАКСИМАЛЬНУЮ цену входа (чтобы не продавать в минус)
+                # Если 1 позиция, используем её цену входа
+                try:
+                    state_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'position_state.json')
+                    if os.path.exists(state_file):
+                        with open(state_file, 'r') as f:
+                            position_state_for_tp = json.load(f)
+                        current_pair_data = position_state_for_tp.get(symbol, {})
+                        
+                        # Проверяем, есть ли max_entry_price (для нескольких позиций)
+                        if open_positions_count >= 2 and 'max_entry_price' in current_pair_data:
+                            entry_price_for_tp = current_pair_data['max_entry_price']
+                            log_info(f"📊 Telegram: Используем MAX цену входа для TP: {entry_price_for_tp:.2f} (позиций: {open_positions_count})")
+                        else:
+                            entry_price_for_tp = strategy.entry_price if hasattr(strategy, 'entry_price') else 0
+                            log_info(f"📊 Telegram: Используем стандартную цену входа для TP: {entry_price_for_tp:.2f}")
+                    else:
+                        entry_price_for_tp = strategy.entry_price if hasattr(strategy, 'entry_price') else 0
+                except Exception as e:
+                    log_error(f"❌ Ошибка чтения max_entry_price: {e}")
+                    entry_price_for_tp = strategy.entry_price if hasattr(strategy, 'entry_price') else 0
+                
                 # 🔧 ИСПРАВЛЕНИЕ: Правильное отображение в зависимости от режима
                 take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
                 take_profit_percent = strategy.settings.get('take_profit_percent', 2.0)
                 taker_fee = strategy.settings.get('taker_fee', 0.001)
                 
-                if take_profit_usdt > 0 and hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
+                if take_profit_usdt > 0 and entry_price_for_tp > 0:
                     # 🔹 РЕЖИМ USDT (с поддержкой маленьких значений)
-                    current_profit_usdt = (current_price - strategy.entry_price) / strategy.entry_price * position_size_usdt
+                    current_profit_usdt = (current_price - entry_price_for_tp) / entry_price_for_tp * position_size_usdt
                     fees_usdt = position_size_usdt * taker_fee * 2
                     net_profit_usdt = current_profit_usdt - fees_usdt
                     remaining_to_tp = max(0, take_profit_usdt - (current_profit_usdt - fees_usdt))
                     
                     # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ
+                    log_info(f"📊 Telegram: Формирование сообщения USDT, количество позиций: {open_positions_count}")
+                    # Всегда показываем количество позиций
+                    positions_count_text = f"📊 <b>Количество открытых позиций:</b> {open_positions_count}\n"
                     position_info = f"""
 💼 <b>ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ USDT)</b>
-💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT
-🎯 <b>Цена входа:</b> {strategy.entry_price:.2f} USDT
+{positions_count_text}💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT
+🎯 <b>Цена входа (TP):</b> {entry_price_for_tp:.2f} USDT
 📈 <b>Текущая прибыль:</b> {self.smart_format(current_profit_usdt, 4)} USDT
 🎯 <b>До Take Profit:</b> +{self.smart_format(remaining_to_tp, 2)} USDT
 🎯 <b>Цель TP:</b> {self.smart_format(take_profit_usdt, 4)} USDT
 🛡️ <b>Комиссии:</b> {self.smart_format(fees_usdt, 4)} USDT
 """
-                elif hasattr(strategy, 'entry_price') and strategy.entry_price > 0:
+                elif entry_price_for_tp > 0:
                     # 🔹 РЕЖИМ ПРОЦЕНТОВ (с поддержкой маленьких значений)
-                    current_profit_percent = ((current_price - strategy.entry_price) / strategy.entry_price) * 100
+                    current_profit_percent = ((current_price - entry_price_for_tp) / entry_price_for_tp) * 100
                     total_fees_percent = taker_fee * 2 * 100
                     net_profit_percent = current_profit_percent - total_fees_percent
                     remaining_to_tp = max(0, take_profit_percent - (current_profit_percent - total_fees_percent))
@@ -313,10 +456,13 @@ class TelegramBot:
                     fees_usdt = position_size_usdt * (total_fees_percent / 100)
                     
                     # 🔧 УМНОЕ ФОРМАТИРОВАНИЕ:
+                    log_info(f"📊 Telegram: Формирование сообщения %, количество позиций: {open_positions_count}")
+                    # Всегда показываем количество позиций
+                    positions_count_text = f"📊 <b>Количество открытых позиций:</b> {open_positions_count}\n"
                     position_info = f"""
 💼 <b>ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ %)</b>
-💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT
-🎯 <b>Цена входа:</b> {strategy.entry_price:.2f} USDT
+{positions_count_text}💰 <b>Размер ставки:</b> {position_size_usdt:.2f} USDT
+🎯 <b>Цена входа (TP):</b> {entry_price_for_tp:.2f} USDT
 📈 <b>Текущая прибыль:</b> {self.smart_format(current_profit_percent, 4)}% ({self.smart_format(current_profit_usdt, 4)} USDT)
 🎯 <b>До Take Profit:</b> +{self.smart_format(remaining_to_tp, 2)}%
 🎯 <b>Цель TP:</b> {self.smart_format(take_profit_percent, 4)}%
@@ -349,6 +495,8 @@ class TelegramBot:
 {position_info}
 ⏰ {datetime.now().strftime("%H:%M:%S")}
 """
+        log_info(f"📊 Telegram: ФИНАЛЬНОЕ значение open_positions_count перед отправкой: {open_positions_count}")
+        log_info(f"📊 Telegram: position_info содержит: {position_info[:200]}...")
         self.send_message(message)
 
     def send_trade_signal(self, signal, market_data, ml_confidence, ml_signal, strategy_name, order_message, position_size_usdt=0, profit_usdt=0):

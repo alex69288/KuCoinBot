@@ -26,6 +26,10 @@ class MenuManager:
         else:
             tp_display = f"{self.smart_format(tp_info['take_profit_percent'], 4)}%"
 
+        # Получаем порог EMA из стратегии
+        strategy = self.bot.get_active_strategy()
+        ema_threshold = strategy.settings.get('ema_threshold', 0.0025) * 100  # Конвертируем в проценты
+
         message = f"""
 ⚙️ <b>НАСТРОЙКИ БОТА</b>
 
@@ -34,7 +38,7 @@ class MenuManager:
 • Стратегия: {self.bot.settings.get_active_strategy_name()}
 • Размер ставки: {self.bot.settings.settings['trade_amount_percent'] * 100:.1f}%
 • Take Profit: {tp_display}
-• EMA порог: {self.bot.settings.settings['ema_cross_threshold'] * 100:.2f}%
+• EMA порог: {self.smart_format(ema_threshold, 2)}%
 • Торговля: {'✅ ВКЛ' if self.bot.settings.settings['trading_enabled'] else '❌ ВЫКЛ'}
 • Режим: {'🟢 ДЕМО' if self.bot.settings.settings['demo_mode'] else '🔴 РЕАЛЬНЫЙ'}
 
@@ -49,7 +53,7 @@ class MenuManager:
                 ],
                 [
                     {'text': f'💰 Размер: {self.bot.settings.settings["trade_amount_percent"] * 100:.1f}%', 'callback_data': 'settings_trade_amount'},
-                    {'text': f'📈 EMA: {self.bot.settings.settings["ema_cross_threshold"] * 100:.2f}%', 'callback_data': 'settings_ema_threshold'}
+                    {'text': f'📈 EMA: {self.smart_format(ema_threshold, 2)}%', 'callback_data': 'settings_ema_threshold'}
                 ],
                 [
                     {'text': '🤖 ML Настройки', 'callback_data': 'settings_ml'},
@@ -85,9 +89,19 @@ class MenuManager:
         trailing_stop_status = "✅ ВКЛ" if strategy.settings.get('trailing_stop', False) else "❌ ВЫКЛ"
         stop_loss = strategy.settings.get('stop_loss_percent', 1.5)
         min_hold_time = strategy.settings.get('min_hold_time', 300) // 60
+        
+        # EMA периоды и порог
+        ema_fast = strategy.settings.get('ema_fast_period', 9)
+        ema_slow = strategy.settings.get('ema_slow_period', 21)
+        ema_threshold = strategy.settings.get('ema_threshold', 0.0025) * 100  # Конвертируем в проценты
 
         message = f"""
 ⚙️ <b>НАСТРОЙКИ EMA СТРАТЕГИИ</b>
+
+📊 <b>EMA Периоды:</b>
+   • Быстрая EMA: <b>{ema_fast}</b>
+   • Медленная EMA: <b>{ema_slow}</b>
+   • Порог EMA: <b>{self.smart_format(ema_threshold, 2)}%</b>
 
 🎯 <b>Take Profit:</b> {tp_display}
 🛑 <b>Stop Loss:</b> {self.smart_format(stop_loss, 1)}%
@@ -96,10 +110,15 @@ class MenuManager:
 🔄 <b>TP режим:</b> {tp_mode}
 
 💡 <b>Выберите параметр для настройки:</b>
+💡 <b>Примечание:</b> Порог EMA настраивается в общем меню настроек
 """
         
         inline_keyboard = {
             'inline_keyboard': [
+                [
+                    {'text': f'📊 Fast: {ema_fast}', 'callback_data': 'ema_fast'},
+                    {'text': f'📊 Slow: {ema_slow}', 'callback_data': 'ema_slow'}
+                ],
                 [
                     {'text': f'🎯 TP: {tp_display}', 'callback_data': 'ema_tp'},
                     {'text': f'🛑 SL: {self.smart_format(stop_loss, 1)}%', 'callback_data': 'ema_sl'}
@@ -152,51 +171,112 @@ class MenuManager:
         return message, inline_keyboard
 
     def send_pairs_menu(self):
-        """Меню выбора торговой пары с inline-кнопками"""
+        """Меню выбора торговой пары с inline-кнопками (динамическое)"""
         current_pair = self.bot.settings.trading_pairs['active_pair']
+        available_pairs = self.bot.settings.trading_pairs['available_pairs']
         
-        message = """
+        # Формируем список доступных пар
+        pairs_list = []
+        for pair_id, pair_name in available_pairs.items():
+            pairs_list.append(f"• {pair_name} ({pair_id})")
+        
+        pairs_text = "\n".join(pairs_list) if pairs_list else "• Нет доступных пар"
+        
+        message = f"""
 💱 <b>ВЫБОР ТОРГОВОЙ ПАРЫ</b>
 
 💡 <b>Доступные пары:</b>
-• ₿ Bitcoin (BTC/USDT)
-• Ξ Ethereum (ETH/USDT) 
-• ◎ Solana (SOL/USDT)
-• ₳ Cardano (ADA/USDT)
-• ● Polkadot (DOT/USDT)
-• 🔗 Chainlink (LINK/USDT)
+{pairs_text}
 
 Выберите торговую пару:
 """
+        
+        # Формируем кнопки для пар (каждая пара в отдельной строке)
+        inline_keyboard = {'inline_keyboard': []}
+        pairs_items = list(available_pairs.items())
+        
+        # Добавляем каждую кнопку пары в отдельную строку
+        for pair_id, pair_name in pairs_items:
+            is_active = '✅' if current_pair == pair_id else ''
+            inline_keyboard['inline_keyboard'].append([{
+                'text': f"{is_active} {pair_name}",
+                'callback_data': f'pair_{pair_id}'
+            }])
+        
+        # Добавляем кнопки управления
+        inline_keyboard['inline_keyboard'].append([
+            {'text': '➕ Добавить пару', 'callback_data': 'pair_add'},
+            {'text': '🗑️ Удалить пару', 'callback_data': 'pair_delete_menu'}
+        ])
+        inline_keyboard['inline_keyboard'].append([
+            {'text': '🔄 Обновить', 'callback_data': 'settings_pairs'},
+            {'text': '🔙 Назад к настройкам', 'callback_data': 'settings'}
+        ])
 
-        pairs = {
-            'BTC/USDT': '₿ Bitcoin',
-            'ETH/USDT': 'Ξ Ethereum',
-            'SOL/USDT': '◎ Solana',
-            'ADA/USDT': '₳ Cardano',
-            'DOT/USDT': '● Polkadot',
-            'LINK/USDT': '🔗 Chainlink'
+        return message, inline_keyboard
+    
+    def send_delete_pairs_menu(self):
+        """Меню удаления торговых пар"""
+        current_pair = self.bot.settings.trading_pairs['active_pair']
+        available_pairs = self.bot.settings.trading_pairs['available_pairs']
+        
+        # Фильтруем пары, которые можно удалить (не активная и не последняя)
+        deletable_pairs = {
+            pair_id: pair_name 
+            for pair_id, pair_name in available_pairs.items()
+            if pair_id != current_pair and len(available_pairs) > 1
         }
         
-        inline_keyboard = {
-            'inline_keyboard': [
-                [
-                    {'text': f"{'✅' if current_pair == 'BTC/USDT' else ''} ₿ Bitcoin", 'callback_data': 'pair_BTC/USDT'},
-                    {'text': f"{'✅' if current_pair == 'ETH/USDT' else ''} Ξ Ethereum", 'callback_data': 'pair_ETH/USDT'}
-                ],
-                [
-                    {'text': f"{'✅' if current_pair == 'SOL/USDT' else ''} ◎ Solana", 'callback_data': 'pair_SOL/USDT'},
-                    {'text': f"{'✅' if current_pair == 'ADA/USDT' else ''} ₳ Cardano", 'callback_data': 'pair_ADA/USDT'}
-                ],
-                [
-                    {'text': f"{'✅' if current_pair == 'DOT/USDT' else ''} ● Polkadot", 'callback_data': 'pair_DOT/USDT'},
-                    {'text': f"{'✅' if current_pair == 'LINK/USDT' else ''} 🔗 Chainlink", 'callback_data': 'pair_LINK/USDT'}
-                ],
-                [
-                    {'text': '🔙 Назад к настройкам', 'callback_data': 'settings'}
+        if not deletable_pairs:
+            message = """
+🗑️ <b>УДАЛЕНИЕ ТОРГОВЫХ ПАР</b>
+
+⚠️ <b>Нет доступных пар для удаления</b>
+
+💡 <b>Примечание:</b>
+• Нельзя удалить активную торговую пару
+• Нельзя удалить последнюю торговую пару
+"""
+            inline_keyboard = {
+                'inline_keyboard': [
+                    [
+                        {'text': '🔙 Назад к парам', 'callback_data': 'settings_pairs'}
+                    ]
                 ]
-            ]
-        }
+            }
+            return message, inline_keyboard
+        
+        # Формируем список пар для удаления
+        pairs_list = []
+        for pair_id, pair_name in deletable_pairs.items():
+            pairs_list.append(f"• {pair_name} ({pair_id})")
+        
+        pairs_text = "\n".join(pairs_list)
+        
+        message = f"""
+🗑️ <b>УДАЛЕНИЕ ТОРГОВЫХ ПАР</b>
+
+💡 <b>Выберите пару для удаления:</b>
+{pairs_text}
+
+⚠️ <b>Внимание:</b> Удаление пары нельзя отменить.
+"""
+        
+        # Формируем кнопки для удаляемых пар (каждая пара в отдельной строке)
+        inline_keyboard = {'inline_keyboard': []}
+        pairs_items = list(deletable_pairs.items())
+        
+        # Добавляем каждую кнопку пары для удаления в отдельную строку
+        for pair_id, pair_name in pairs_items:
+            inline_keyboard['inline_keyboard'].append([{
+                'text': f"🗑️ {pair_name}",
+                'callback_data': f'pair_delete_{pair_id}'
+            }])
+        
+        # Добавляем кнопку назад
+        inline_keyboard['inline_keyboard'].append([
+            {'text': '🔙 Назад к парам', 'callback_data': 'settings_pairs'}
+        ])
 
         return message, inline_keyboard
 
@@ -301,6 +381,8 @@ class MenuManager:
 • Макс. позиция: 5-25% от баланса
 • Макс. убыток: 2-5% в день
 • Убыточные: 3-5 сделок подряд
+
+📌 <b>Примечание:</b> Stop Loss настраивается в настройках стратегии (EMA)
 
 Выберите параметр для настройки:
 """

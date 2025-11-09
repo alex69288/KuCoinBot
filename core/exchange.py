@@ -3,6 +3,9 @@
 """
 import ccxt
 import os
+import time
+import traceback
+from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 from utils.logger import log_info, log_error
 
@@ -15,32 +18,56 @@ class ExchangeManager:
         self.connect()
     
     def connect(self):
-        """Подключение к бирже KuCoin"""
-        try:
-            self.exchange = ccxt.kucoin({
-                'apiKey': os.getenv('KUCOIN_API_KEY'),
-                'secret': os.getenv('KUCOIN_SECRET_KEY'),
-                'password': os.getenv('KUCOIN_PASSPHRASE'),
-                'sandbox': False,
-                'enableRateLimit': True,
-                'rateLimit': 300,
-                'timeout': 30000,
-            })
-            
-            # Проверяем подключение
-            self.exchange.fetch_balance()
-            self.connected = True
-            log_info("✅ Успешное подключение к KuCoin")
-            
-        except ccxt.AuthenticationError as e:
-            log_error(f"❌ Ошибка аутентификации KuCoin: {e}")
-            self.connected = False
-        except ccxt.ExchangeError as e:
-            log_error(f"❌ Ошибка биржи KuCoin: {e}")
-            self.connected = False
-        except Exception as e:
-            log_error(f"❌ Ошибка подключения к KuCoin: {e}")
-            self.connected = False
+        """Подключение к бирже KuCoin с диагностикой переменных окружения и повторными попытками."""
+        api_key = os.getenv('KUCOIN_API_KEY')
+        secret_key = os.getenv('KUCOIN_SECRET_KEY')
+        passphrase = os.getenv('KUCOIN_PASSPHRASE')
+        missing = [n for n, v in [('KUCOIN_API_KEY', api_key), ('KUCOIN_SECRET_KEY', secret_key), ('KUCOIN_PASSPHRASE', passphrase)] if not v]
+        if missing:
+            log_error(f"⚠️ Отсутствуют переменные окружения: {', '.join(missing)}. Публичные данные можно получать без них, но баланс/торговля недоступны.")
+
+        base_config = {
+            'apiKey': api_key or '',
+            'secret': secret_key or '',
+            'password': passphrase or '',
+            'sandbox': False,
+            'enableRateLimit': True,
+            'rateLimit': 300,
+            'timeout': 30000,
+        }
+        proxy = os.getenv('PROXY_URL')
+        if proxy:
+            base_config['proxies'] = {'http': proxy, 'https': proxy}
+            log_info(f"🔒 Использую прокси: {proxy.split('@')[-1] if '@' in proxy else proxy}")
+
+        # Повторные попытки подключения (например, временные сетевые проблемы)
+        attempts = 3
+        for attempt in range(1, attempts + 1):
+            try:
+                self.exchange = ccxt.kucoin(base_config)
+                # Тестовый лёгкий запрос: markets (публичный) для проверки сети
+                self.exchange.load_markets(reload=True)
+                # Баланс пробуем только если есть ключи
+                if api_key and secret_key and passphrase:
+                    self.exchange.fetch_balance()
+                self.connected = True
+                log_info(f"✅ Успешное подключение к KuCoin (попытка {attempt}/{attempts})")
+                return
+            except ccxt.AuthenticationError as e:
+                log_error(f"❌ Ошибка аутентификации KuCoin (попытка {attempt}): {e}")
+                break  # нет смысла повторять
+            except ccxt.NetworkError as e:
+                log_error(f"🌐 Сетевая ошибка подключения KuCoin (попытка {attempt}): {e}")
+            except ccxt.ExchangeNotAvailable as e:
+                log_error(f"🚫 Биржа недоступна KuCoin (попытка {attempt}): {e}")
+            except ccxt.ExchangeError as e:
+                log_error(f"❌ Ошибка биржи KuCoin (попытка {attempt}): {e}")
+            except Exception as e:
+                log_error(f"❌ Непредвиденная ошибка подключения (попытка {attempt}): {e}\n{traceback.format_exc()}")
+            time.sleep(2 * attempt)  # экспоненциальная задержка
+
+        self.connected = False
+        log_error("❌ Подключение к KuCoin не удалось после всех попыток")
     
     def get_balance(self):
         """Получение баланса"""
@@ -60,45 +87,93 @@ class ExchangeManager:
             log_error(f"❌ Ошибка получения баланса: {e}")
             return None
     
-    def get_market_data(self, symbol, timeframe='1h', limit=50):
-        """Получение рыночных данных"""
+    def get_market_data(
+        self,
+        symbol: str,
+        timeframe: str = '1h',
+        limit: int = 50,
+        ema_fast_period: int = 9,
+        ema_slow_period: int = 21,
+        retries: int = 3,
+        retry_delay: float = 1.5
+    ) -> Optional[Dict[str, Any]]:
+        """Получение рыночных данных с повторными попытками и подробным логированием.
+
+        Args:
+            symbol: Торговая пара (например 'BTC/USDT')
+            timeframe: Таймфрейм ccxt (e.g. '1m','5m','15m','1h','4h','1d')
+            limit: Количество свечей для выборки
+            ema_fast_period: Период быстрой EMA
+            ema_slow_period: Период медленной EMA
+            retries: Количество повторных попыток при сетевых/временных ошибках
+            retry_delay: Базовая задержка между попытками (экспоненциально)
+        Returns:
+            dict с рассчитанными индикаторами или None при неудаче.
+        """
         if not self.connected:
+            log_error("❌ get_market_data: нет подключения к бирже")
             return None
-            
+
+        # Валидация символа
         try:
-            ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
-            
-            if not ohlcv or len(ohlcv) < 2:
+            if not self.exchange.markets:
+                self.exchange.load_markets()
+            if symbol not in self.exchange.markets:
+                log_error(f"❌ Символ {symbol} не найден в markets KuCoin")
                 return None
-            
-            closes = [candle[4] for candle in ohlcv]
-            current_price = closes[-1]
-            
-            # Рассчитываем индикаторы
-            from utils.helpers import calculate_ema
-            
-            fast_ema = calculate_ema(closes, 9)
-            slow_ema = calculate_ema(closes, 21)
-            ema_diff_percent = (fast_ema - slow_ema) / slow_ema
-            
-            # Изменение цены за 24 часа
-            price_change_24h = 0
-            if len(closes) >= 24:
-                price_24h_ago = closes[-24]
-                price_change_24h = ((current_price - price_24h_ago) / price_24h_ago) * 100
-            
-            return {
-                'fast_ema': fast_ema,
-                'slow_ema': slow_ema,
-                'ema_diff_percent': ema_diff_percent,
-                'current_price': current_price,
-                'price_change_24h': price_change_24h,
-                'ohlcv': ohlcv
-            }
-            
         except Exception as e:
-            log_error(f"❌ Ошибка получения данных для {symbol}: {e}")
-            return None
+            log_error(f"❌ Не удалось загрузить markets для проверки символа: {e}")
+
+        last_exception = None
+        for attempt in range(1, retries + 1):
+            start_t = time.time()
+            try:
+                log_info(f"🔄 Запрос OHLCV {symbol} timeframe={timeframe} limit={limit} (попытка {attempt}/{retries})")
+                ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
+                duration = (time.time() - start_t) * 1000
+                if not ohlcv or len(ohlcv) < 2:
+                    log_error(f"⚠️ Пустой или недостаточный OHLCV ответ (len={len(ohlcv) if ohlcv else 0}) за {duration:.1f} ms")
+                    last_exception = ValueError("Недостаточно свечей")
+                else:
+                    closes = [candle[4] for candle in ohlcv]
+                    current_price = closes[-1]
+                    from utils.helpers import calculate_ema
+                    fast_ema = calculate_ema(closes, ema_fast_period)
+                    slow_ema = calculate_ema(closes, ema_slow_period)
+                    ema_diff_percent = (fast_ema - slow_ema) / slow_ema if slow_ema else 0
+                    price_change_24h = 0
+                    if len(closes) >= 24:
+                        price_24h_ago = closes[-24]
+                        if price_24h_ago:
+                            price_change_24h = ((current_price - price_24h_ago) / price_24h_ago) * 100
+                    data = {
+                        'fast_ema': fast_ema,
+                        'slow_ema': slow_ema,
+                        'ema_diff_percent': ema_diff_percent,
+                        'current_price': current_price,
+                        'price_change_24h': price_change_24h,
+                        'ohlcv': ohlcv,
+                        'latency_ms': duration
+                    }
+                    log_info(f"✅ OHLCV получен: {len(ohlcv)} свечей, latency={duration:.1f} ms, цена={current_price}")
+                    return data
+            except ccxt.NetworkError as e:
+                last_exception = e
+                log_error(f"🌐 Сетевая ошибка OHLCV {symbol} (попытка {attempt}): {e}")
+            except ccxt.ExchangeError as e:
+                last_exception = e
+                log_error(f"❌ Ошибка биржи OHLCV {symbol} (попытка {attempt}): {e}")
+            except Exception as e:
+                last_exception = e
+                log_error(f"❌ Непредвиденная ошибка OHLCV {symbol} (попытка {attempt}): {e}\n{traceback.format_exc()}")
+            # Задержка перед повтором (экспоненциальная)
+            if attempt < retries:
+                delay = retry_delay * attempt
+                time.sleep(delay)
+                log_info(f"⏳ Повторная попытка через {delay:.1f} сек...")
+
+        log_error(f"❌ Не удалось получить рыночные данные {symbol} после {retries} попыток: {last_exception}")
+        return None
     
     def get_ticker(self, symbol):
         """Получение тикера"""
@@ -226,17 +301,94 @@ class ExchangeManager:
         except Exception as e:
             log_error(f"❌ Ошибка получения информации о рынке {symbol}: {e}")
             return None
+
+    def get_min_limits(self, symbol):
+        """Возвращает (min_amount, min_cost) для пары с безопасными fallback.
+        - min_amount: минимальное количество базовой валюты (BTC/SOL/...)
+        - min_cost: минимальная сумма ордера в котируемой валюте (обычно USDT)
+        """
+        try:
+            if self.connected:
+                market = self.exchange.market(symbol)
+                min_amount = market['limits']['amount']['min'] or 0
+                min_cost = market['limits']['cost']['min'] or 0.1
+            else:
+                # Fallback: используем константы проекта
+                from config.constants import MIN_TRADE_AMOUNTS, MIN_TRADE_USDT
+                min_amount = MIN_TRADE_AMOUNTS.get(symbol, 0.001)
+                min_cost = MIN_TRADE_USDT
+            return float(min_amount), float(min_cost)
+        except Exception as e:
+            log_error(f"❌ Ошибка получения минимальных лимитов {symbol}: {e}")
+            # Безопасные значения по умолчанию
+            from config.constants import MIN_TRADE_USDT
+            return 0.001, MIN_TRADE_USDT
     
-    def fetch_my_trades(self, symbol, limit=100):
-        """Получение истории сделок пользователя"""
+    def fetch_my_trades(self, symbol, limit=500, days_back=60):
+        """Получение истории сделок пользователя с расширенным окном по времени и параметрами KuCoin.
+        - limit: желаемое максимальное количество сделок (до 500 за страницу)
+        - days_back: сколько дней назад начинать выборку (по умолчанию 60)
+        """
         if not self.connected:
             return []
             
         try:
-            trades = self.exchange.fetch_my_trades(symbol, limit=limit)
+            # Начало окна выборки
+            since_ms = int((time.time() - days_back * 86400) * 1000)
+
+            # Параметры, специфичные для KuCoin (см. /api/v1/fills: pageSize/startAt/endAt)
+            params = {}
+            page_size = 500 if (limit is None or limit > 500) else int(limit)
+            if getattr(self.exchange, 'id', '') == 'kucoin':
+                params['pageSize'] = page_size
+                params['startAt'] = since_ms // 1000  # сек
+
+            collected = []
+            remaining = limit or page_size
+            max_pages = 3  # защитный предел пагинации
+            end_at_sec = None
+
+            for _ in range(max_pages):
+                call_params = dict(params)
+                if end_at_sec is not None:
+                    # Пагинация назад по времени: берём до endAt
+                    call_params['endAt'] = end_at_sec
+
+                # 🔧 ИСПРАВЛЕНИЕ: KuCoin не работает с since + startAt одновременно
+                # Используем ЛИБО since (ccxt), ЛИБО startAt (kucoin params)
+                batch = self.exchange.fetch_my_trades(
+                    symbol,
+                    since=None,  # Не передаем since, используем только params
+                    limit=min(page_size, remaining),
+                    params=call_params,
+                )
+                
+                log_info(f"🔍 DEBUG fetch_my_trades: API вернул {len(batch) if batch else 0} сделок для {symbol}, params={call_params}")
+
+                if not batch:
+                    break
+
+                collected.extend(batch)
+
+                # Если получили меньше страницы — дальше нечего запрашивать
+                if len(batch) < min(page_size, remaining):
+                    break
+
+                # Готовим endAt для следующей страницы (строго раньше самой старой сделки из batch)
+                oldest_ts_ms = min(t.get('timestamp', since_ms) for t in batch)
+                end_at_sec = max(0, (oldest_ts_ms // 1000) - 1)
+
+                # Контроль общего лимита
+                if limit is not None:
+                    remaining = max(0, remaining - len(batch))
+                    if remaining == 0:
+                        break
+
             # Сортируем по времени (от старых к новым)
-            trades.sort(key=lambda x: x['timestamp'])
-            return trades
+            collected.sort(key=lambda x: x['timestamp'])
+            # Лог: сколько всего собрали
+            log_info(f"🔍 DEBUG: fetch_my_trades: собрано {len(collected)} сделок за ~{days_back} дней (limit={limit}, page_size={page_size})")
+            return collected
         except Exception as e:
             log_error(f"❌ Ошибка получения истории сделок {symbol}: {e}")
             return []
@@ -250,29 +402,60 @@ class ExchangeManager:
             return [], 0.0
         
         try:
-            trades = self.fetch_my_trades(symbol, limit=100)
+            # Берём расширенную историю (уже отсортирована)
+            trades = self.fetch_my_trades(symbol, limit=500)
             if not trades:
                 return [], 0.0
             
+            # Логирование для отладки - показываем ВСЕ полученные сделки
+            from utils.logger import log_info
+            log_info(f"🔍 DEBUG: Всего получено сделок из API: {len(trades)}")
+            for i, trade in enumerate(trades, 1):
+                log_info(f"   DEBUG Сделка {i}: {trade['side'].upper()} по {trade.get('price', 0):.2f} USDT, время: {trade.get('timestamp', 0)}")
+            
             # Ищем последнюю продажу
             last_sell_time = 0
-            for trade in reversed(trades):
+            last_sell_index = -1
+            for i, trade in enumerate(reversed(trades)):
                 if trade['side'] == 'sell':
                     last_sell_time = trade['timestamp']
+                    last_sell_index = len(trades) - 1 - i
+                    log_info(f"🔍 DEBUG: Найдена последняя продажа на индексе {last_sell_index}, timestamp: {last_sell_time}")
                     break
             
-            # Собираем все покупки после последней продажи
-            buy_trades = []
-            for trade in trades:
-                if trade['timestamp'] > last_sell_time and trade['side'] == 'buy':
-                    buy_trades.append(trade)
+            if last_sell_index < 0:
+                log_info(f"🔍 DEBUG: Продажи не найдено, берем все покупки")
             
-            # Если нет покупок после последней продажи, но есть покупки - берем последнюю покупку
-            if not buy_trades and trades:
-                for trade in reversed(trades):
+            # УПРОЩЕННЫЙ АЛГОРИТМ: просто берем все покупки ПОСЛЕ последней продажи
+            # Это работает для большинства случаев и проще в отладке
+            buy_trades = []
+            
+            if last_sell_index >= 0:
+                # Берем все покупки после последней продажи
+                for trade in trades:
+                    if trade['side'] == 'buy' and trade['timestamp'] > last_sell_time:
+                        buy_trades.append({
+                            'price': trade.get('price', 0.0),
+                            'amount': trade.get('amount', 0.0),
+                            'timestamp': trade.get('timestamp', 0),
+                            'cost': trade.get('cost', 0) or (trade.get('amount', 0) * trade.get('price', 0))
+                        })
+            else:
+                # Если продаж не было, берем все покупки
+                for trade in trades:
                     if trade['side'] == 'buy':
-                        buy_trades.append(trade)
-                        break
+                        buy_trades.append({
+                            'price': trade.get('price', 0.0),
+                            'amount': trade.get('amount', 0.0),
+                            'timestamp': trade.get('timestamp', 0),
+                            'cost': trade.get('cost', 0) or (trade.get('amount', 0) * trade.get('price', 0))
+                        })
+            
+            log_info(f"🔍 DEBUG: Открытых покупок после последней продажи: {len(buy_trades)}")
+            for i, bt in enumerate(buy_trades, 1):
+                log_info(f"   DEBUG LOT {i}: {bt['amount']:.8f} BTC @ {bt['price']:.2f} USDT (стоимость {bt.get('cost', 0):.2f} USDT) ts={bt['timestamp']}")
+            
+            log_info(f"🔍 Открытые позиции: найдено {len(buy_trades)} покупок после последней продажи (timestamp: {last_sell_time})")
             
             # Находим максимальную цену среди открытых покупок
             max_price = 0.0
@@ -284,6 +467,8 @@ class ExchangeManager:
             
         except Exception as e:
             log_error(f"❌ Ошибка получения открытых покупок {symbol}: {e}")
+            import traceback
+            log_error(f"   Traceback: {traceback.format_exc()}")
             return [], 0.0
     
     def check_open_position(self, symbol):

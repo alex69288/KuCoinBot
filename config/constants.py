@@ -2,24 +2,16 @@
 КОНСТАНТЫ ПРОЕКТА
 """
 
-# Торговые пары
+# Торговые пары (только BTC и SOL по умолчанию)
 TRADING_PAIRS = {
     'BTC/USDT': '₿ Bitcoin',
-    'ETH/USDT': 'Ξ Ethereum',
-    'SOL/USDT': '◎ Solana',
-    'ADA/USDT': '₳ Cardano',
-    'DOT/USDT': '● Polkadot',
-    'LINK/USDT': '🔗 Chainlink'
+    'SOL/USDT': '◎ Solana'
 }
 
 # 🔧 ИСПРАВЛЕННЫЕ минимальные объемы торговли для KuCoin
 MIN_TRADE_AMOUNTS = {
     'BTC/USDT': 0.00001,  # 🔧 ИСПРАВЛЕНО: 0.00001 BTC
-    'ETH/USDT': 0.001,
-    'SOL/USDT': 0.1,
-    'ADA/USDT': 1.0,
-    'DOT/USDT': 0.1,
-    'LINK/USDT': 0.1
+    'SOL/USDT': 0.001,  # 🔧 ИСПРАВЛЕНО: минимум 0.001 SOL (не 0.1)
 }
 
 MIN_TRADE_USDT = 0.1  # Минимальная сумма в USDT
@@ -56,8 +48,7 @@ DEFAULT_ML_SETTINGS = {
 # Настройки рисков по умолчанию
 DEFAULT_RISK_SETTINGS = {
     'max_daily_loss': 3.0,
-    'stop_loss': 1.5,
-    'take_profit': 3.0,
+    # 🔧 УДАЛЕНО: stop_loss и take_profit теперь только в настройках стратегии
     'max_position_size': 25.0,
     'max_consecutive_losses': 3,
     'volatility_limit': 5.0,

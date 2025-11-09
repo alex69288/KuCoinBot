@@ -31,6 +31,11 @@ class SettingsManager:
         # Добавляем поля для сохранения настроек стратегий
         self.ml_settings['last_take_profit_usdt'] = 0.0
         self.ml_settings['last_take_profit_percent'] = 2.0
+        self.ml_settings['last_stop_loss_percent'] = 1.5  # 🔧 Сохраняем Stop Loss
+        # EMA настройки
+        self.ml_settings['last_ema_fast_period'] = 9
+        self.ml_settings['last_ema_slow_period'] = 21
+        self.ml_settings['last_ema_threshold'] = 0.0025  # 0.25%
         
         self.bot = None  # Ссылка на бота для доступа к стратегиям
         self.load_settings()
@@ -46,7 +51,15 @@ class SettingsManager:
         try:
             if os.path.exists(self.settings_file):
                 with open(self.settings_file, 'r', encoding='utf-8') as f:
-                    saved_settings = json.load(f)
+                    content = f.read().strip()
+                    
+                    # Проверка на пустой файл
+                    if not content:
+                        print("⚠️ Файл настроек пуст, использую значения по умолчанию")
+                        self.save_settings()
+                        return
+                    
+                    saved_settings = json.loads(content)
                     
                     # Обновляем настройки
                     self.settings.update(saved_settings.get('settings', {}))
@@ -56,8 +69,13 @@ class SettingsManager:
                     self.risk_settings.update(saved_settings.get('risk_settings', self.risk_settings))
                     
                 print("✅ Настройки загружены")
+        except json.JSONDecodeError as e:
+            print(f"❌ Ошибка формата JSON в файле настроек: {e}")
+            print("⚠️ Создаю новый файл с настройками по умолчанию")
+            self.save_settings()
         except Exception as e:
             print(f"❌ Ошибка загрузки настроек: {e}")
+            print("⚠️ Использую настройки по умолчанию")
 
     def load_strategy_settings(self):
         """Загрузка настроек для активной стратегии"""
@@ -73,26 +91,49 @@ class SettingsManager:
                 # Восстанавливаем настройки Take Profit из сохраненных
                 last_tp_usdt = self.ml_settings.get('last_take_profit_usdt')
                 last_tp_percent = self.ml_settings.get('last_take_profit_percent')
+                last_sl_percent = self.ml_settings.get('last_stop_loss_percent', 1.5)  # 🔧 Загружаем Stop Loss
+                
+                # Загружаем EMA настройки
+                last_ema_fast = self.ml_settings.get('last_ema_fast_period', 9)
+                last_ema_slow = self.ml_settings.get('last_ema_slow_period', 21)
+                last_ema_threshold = self.ml_settings.get('last_ema_threshold', 0.0025)
                 
                 if last_tp_usdt is not None:
                     strategy.settings['take_profit_usdt'] = last_tp_usdt
                 if last_tp_percent is not None:
                     strategy.settings['take_profit_percent'] = last_tp_percent
+                if last_sl_percent is not None:  # 🔧 Загружаем Stop Loss
+                    strategy.settings['stop_loss_percent'] = last_sl_percent
                 
-                print(f"✅ Настройки стратегии загружены: TP_USDT={last_tp_usdt}, TP_%={last_tp_percent}")
+                # Загружаем EMA настройки
+                if last_ema_fast is not None:
+                    strategy.settings['ema_fast_period'] = last_ema_fast
+                if last_ema_slow is not None:
+                    strategy.settings['ema_slow_period'] = last_ema_slow
+                if last_ema_threshold is not None:
+                    strategy.settings['ema_threshold'] = last_ema_threshold
+                
+                print(f"✅ Настройки стратегии загружены: TP_USDT={last_tp_usdt}, TP_%={last_tp_percent}, SL_%={last_sl_percent}, EMA={last_ema_fast}/{last_ema_slow}, Threshold={last_ema_threshold*100:.2f}%")
         except Exception as e:
             print(f"❌ Ошибка загрузки настроек стратегии: {e}")
 
-    def save_settings(self):
-        """Сохранение настроек в файл"""
+    def save_settings(self, sync_from_strategy=True):
+        """Сохранение настроек в файл
+        sync_from_strategy: если True, синхронизирует ml_settings из стратегии перед сохранением
+        """
         try:
-            # Сохраняем настройки активной стратегии
-            if self.bot:
+            # Сохраняем настройки активной стратегии (только если sync_from_strategy=True)
+            if sync_from_strategy and self.bot:
                 strategy = self.bot.get_active_strategy()
                 if strategy:
-                    # Сохраняем настройки Take Profit стратегии
+                    # Сохраняем настройки Take Profit и Stop Loss стратегии
                     self.ml_settings['last_take_profit_usdt'] = strategy.settings.get('take_profit_usdt', 0.0)
                     self.ml_settings['last_take_profit_percent'] = strategy.settings.get('take_profit_percent', 2.0)
+                    self.ml_settings['last_stop_loss_percent'] = strategy.settings.get('stop_loss_percent', 1.5)  # 🔧 Сохраняем Stop Loss
+                    # Сохраняем EMA настройки
+                    self.ml_settings['last_ema_fast_period'] = strategy.settings.get('ema_fast_period', 9)
+                    self.ml_settings['last_ema_slow_period'] = strategy.settings.get('ema_slow_period', 21)
+                    self.ml_settings['last_ema_threshold'] = strategy.settings.get('ema_threshold', 0.0025)
             
             settings_to_save = {
                 'settings': self.settings,
@@ -172,9 +213,14 @@ class SettingsManager:
             if self.bot:
                 strategy = self.bot.get_active_strategy()
                 if strategy:
-                    # Сохраняем настройки Take Profit
+                    # Сохраняем настройки Take Profit и Stop Loss
                     self.ml_settings['last_take_profit_usdt'] = strategy.settings.get('take_profit_usdt', 0.0)
                     self.ml_settings['last_take_profit_percent'] = strategy.settings.get('take_profit_percent', 2.0)
+                    self.ml_settings['last_stop_loss_percent'] = strategy.settings.get('stop_loss_percent', 1.5)  # 🔧 Сохраняем Stop Loss
+                    # Сохраняем EMA настройки
+                    self.ml_settings['last_ema_fast_period'] = strategy.settings.get('ema_fast_period', 9)
+                    self.ml_settings['last_ema_slow_period'] = strategy.settings.get('ema_slow_period', 21)
+                    self.ml_settings['last_ema_threshold'] = strategy.settings.get('ema_threshold', 0.0025)
                     
                     # Сохраняем другие настройки стратегии если нужно
                     self.save_settings()
@@ -196,6 +242,7 @@ class SettingsManager:
             # Сбрасываем настройки стратегий
             self.ml_settings['last_take_profit_usdt'] = 0.0
             self.ml_settings['last_take_profit_percent'] = 2.0
+            self.ml_settings['last_stop_loss_percent'] = 1.5  # 🔧 Сбрасываем Stop Loss
             
             self.save_settings()
             print("✅ Настройки сброшены к значениям по умолчанию")
@@ -206,6 +253,7 @@ class SettingsManager:
                 if strategy:
                     strategy.settings['take_profit_usdt'] = 0.0
                     strategy.settings['take_profit_percent'] = 2.0
+                    strategy.settings['stop_loss_percent'] = 1.5  # 🔧 Сбрасываем Stop Loss
             
             return True
         except Exception as e:

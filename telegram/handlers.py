@@ -10,6 +10,12 @@ class MessageHandler:
     def __init__(self, trading_bot):
         self.bot = trading_bot
         self.waiting_for_input = None
+        # Сохраняем chat_id и message_id последнего меню EMA настроек для редактирования
+        self.last_ema_menu_chat_id = None
+        self.last_ema_menu_message_id = None
+        # Сохраняем chat_id и message_id последнего меню настроек для редактирования
+        self.last_settings_menu_chat_id = None
+        self.last_settings_menu_message_id = None
     
     def _safe_send_message(self, message):
         """Безопасная отправка сообщения с проверкой инициализации telegram"""
@@ -23,9 +29,15 @@ class MessageHandler:
             log_error(f"❌ Ошибка отправки сообщения в Telegram: {e}")
             return False
 
-    def handle_message(self, message_text):
+    def handle_message(self, message_text, chat_id=None):
         """Основной обработчик сообщений"""
         try:
+            # Сохраняем chat_id для последующего использования
+            if chat_id is not None:
+                # Если у нас нет сохраненного chat_id для меню EMA, сохраняем его
+                if self.last_ema_menu_chat_id is None:
+                    self.last_ema_menu_chat_id = chat_id
+            
             if self.waiting_for_input:
                 self.handle_direct_input(message_text)
                 return
@@ -140,7 +152,7 @@ class MessageHandler:
             elif callback_data == "account_info":
                 self.send_account_info_inline()
             elif callback_data == "settings":
-                self.send_settings_menu_inline()
+                self.send_settings_menu_inline(chat_id, message_id)
             elif callback_data == "trades":
                 self.send_trade_history_inline()
             elif callback_data == "analytics":
@@ -156,11 +168,12 @@ class MessageHandler:
             elif callback_data == "settings_trade_amount":
                 self.start_trade_amount_input()
             elif callback_data == "settings_ema_threshold":
+                # Используем старую логику для настройки порога EMA
                 self.start_ema_threshold_input()
             elif callback_data == "settings_ml":
                 self.send_ml_settings_menu_inline()
             elif callback_data == "settings_ema":
-                self.send_ema_settings_menu_inline()
+                self.send_ema_settings_menu_inline(chat_id, message_id)
             elif callback_data == "settings_risk":
                 self.send_risk_settings_menu_inline()
             elif callback_data == "settings_toggle_updates":
@@ -173,9 +186,26 @@ class MessageHandler:
                 self.handle_strategy_selection_by_id(strategy_id)
             elif callback_data.startswith("pair_"):
                 pair_id = callback_data.replace("pair_", "")
-                self.handle_pair_selection_by_id(pair_id)
+                if pair_id == "add":
+                    self.start_add_pair_input()
+                elif pair_id == "delete_menu":
+                    self.send_delete_pairs_menu_inline(chat_id, message_id)
+                elif pair_id.startswith("delete_"):
+                    actual_pair_id = pair_id.replace("delete_", "")
+                    self.handle_pair_deletion(actual_pair_id, chat_id, message_id)
+                else:
+                    self.handle_pair_selection_by_id(pair_id, chat_id, message_id)
+            elif callback_data == "noop":
+                # Пустой callback для выравнивания кнопок
+                pass
             
             # EMA настройки
+            elif callback_data == "ema_fast":
+                self.start_ema_fast_input()
+            elif callback_data == "ema_slow":
+                self.start_ema_slow_input()
+            elif callback_data == "ema_threshold_strategy":
+                self.start_ema_threshold_strategy_input()
             elif callback_data == "ema_tp":
                 strategy = self.bot.get_active_strategy()
                 take_profit_usdt = strategy.settings.get('take_profit_usdt', 0.0)
@@ -187,12 +217,12 @@ class MessageHandler:
                 self.start_stop_loss_input()
             elif callback_data == "ema_trailing":
                 self.toggle_trailing_stop()
-                self.send_ema_settings_menu_inline()
+                self.send_ema_settings_menu_inline(chat_id, message_id)
             elif callback_data == "ema_hold_time":
                 self.start_min_hold_time_input()
             elif callback_data == "ema_tp_mode":
                 self.toggle_take_profit_mode()
-                self.send_ema_settings_menu_inline()
+                self.send_ema_settings_menu_inline(chat_id, message_id)
             
             # ML настройки
             elif callback_data == "ml_toggle":
@@ -254,25 +284,66 @@ class MessageHandler:
         message, inline_keyboard = self.bot.telegram.menu_manager.send_main_menu_inline()
         self._send_or_edit_message(None, None, message, inline_keyboard)
     
-    def send_settings_menu_inline(self):
+    def send_settings_menu_inline(self, chat_id=None, message_id=None):
         """Отправка меню настроек с inline-кнопками"""
+        # Сохраняем chat_id и message_id для последующего редактирования
+        if chat_id is not None and message_id is not None:
+            self.last_settings_menu_chat_id = chat_id
+            self.last_settings_menu_message_id = message_id
+        elif chat_id is not None:
+            # Если передан только chat_id, сохраняем его
+            self.last_settings_menu_chat_id = chat_id
+        
         message, inline_keyboard = self.bot.telegram.menu_manager.send_settings_menu()
-        self._send_or_edit_message(None, None, message, inline_keyboard)
+        # Используем сохраненные chat_id и message_id, если они есть
+        edit_chat_id = self.last_settings_menu_chat_id if chat_id is None else chat_id
+        edit_message_id = self.last_settings_menu_message_id if message_id is None else message_id
+        
+        # Отправляем или редактируем сообщение
+        result = self._send_or_edit_message(edit_chat_id, edit_message_id, message, inline_keyboard)
+        
+        # Если было отправлено новое сообщение и мы получили message_id, сохраняем его
+        if result and isinstance(result, int) and edit_chat_id:
+            self.last_settings_menu_chat_id = edit_chat_id
+            self.last_settings_menu_message_id = result
     
     def send_strategy_menu_inline(self):
         """Отправка меню выбора стратегии с inline-кнопками"""
         message, inline_keyboard = self.bot.telegram.menu_manager.send_strategy_menu()
         self._send_or_edit_message(None, None, message, inline_keyboard)
     
-    def send_pairs_menu_inline(self):
-        """Отправка меню выбора пары с inline-кнопками"""
+    def send_pairs_menu_inline(self, chat_id=None, message_id=None):
+        """Отправка меню выбора пары с inline-кнопками (с возможностью обновления)"""
         message, inline_keyboard = self.bot.telegram.menu_manager.send_pairs_menu()
-        self._send_or_edit_message(None, None, message, inline_keyboard)
+        self._send_or_edit_message(chat_id, message_id, message, inline_keyboard)
     
-    def send_ema_settings_menu_inline(self):
+    def send_delete_pairs_menu_inline(self, chat_id=None, message_id=None):
+        """Отправка меню удаления пар с inline-кнопками"""
+        message, inline_keyboard = self.bot.telegram.menu_manager.send_delete_pairs_menu()
+        self._send_or_edit_message(chat_id, message_id, message, inline_keyboard)
+    
+    def send_ema_settings_menu_inline(self, chat_id=None, message_id=None):
         """Отправка меню настроек EMA с inline-кнопками"""
+        # Сохраняем chat_id и message_id для последующего редактирования
+        if chat_id is not None and message_id is not None:
+            self.last_ema_menu_chat_id = chat_id
+            self.last_ema_menu_message_id = message_id
+        elif chat_id is not None:
+            # Если передан только chat_id, сохраняем его
+            self.last_ema_menu_chat_id = chat_id
+        
         message, inline_keyboard = self.bot.telegram.menu_manager.send_ema_settings_menu()
-        self._send_or_edit_message(None, None, message, inline_keyboard)
+        # Используем сохраненные chat_id и message_id, если они есть
+        edit_chat_id = self.last_ema_menu_chat_id if chat_id is None else chat_id
+        edit_message_id = self.last_ema_menu_message_id if message_id is None else message_id
+        
+        # Отправляем или редактируем сообщение
+        result = self._send_or_edit_message(edit_chat_id, edit_message_id, message, inline_keyboard)
+        
+        # Если было отправлено новое сообщение и мы получили message_id, сохраняем его
+        if result and isinstance(result, int) and edit_chat_id:
+            self.last_ema_menu_chat_id = edit_chat_id
+            self.last_ema_menu_message_id = result
     
     def send_ml_settings_menu_inline(self):
         """Отправка меню ML настроек с inline-кнопками"""
@@ -374,21 +445,26 @@ class MessageHandler:
         self.bot.telegram.send_message(message, inline_keyboard)
     
     def _send_or_edit_message(self, chat_id, message_id, message, inline_keyboard):
-        """Вспомогательный метод - редактирует сообщение, если есть chat_id и message_id, иначе отправляет новое"""
+        """Вспомогательный метод - редактирует сообщение, если есть chat_id и message_id, иначе отправляет новое
+        Возвращает message_id нового сообщения, если оно было отправлено, иначе None"""
         # 🔧 БЕЗОПАСНАЯ ПРОВЕРКА перед отправкой сообщения
         if not hasattr(self.bot, 'telegram') or self.bot.telegram is None:
             log_error("❌ Telegram бот не инициализирован. Сообщение не отправлено.")
-            return
+            return None
         
         # Если есть chat_id и message_id, редактируем существующее сообщение
         if chat_id is not None and message_id is not None:
             # Пытаемся отредактировать сообщение
-            if not self.bot.telegram.edit_message_text(chat_id, message_id, message, inline_keyboard):
+            if self.bot.telegram.edit_message_text(chat_id, message_id, message, inline_keyboard):
+                return None  # Сообщение отредактировано, не нужно возвращать message_id
+            else:
                 # Если редактирование не удалось (например, сообщение слишком старое), отправляем новое
-                self.bot.telegram.send_message(message, inline_keyboard)
+                new_message_id = self.bot.telegram.send_message(message, inline_keyboard)
+                return new_message_id if isinstance(new_message_id, int) else None
         else:
             # Если нет данных для редактирования, отправляем новое сообщение
-            self.bot.telegram.send_message(message, inline_keyboard)
+            new_message_id = self.bot.telegram.send_message(message, inline_keyboard)
+            return new_message_id if isinstance(new_message_id, int) else None
     
     def handle_strategy_selection_by_id(self, strategy_id):
         """Обработка выбора стратегии по ID"""
@@ -401,17 +477,30 @@ class MessageHandler:
         self.bot.telegram.send_message(msg)
         self.send_settings_menu_inline()
     
-    def handle_pair_selection_by_id(self, pair_id):
-        """Обработка выбора пары по ID"""
+    def handle_pair_selection_by_id(self, pair_id, chat_id=None, message_id=None):
+        """Обработка выбора пары по ID с обновлением меню"""
         old_pair = self.bot.settings.trading_pairs['active_pair']
+        
+        # 🔧 ИСПРАВЛЕНИЕ: Сохраняем текущую позицию перед переключением пары
+        if old_pair != pair_id:
+            log_info(f"🔄 Переключение пары с {old_pair} на {pair_id}. Сохраняем текущую позицию.")
+            # Сохраняем позицию для старой пары
+            self.bot.save_position_state()
+        
         self.bot.settings.trading_pairs['active_pair'] = pair_id
         self.bot.settings.settings['symbol'] = pair_id
         self.bot.settings.save_settings()
         
+        # 🔧 ЗАГРУЖАЕМ СОСТОЯНИЕ ПОЗИЦИИ ДЛЯ НОВОЙ ПАРЫ
+        self.bot.load_position_state()
+        
         pair_name = self.bot.settings.trading_pairs['available_pairs'].get(pair_id, pair_id)
         msg = f"✅ Торговая пара изменена на: <b>{pair_id} - {pair_name}</b>"
+        if self.bot.position == 'long':
+            msg += f"\n💼 Восстановлена открытая позиция для {pair_id}"
         self.bot.telegram.send_message(msg)
-        self.send_settings_menu_inline()
+        # Обновляем меню выбора пар вместо возврата к настройкам
+        self.send_pairs_menu_inline(chat_id, message_id)
 
     def handle_ml_settings_selection(self, message_text):
         """Обработка выбора ML настроек"""
@@ -475,8 +564,20 @@ class MessageHandler:
             if message_text == '❌ Отменить ввод':
                 self.waiting_for_input = None
                 self.bot.telegram.send_message("❌ Ввод отменен")
-                self.send_settings_menu()
+                # Если отменяем добавление пары, возвращаемся к меню пар
+                if hasattr(self, '_last_menu') and self._last_menu == 'pairs':
+                    self.send_pairs_menu_inline()
+                else:
+                    self.send_settings_menu()
                 return
+            
+            # Обработка добавления пары (не требует числового ввода)
+            if self.waiting_for_input == 'add_pair':
+                self.handle_add_pair_input(message_text)
+                self.waiting_for_input = None
+                return
+            
+            # Для остальных случаев требуется числовой ввод
             try:
                 value = float(message_text.replace(',', '.'))
             except ValueError:
@@ -485,11 +586,19 @@ class MessageHandler:
 
             if self.waiting_for_input == 'ema_threshold':
                 if validate_number_input(value, 0.01, 10.0):
-                    self.bot.settings.settings['ema_cross_threshold'] = value / 100
-                    self.bot.settings.save_settings()
+                    new_threshold = value / 100  # Конвертируем в десятичную дробь
+                    # 🔧 Обновляем настройки в стратегии
+                    strategy = self.bot.get_active_strategy()
+                    strategy.settings['ema_threshold'] = new_threshold
+                    # 🔧 Обновляем настройки в менеджере настроек
+                    self.bot.settings.ml_settings['last_ema_threshold'] = new_threshold
+                    # 🔧 Сохраняем старое значение для обратной совместимости
+                    self.bot.settings.settings['ema_cross_threshold'] = new_threshold
+                    # 🔧 Сохраняем настройки БЕЗ синхронизации из стратегии
+                    self.bot.settings.save_settings(sync_from_strategy=False)
                     self.bot.telegram.send_message(f"✅ Порог EMA установлен: <b>{value:.2f}%</b>")
-                    # Возвращаемся к настройкам
-                    self.send_settings_menu_inline()
+                    # 🔧 Обновляем меню настроек с актуальными данными (редактируем существующее сообщение)
+                    self.send_settings_menu_inline(self.last_settings_menu_chat_id, self.last_settings_menu_message_id)
                 else:
                     self.bot.telegram.send_message("❌ Значение должно быть от 0.01 до 10.0")
             elif self.waiting_for_input == 'trade_amount':
@@ -523,10 +632,10 @@ class MessageHandler:
                     strategy = self.bot.get_active_strategy()
                     strategy.settings['take_profit_percent'] = value
                     strategy.settings['take_profit_usdt'] = 0.0  # 🔹 Явно устанавливаем режим процентов
-                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ
-                    self.bot.settings.save_settings()
+                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ИСПОЛЬЗУЯ МЕНЕДЖЕР НАСТРОЕК БОТА
+                    strategy.save_settings_to_manager(self.bot.settings)
                     self.bot.telegram.send_message(f"✅ Take Profit установлен: <b>{self.bot.telegram.smart_format(value, 4)}%</b>")
-                    self.send_ema_settings_menu()
+                    self.send_ema_settings_menu_inline(self.last_ema_menu_chat_id, self.last_ema_menu_message_id)
                 else:
                     self.bot.telegram.send_message("❌ Значение должно быть от 0.01 до 20.0%")
                     
@@ -536,42 +645,88 @@ class MessageHandler:
                     strategy = self.bot.get_active_strategy()
                     strategy.settings['take_profit_usdt'] = value
                     strategy.settings['take_profit_percent'] = 0.0  # 🔹 Явно устанавливаем режим USDT
-                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ
-                    self.bot.settings.save_settings()
+                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ИСПОЛЬЗУЯ МЕНЕДЖЕР НАСТРОЕК БОТА
+                    strategy.save_settings_to_manager(self.bot.settings)
                     self.bot.telegram.send_message(f"✅ Take Profit установлен: <b>{self.bot.telegram.smart_format(value, 4)} USDT</b>")
-                    self.send_ema_settings_menu()
+                    self.send_ema_settings_menu_inline(self.last_ema_menu_chat_id, self.last_ema_menu_message_id)
                 elif value == 0:
                     # Переключение обратно в режим процентов
                     strategy = self.bot.get_active_strategy()
                     strategy.settings['take_profit_usdt'] = 0.0
                     strategy.settings['take_profit_percent'] = 2.0  # Значение по умолчанию
-                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ
-                    self.bot.settings.save_settings()
+                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ИСПОЛЬЗУЯ МЕНЕДЖЕР НАСТРОЕК БОТА
+                    strategy.save_settings_to_manager(self.bot.settings)
                     self.bot.telegram.send_message("🔄 Take Profit переключен в режим процентов (2.0%)")
-                    self.send_ema_settings_menu()
+                    self.send_ema_settings_menu_inline(self.last_ema_menu_chat_id, self.last_ema_menu_message_id)
                 else:
                     self.bot.telegram.send_message("❌ Значение должно быть >= 0.01 USDT или 0 для переключения в %")
                     
             elif self.waiting_for_input == 'stop_loss':
-                if validate_number_input(value, 0.5, 10.0):
+                if validate_number_input(value, 0.5, 100.0):
                     strategy = self.bot.get_active_strategy()
                     strategy.settings['stop_loss_percent'] = value
-                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ
-                    self.bot.settings.save_settings()
+                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ИСПОЛЬЗУЯ МЕНЕДЖЕР НАСТРОЕК БОТА
+                    strategy.save_settings_to_manager(self.bot.settings)
                     self.bot.telegram.send_message(f"✅ Stop Loss установлен: <b>{value:.1f}%</b>")
-                    self.send_ema_settings_menu()
+                    self.send_ema_settings_menu_inline(self.last_ema_menu_chat_id, self.last_ema_menu_message_id)
                 else:
-                    self.bot.telegram.send_message("❌ Значение должно быть от 0.5 до 10.0")
+                    self.bot.telegram.send_message("❌ Значение должно быть от 0.5 до 100.0")
             elif self.waiting_for_input == 'min_hold_time':
                 if validate_number_input(value, 1, 60):
                     strategy = self.bot.get_active_strategy()
                     strategy.settings['min_hold_time'] = int(value) * 60
-                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ
-                    self.bot.settings.save_settings()
+                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ИСПОЛЬЗУЯ МЕНЕДЖЕР НАСТРОЕК БОТА
+                    strategy.save_settings_to_manager(self.bot.settings)
                     self.bot.telegram.send_message(f"✅ Min Hold Time установлен: <b>{value} мин</b>")
-                    self.send_ema_settings_menu()
+                    self.send_ema_settings_menu_inline(self.last_ema_menu_chat_id, self.last_ema_menu_message_id)
                 else:
                     self.bot.telegram.send_message("❌ Значение должно быть от 1 до 60 минут")
+            elif self.waiting_for_input == 'ema_fast':
+                if validate_number_input(value, 3, 50) and value == int(value):
+                    strategy = self.bot.get_active_strategy()
+                    strategy.settings['ema_fast_period'] = int(value)
+                    # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ИСПОЛЬЗУЯ МЕНЕДЖЕР НАСТРОЕК БОТА
+                    strategy.save_settings_to_manager(self.bot.settings)
+                    self.bot.telegram.send_message(f"✅ Быстрая EMA установлена: <b>{int(value)}</b>")
+                    self.send_ema_settings_menu_inline(self.last_ema_menu_chat_id, self.last_ema_menu_message_id)
+                else:
+                    self.bot.telegram.send_message("❌ Значение должно быть целым числом от 3 до 50")
+            elif self.waiting_for_input == 'ema_slow':
+                if validate_number_input(value, 5, 100) and value == int(value):
+                    strategy = self.bot.get_active_strategy()
+                    ema_fast = strategy.settings.get('ema_fast_period', 9)
+                    if int(value) <= ema_fast:
+                        self.bot.telegram.send_message(f"❌ Медленная EMA должна быть больше быстрой ({ema_fast})")
+                    else:
+                        strategy.settings['ema_slow_period'] = int(value)
+                        # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ИСПОЛЬЗУЯ МЕНЕДЖЕР НАСТРОЕК БОТА
+                        strategy.save_settings_to_manager(self.bot.settings)
+                        self.bot.telegram.send_message(f"✅ Медленная EMA установлена: <b>{int(value)}</b>")
+                        self.send_ema_settings_menu_inline(self.last_ema_menu_chat_id, self.last_ema_menu_message_id)
+                else:
+                    self.bot.telegram.send_message("❌ Значение должно быть целым числом от 5 до 100 и больше быстрой EMA")
+            elif self.waiting_for_input == 'ema_threshold_strategy':
+                # Порог в процентах (0.01% - 5.0%)
+                if value >= 0.01 and value <= 5.0:
+                    new_threshold = value / 100  # Конвертируем в десятичную дробь
+                    # 🔧 ВАЖНО: Сначала обновляем настройки в менеджере настроек
+                    self.bot.settings.ml_settings['last_ema_threshold'] = new_threshold
+                    # 🔧 Затем обновляем настройки в стратегии
+                    strategy = self.bot.get_active_strategy()
+                    strategy.settings['ema_threshold'] = new_threshold
+                    # 🔧 Сохраняем настройки в файл БЕЗ синхронизации из стратегии (sync_from_strategy=False)
+                    # чтобы не перезаписать только что обновленные ml_settings
+                    self.bot.settings.save_settings(sync_from_strategy=False)
+                    # 🔧 Получаем стратегию заново для проверки
+                    strategy = self.bot.get_active_strategy()
+                    log_info(f"🔍 После обновления: порог EMA в ml_settings = {self.bot.settings.ml_settings.get('last_ema_threshold', 0) * 100:.2f}%")
+                    log_info(f"🔍 После обновления: порог EMA в стратегии = {strategy.settings.get('ema_threshold', 0) * 100:.2f}%")
+                    # 🔧 ОТПРАВЛЯЕМ ПОДТВЕРЖДЕНИЕ
+                    self.bot.telegram.send_message(f"✅ Порог EMA установлен: <b>{self.bot.telegram.smart_format(value, 2)}%</b>")
+                    # 🔧 ОБНОВЛЯЕМ МЕНЮ С АКТУАЛЬНЫМИ ДАННЫМИ (редактируем существующее сообщение)
+                    self.send_ema_settings_menu_inline(self.last_ema_menu_chat_id, self.last_ema_menu_message_id)
+                else:
+                    self.bot.telegram.send_message("❌ Значение должно быть от 0.01 до 5.0%")
             elif self.waiting_for_input == 'max_daily_loss':
                 if validate_number_input(value, 0.5, 20.0):
                     self.bot.settings.risk_settings['max_daily_loss'] = value
@@ -633,11 +788,11 @@ class MessageHandler:
                 strategy.settings['take_profit_percent'] = 0.0
                 msg = "🔄 Take Profit переключен в режим <b>USDT</b>"
             
-            # 🔧 СОХРАНЯЕМ НАСТРОЙКИ
-            self.bot.settings.save_settings()
+            # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ИСПОЛЬЗУЯ МЕНЕДЖЕР НАСТРОЕК БОТА
+            strategy.save_settings_to_manager(self.bot.settings)
             
             self.bot.telegram.send_message(msg)
-            self.send_ema_settings_menu()
+            self.send_ema_settings_menu_inline(self.last_ema_menu_chat_id, self.last_ema_menu_message_id)
             
         except Exception as e:
             error_msg = f"❌ Ошибка переключения режима TP: {e}"
@@ -667,9 +822,20 @@ class MessageHandler:
         for pair_id, pair_name in self.bot.settings.trading_pairs['available_pairs'].items():
             if pair_name in message_text:
                 old_pair = self.bot.settings.trading_pairs['active_pair']
+                
+                # 🔧 ИСПРАВЛЕНИЕ: Сохраняем текущую позицию перед переключением пары
+                if old_pair != pair_id:
+                    log_info(f"🔄 Переключение пары с {old_pair} на {pair_id}. Сохраняем текущую позицию.")
+                    # Сохраняем позицию для старой пары
+                    self.bot.save_position_state()
+                
                 self.bot.settings.trading_pairs['active_pair'] = pair_id
                 self.bot.settings.settings['symbol'] = pair_id
                 self.bot.settings.save_settings()
+                
+                # 🔧 ЗАГРУЖАЕМ СОСТОЯНИЕ ПОЗИЦИИ ДЛЯ НОВОЙ ПАРЫ
+                self.bot.load_position_state()
+                
                 new_data = self.bot.exchange.get_market_data(pair_id)
                 if new_data:
                     message = f"""
@@ -679,12 +845,16 @@ class MessageHandler:
 💰 Текущая цена: <b>{new_data['current_price']:.2f} USDT</b>
 📈 Изменение 24ч: <b>{new_data['price_change_24h']:+.2f}%</b>
 """
+                    if self.bot.position == 'long':
+                        message += f"\n💼 Восстановлена открытая позиция для {pair_id}"
                 else:
                     message = f"""
 ✅ <b>ТОРГОВАЯ ПАРА ИЗМЕНЕНА</b>
 🔄 Было: <b>{old_pair}</b>  
 🎯 Стало: <b>{pair_id} - {pair_name}</b>
 """
+                    if self.bot.position == 'long':
+                        message += f"\n💼 Восстановлена открытая позиция для {pair_id}"
                 self.bot.telegram.send_message(message)
                 # Возвращаемся к настройкам после изменения
                 self.send_settings_menu_inline()
@@ -793,14 +963,19 @@ class MessageHandler:
     def start_ema_threshold_input(self):
         self.waiting_for_input = 'ema_threshold'
         keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
+        # Получаем текущее значение из стратегии
+        strategy = self.bot.get_active_strategy()
+        current_threshold = strategy.settings.get('ema_threshold', 0.0025) * 100  # Конвертируем в проценты
         message = f"""
 📈 <b>НАСТРОЙКА ПОРОГА EMA</b>
-Текущее значение: <b>{self.bot.settings.settings['ema_cross_threshold'] * 100:.2f}%</b>
-💡 Введите новое значение в процентах:
+Текущее значение: <b>{self.bot.telegram.smart_format(current_threshold, 2)}%</b>
+💡 Введите новое значение в процентах (0.01 - 10.0%):
 Примеры:
+• 0.1 для 0.1% (скальпинг)
 • 0.25 для 0.25%
 • .25 для 0.25%  
 • 0.5 для 0.5%
+💡 <b>Чем меньше порог, тем больше торговых сигналов!</b>
 """
         self.bot.telegram.send_message(message, keyboard)
 
@@ -856,12 +1031,14 @@ class MessageHandler:
         message = f"""
 🛑 <b>НАСТРОЙКА STOP LOSS</b>
 Текущее значение: <b>{current_sl:.1f}%</b>
-💡 Введите новое значение (0.5 - 10.0%):
+💡 Введите новое значение (0.5 - 100.0%):
 Stop Loss - процент убытка для автоматического закрытия позиции.
 Примеры:
 • 1.5 - стандартный SL 1.5%
 • 1.0 - консервативный SL 1%
 • 2.0 - агрессивный SL 2%
+• 10.0 - умеренный SL 10%
+• 100.0 - без ограничения убытков (для тестирования)
 """
         self.bot.telegram.send_message(message, keyboard)
 
@@ -921,6 +1098,62 @@ Stop Loss - процент убытка для автоматического з
 • 5 - 5 минут (стандарт)
 • 10 - 10 минут (консервативно)
 • 2 - 2 минуты (агрессивно)
+"""
+        self.bot.telegram.send_message(message, keyboard)
+
+    def start_ema_fast_input(self):
+        self.waiting_for_input = 'ema_fast'
+        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
+        strategy = self.bot.get_active_strategy()
+        current_fast = strategy.settings.get('ema_fast_period', 9)
+        message = f"""
+📊 <b>НАСТРОЙКА БЫСТРОЙ EMA</b>
+Текущее значение: <b>{current_fast}</b>
+💡 Введите новое значение (3 - 50):
+Быстрая EMA реагирует быстрее на изменения цены.
+Примеры:
+• 5 - для скальпинга (быстрая реакция)
+• 9 - стандартное значение
+• 12 - более медленная реакция
+💡 <b>Важно:</b> Быстрая EMA должна быть меньше медленной!
+"""
+        self.bot.telegram.send_message(message, keyboard)
+
+    def start_ema_slow_input(self):
+        self.waiting_for_input = 'ema_slow'
+        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
+        strategy = self.bot.get_active_strategy()
+        current_slow = strategy.settings.get('ema_slow_period', 21)
+        current_fast = strategy.settings.get('ema_fast_period', 9)
+        message = f"""
+📊 <b>НАСТРОЙКА МЕДЛЕННОЙ EMA</b>
+Текущее значение: <b>{current_slow}</b>
+Текущая быстрая EMA: <b>{current_fast}</b>
+💡 Введите новое значение (5 - 100):
+Медленная EMA сглаживает колебания цены.
+Примеры:
+• 13 - для скальпинга (быстрая реакция)
+• 21 - стандартное значение
+• 50 - более медленная реакция
+💡 <b>Важно:</b> Медленная EMA должна быть больше быстрой ({current_fast})!
+"""
+        self.bot.telegram.send_message(message, keyboard)
+
+    def start_ema_threshold_strategy_input(self):
+        self.waiting_for_input = 'ema_threshold_strategy'
+        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
+        strategy = self.bot.get_active_strategy()
+        current_threshold = strategy.settings.get('ema_threshold', 0.0025) * 100  # Конвертируем в проценты
+        message = f"""
+📊 <b>НАСТРОЙКА ПОРОГА EMA</b>
+Текущее значение: <b>{self.bot.telegram.smart_format(current_threshold, 2)}%</b>
+💡 Введите новое значение (0.01 - 5.0%):
+Порог разницы между быстрой и медленной EMA для открытия позиции.
+Примеры:
+• 0.1 - для скальпинга (больше сигналов)
+• 0.25 - стандартное значение
+• 0.5 - меньше сигналов, но более надежные
+💡 <b>Чем меньше порог, тем больше торговых сигналов!</b>
 """
         self.bot.telegram.send_message(message, keyboard)
 
@@ -984,12 +1217,12 @@ Stop Loss - процент убытка для автоматического з
     def toggle_trailing_stop(self):
         strategy = self.bot.get_active_strategy()
         strategy.settings['trailing_stop'] = not strategy.settings.get('trailing_stop', False)
-        # 🔧 СОХРАНЯЕМ НАСТРОЙКИ
-        self.bot.settings.save_settings()
+        # 🔧 СОХРАНЯЕМ НАСТРОЙКИ ИСПОЛЬЗУЯ МЕНЕДЖЕР НАСТРОЕК БОТА
+        strategy.save_settings_to_manager(self.bot.settings)
         status = "✅ ВКЛЮЧЕН" if strategy.settings['trailing_stop'] else "❌ ВЫКЛЮЧЕН"
         message = f"📉 Trailing Stop: <b>{status}</b>"
         self.bot.telegram.send_message(message)
-        self.send_ema_settings_menu()
+        self.send_ema_settings_menu_inline(self.last_ema_menu_chat_id, self.last_ema_menu_message_id)
 
     def toggle_trading_enabled(self, send_confirmation=True):
         self.bot.settings.settings['trading_enabled'] = not self.bot.settings.settings['trading_enabled']
@@ -1124,3 +1357,154 @@ Stop Loss - процент убытка для автоматического з
         signal = self.bot.get_active_strategy().calculate_signal(data, ml_confidence, ml_signal)
         
         self.bot.telegram.send_market_update(data, signal, ml_confidence, ml_signal)
+    
+    def start_add_pair_input(self):
+        """Запуск ввода новой торговой пары"""
+        self.waiting_for_input = 'add_pair'
+        self._last_menu = 'pairs'  # Запоминаем, что мы в меню пар
+        keyboard = self.bot.telegram.menu_manager.create_cancel_keyboard()
+        message = """
+➕ <b>ДОБАВЛЕНИЕ ТОРГОВОЙ ПАРЫ</b>
+
+💡 Введите торговую пару в формате: <b>SYMBOL/USDT</b>
+
+Примеры:
+• ETH/USDT
+• ADA/USDT
+• DOT/USDT
+• LINK/USDT
+
+⚠️ <b>Важно:</b>
+• Пара должна существовать на бирже KuCoin
+• Формат: BASE/USDT (например, BTC/USDT)
+• Базовый актив должен быть валидным символом
+"""
+        self.bot.telegram.send_message(message, keyboard)
+    
+    def handle_add_pair_input(self, pair_input):
+        """Обработка ввода новой торговой пары"""
+        try:
+            # Очищаем ввод от пробелов и приводим к верхнему регистру
+            pair_input = pair_input.strip().upper()
+            
+            # Проверяем формат пары
+            if not pair_input.endswith('/USDT'):
+                self.bot.telegram.send_message("❌ Неверный формат. Используйте формат: SYMBOL/USDT\nПример: ETH/USDT")
+                return
+            
+            # Проверяем, не добавлена ли уже эта пара
+            if pair_input in self.bot.settings.trading_pairs['available_pairs']:
+                self.bot.telegram.send_message(f"❌ Пара <b>{pair_input}</b> уже добавлена")
+                return
+            
+            # Проверяем существование пары на бирже
+            if self.bot.exchange.connected:
+                try:
+                    # Пытаемся получить данные о паре
+                    market_data = self.bot.exchange.get_market_data(pair_input)
+                    if not market_data:
+                        self.bot.telegram.send_message(f"❌ Пара <b>{pair_input}</b> не найдена на бирже KuCoin")
+                        return
+                except Exception as e:
+                    log_error(f"❌ Ошибка проверки пары {pair_input}: {e}")
+                    self.bot.telegram.send_message(f"❌ Не удалось проверить пару <b>{pair_input}</b> на бирже")
+                    return
+            
+            # Получаем название базового актива
+            base_symbol = pair_input.split('/')[0]
+            pair_name = self._get_pair_display_name(base_symbol)
+            
+            # Добавляем пару в список доступных
+            self.bot.settings.trading_pairs['available_pairs'][pair_input] = pair_name
+            self.bot.settings.save_settings()
+            
+            # Добавляем минимальный объем торговли по умолчанию, если его нет
+            from config.constants import MIN_TRADE_AMOUNTS
+            if pair_input not in MIN_TRADE_AMOUNTS:
+                # Используем значение по умолчанию
+                MIN_TRADE_AMOUNTS[pair_input] = 0.001
+            
+            self.bot.telegram.send_message(f"✅ Пара <b>{pair_input} - {pair_name}</b> успешно добавлена!")
+            self.send_pairs_menu_inline()
+            
+        except Exception as e:
+            log_error(f"❌ Ошибка добавления пары: {e}")
+            self.bot.telegram.send_message(f"❌ Ошибка добавления пары: {e}")
+    
+    def handle_pair_deletion(self, pair_id, chat_id=None, message_id=None):
+        """Обработка удаления торговой пары"""
+        try:
+            # Нельзя удалить активную пару
+            if pair_id == self.bot.settings.trading_pairs['active_pair']:
+                self.bot.telegram.send_message("❌ Нельзя удалить активную торговую пару. Сначала выберите другую пару.")
+                # Возвращаемся в меню удаления
+                self.send_delete_pairs_menu_inline(chat_id, message_id)
+                return
+            
+            # Нельзя удалить, если это последняя пара
+            if len(self.bot.settings.trading_pairs['available_pairs']) <= 1:
+                self.bot.telegram.send_message("❌ Нельзя удалить последнюю торговую пару")
+                # Возвращаемся в меню удаления
+                self.send_delete_pairs_menu_inline(chat_id, message_id)
+                return
+            
+            # Удаляем пару
+            pair_name = self.bot.settings.trading_pairs['available_pairs'].get(pair_id, pair_id)
+            del self.bot.settings.trading_pairs['available_pairs'][pair_id]
+            self.bot.settings.save_settings()
+            
+            self.bot.telegram.send_message(f"✅ Пара <b>{pair_id} - {pair_name}</b> удалена")
+            
+            # Если есть еще пары для удаления, обновляем меню удаления, иначе возвращаемся к списку пар
+            current_pair = self.bot.settings.trading_pairs['active_pair']
+            available_pairs = self.bot.settings.trading_pairs['available_pairs']
+            deletable_pairs = {
+                pid: pname 
+                for pid, pname in available_pairs.items()
+                if pid != current_pair and len(available_pairs) > 1
+            }
+            
+            if deletable_pairs:
+                # Обновляем меню удаления
+                self.send_delete_pairs_menu_inline(chat_id, message_id)
+            else:
+                # Возвращаемся к списку пар
+                self.send_pairs_menu_inline(chat_id, message_id)
+            
+        except Exception as e:
+            log_error(f"❌ Ошибка удаления пары: {e}")
+            self.bot.telegram.send_message(f"❌ Ошибка удаления пары: {e}")
+            # Возвращаемся в меню удаления при ошибке
+            self.send_delete_pairs_menu_inline(chat_id, message_id)
+    
+    def _get_pair_display_name(self, base_symbol):
+        """Получение отображаемого названия для торговой пары"""
+        # Словарь известных символов и их названий
+        symbol_names = {
+            'BTC': '₿ Bitcoin',
+            'ETH': 'Ξ Ethereum',
+            'SOL': '◎ Solana',
+            'ADA': '₳ Cardano',
+            'DOT': '● Polkadot',
+            'LINK': '🔗 Chainlink',
+            'BNB': '🔶 Binance Coin',
+            'XRP': '💧 Ripple',
+            'MATIC': '🔷 Polygon',
+            'AVAX': '🔺 Avalanche',
+            'ATOM': '⚛️ Cosmos',
+            'ALGO': '🔵 Algorand',
+            'NEAR': '🌐 NEAR Protocol',
+            'FTM': '👻 Fantom',
+            'SAND': '🏖️ The Sandbox',
+            'MANA': '🎮 Decentraland',
+            'AXS': '🎯 Axie Infinity',
+            'GALA': '🎪 Gala',
+            'ENJ': '💎 Enjin',
+        }
+        
+        # Если символ известен, возвращаем его название
+        if base_symbol in symbol_names:
+            return symbol_names[base_symbol]
+        
+        # Иначе возвращаем просто символ
+        return base_symbol
