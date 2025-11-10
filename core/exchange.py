@@ -44,9 +44,12 @@ class ExchangeManager:
         attempts = 3
         for attempt in range(1, attempts + 1):
             try:
+                print(f"🔌 Попытка {attempt}/{attempts}: Создание клиента KuCoin...", flush=True)
                 self.exchange = ccxt.kucoin(base_config)
+                print(f"✅ Клиент создан, загрузка рынков...", flush=True)
                 # Тестовый лёгкий запрос: markets (публичный) для проверки сети
                 self.exchange.load_markets(reload=True)
+                print(f"✅ Рынки загружены ({len(self.exchange.markets)} пар)", flush=True)
                 # Баланс пробуем только если есть ключи
                 if api_key and secret_key and passphrase:
                     self.exchange.fetch_balance()
