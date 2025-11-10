@@ -52,6 +52,26 @@ def set_trading_bot(bot):
     log_info("✅ Trading bot установлен в Web App сервере")
 
 
+def _get_bot_token() -> Optional[str]:
+    """Безопасно получает токен Telegram бота из экземпляра trading_bot.
+    Возвращает None, если токен недоступен.
+    """
+    try:
+        if not trading_bot:
+            return None
+        # Если в боте есть объект telegram с полем token
+        if hasattr(trading_bot, 'telegram') and getattr(trading_bot, 'telegram'):
+            token = getattr(trading_bot.telegram, 'token', None)
+            if token:
+                return token
+        # Попробуем достать из настроек
+        if hasattr(trading_bot, 'settings') and getattr(trading_bot, 'settings'):
+            return trading_bot.settings.settings.get('telegram_token')
+    except Exception as e:
+        log_error(f"Ошибка при получении токена бота: {e}")
+    return None
+
+
 def verify_telegram_webapp_data(init_data: str, bot_token: str) -> bool:
     """
     Проверяет подлинность данных от Telegram Web App
@@ -135,7 +155,8 @@ async def get_bot_status(init_data: str = Query(..., description="Telegram Web A
         raise HTTPException(status_code=503, detail="Bot not initialized")
     
     # Проверяем подлинность данных от Telegram
-    if not verify_telegram_webapp_data(init_data, trading_bot.telegram_bot.token):
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
@@ -189,7 +210,8 @@ async def get_market_data(
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
     
-    if not verify_telegram_webapp_data(init_data, trading_bot.telegram_bot.token):
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
@@ -220,7 +242,8 @@ async def start_bot(init_data: str = Body(..., embed=True)):
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
     
-    if not verify_telegram_webapp_data(init_data, trading_bot.telegram_bot.token):
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
@@ -241,7 +264,8 @@ async def stop_bot(init_data: str = Body(..., embed=True)):
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
     
-    if not verify_telegram_webapp_data(init_data, trading_bot.telegram_bot.token):
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
@@ -262,7 +286,8 @@ async def get_settings(init_data: str = Query(...)):
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
     
-    if not verify_telegram_webapp_data(init_data, trading_bot.telegram_bot.token):
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
@@ -292,7 +317,8 @@ async def update_settings(
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
     
-    if not verify_telegram_webapp_data(init_data, trading_bot.telegram_bot.token):
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
@@ -336,7 +362,8 @@ async def get_trades(
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
     
-    if not verify_telegram_webapp_data(init_data, trading_bot.telegram_bot.token):
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
