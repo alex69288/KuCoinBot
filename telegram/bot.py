@@ -172,6 +172,11 @@ class TelegramBot:
         """Отправляет кнопку для открытия Web App"""
         try:
             webapp_url = os.getenv('WEBAPP_URL', 'https://your-server.com')
+            log_info(f"🌐 Создание кнопки Web App с URL: {webapp_url}")
+            
+            if webapp_url == 'https://your-server.com':
+                log_error("⚠️ WEBAPP_URL не установлена! Используется заглушка. Установите переменную окружения WEBAPP_URL.")
+            
             message = """
 🌐 <b>Web App доступен!</b>
 

@@ -56,6 +56,12 @@ class MessageHandler:
             # Основные команды главного меню
             if message_text == '/start':
                 self.send_main_menu_inline()
+            elif message_text == '/webapp':
+                # Переотправка кнопки Web App с актуальным URL
+                if hasattr(self.bot, 'telegram') and self.bot.telegram is not None:
+                    self.bot.telegram.send_webapp_button()
+                else:
+                    log_error("❌ Telegram бот не инициализирован")
             elif message_text == '📊 Статус':
                 self.send_status()
             elif message_text == '💼 Инфо аккаунта':
