@@ -140,6 +140,12 @@ else:
 
 # ============= API ENDPOINTS =============
 
+@app.get("/ping")
+async def ping():
+    """Простейший тест - должен всегда работать"""
+    return {"status": "pong", "message": "Server is running!"}
+
+
 @app.get("/")
 async def root():
     """Корневой endpoint - возвращает index.html"""
@@ -147,7 +153,7 @@ async def root():
     index_path = os.path.join(STATIC_DIR, 'index.html')
     
     log_info(f"🔍 GET / - Запрос главной страницы")
-    log_info(f"� Ищем index.html по пути: {index_path}")
+    log_info(f"📂 Ищем index.html по пути: {index_path}")
     
     if os.path.exists(index_path):
         log_info(f"✅ Отдаём index.html из {index_path}")
