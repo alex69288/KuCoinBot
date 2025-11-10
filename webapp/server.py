@@ -121,32 +121,51 @@ def get_user_from_init_data(init_data: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+# Определяем базовую директорию проекта
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # Монтируем статические файлы ПЕРЕД маршрутами
-static_dir = "webapp/static"
+static_dir = os.path.join(BASE_DIR, "webapp", "static")
+log_info(f"🔍 Проверка директории статики: {static_dir}")
+log_info(f"📂 Рабочая директория: {os.getcwd()}")
+log_info(f"📁 Базовая директория проекта: {BASE_DIR}")
+
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
     log_info(f"✅ Статические файлы смонтированы из {static_dir}")
 else:
     log_error(f"❌ Директория статических файлов не найдена: {static_dir}")
+    # Попытка найти альтернативную директорию
+    alt_static = os.path.join(os.getcwd(), "webapp", "static")
+    if os.path.exists(alt_static):
+        app.mount("/static", StaticFiles(directory=alt_static), name="static")
+        log_info(f"✅ Использована альтернативная директория: {alt_static}")
+    else:
+        log_error(f"❌ Альтернативная директория тоже не найдена: {alt_static}")
 
 # ============= API ENDPOINTS =============
 
 @app.get("/")
 async def root():
     """Корневой endpoint - возвращает index.html"""
-    # Ищем index.html в возможных расположениях
+    # Ищем index.html с использованием абсолютных путей
     possible_paths = [
-        'webapp/static/index.html',
-        'docs/index.html',
-        'static/index.html'
+        os.path.join(BASE_DIR, 'webapp', 'static', 'index.html'),
+        os.path.join(BASE_DIR, 'docs', 'index.html'),
+        os.path.join(os.getcwd(), 'webapp', 'static', 'index.html'),
+        os.path.join(os.getcwd(), 'static', 'index.html')
     ]
     
+    log_info(f"🔍 Поиск index.html...")
     for path in possible_paths:
+        log_info(f"  Проверяю: {path} - {'СУЩЕСТВУЕТ' if os.path.exists(path) else 'НЕ НАЙДЕН'}")
         if os.path.exists(path):
             log_info(f"📄 Отдаём index.html из {path}")
             return FileResponse(path)
     
-    log_error("❌ index.html не найден ни в одной из директорий")
+    log_error("❌ index.html не найден ни в одной из директорий:")
+    for path in possible_paths:
+        log_error(f"  ❌ {path}")
     raise HTTPException(status_code=404, detail="index.html not found")
 
 
