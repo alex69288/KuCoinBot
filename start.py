@@ -34,6 +34,29 @@ def main():
     # Импортируем и запускаем основное приложение
     try:
         print("📦 Импорт главного модуля приложения...", flush=True)
+        
+        # Диагностика тяжелых импортов
+        print("  ⏱️ Импортируем ccxt (биржа)...", flush=True)
+        import ccxt
+        print("  ✅ ccxt импортирован", flush=True)
+        
+        print("  ⏱️ Импортируем sklearn (ML)...", flush=True)
+        import sklearn
+        print("  ✅ sklearn импортирован", flush=True)
+        
+        print("  ⏱️ Импортируем core.exchange...", flush=True)
+        from core.exchange import ExchangeManager
+        print("  ✅ core.exchange импортирован", flush=True)
+        
+        print("  ⏱️ Импортируем telegram.bot...", flush=True)
+        from telegram.bot import TelegramBot  
+        print("  ✅ telegram.bot импортирован", flush=True)
+        
+        print("  ⏱️ Импортируем core.bot...", flush=True)
+        from core.bot import AdvancedTradingBot
+        print("  ✅ core.bot импортирован", flush=True)
+        
+        print("  ⏱️ Импортируем main_with_webapp...", flush=True)
         from main_with_webapp import main as app_main
         print("✅ Главный модуль импортирован", flush=True)
         
