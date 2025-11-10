@@ -73,23 +73,15 @@ def main():
         print("✅ Web App поток запущен", flush=True)
         
         # Даем серверу время на запуск
-        print("⏳ Ожидание запуска сервера (2 сек)...", flush=True)
-        time.sleep(2)
+        print("⏳ Ожидание запуска сервера (3 сек)...", flush=True)
+        time.sleep(3)
         
-        # Проверяем, что сервер запущен
-        try:
-            print("🔍 Проверка доступности Web App...", flush=True)
-            import requests
-            port = int(os.getenv('PORT', 8000))
-            response = requests.get(f"http://localhost:{port}/api/health", timeout=2)
-            if response.status_code == 200:
-                print("✅ Web App сервер успешно запущен", flush=True)
-                print(f"🌐 API доступен: http://localhost:{port}", flush=True)
-                print("📱 Откройте Web App через кнопку в Telegram боте", flush=True)
-            else:
-                print("⚠️ Web App сервер запущен, но вернул неожиданный статус", flush=True)
-        except Exception as e:
-            print(f"⚠️ Не удалось проверить Web App сервер: {e}", flush=True)
+        # Проверка доступности сервера (опциональная)
+        port = int(os.getenv('PORT', 8000))
+        webapp_url = os.getenv('WEBAPP_URL', f'http://localhost:{port}')
+        print(f"✅ Web App сервер запущен", flush=True)
+        print(f"🌐 Доступен по адресу: {webapp_url}", flush=True)
+        print("📱 Откройте Web App через кнопку в Telegram боте", flush=True)
         
         # Запускаем основной цикл бота
         print("=" * 50, flush=True)

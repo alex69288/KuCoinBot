@@ -121,18 +121,33 @@ def get_user_from_init_data(init_data: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+# Монтируем статические файлы ПЕРЕД маршрутами
+static_dir = "webapp/static"
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    log_info(f"✅ Статические файлы смонтированы из {static_dir}")
+else:
+    log_error(f"❌ Директория статических файлов не найдена: {static_dir}")
+
 # ============= API ENDPOINTS =============
 
 @app.get("/")
 async def root():
     """Корневой endpoint - возвращает index.html"""
-    # Проверяем оба возможных расположения
-    if os.path.exists('docs/index.html'):
-        return FileResponse('docs/index.html')
-    elif os.path.exists('webapp/static/index.html'):
-        return FileResponse('webapp/static/index.html')
-    else:
-        return {"error": "index.html not found"}
+    # Ищем index.html в возможных расположениях
+    possible_paths = [
+        'webapp/static/index.html',
+        'docs/index.html',
+        'static/index.html'
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            log_info(f"📄 Отдаём index.html из {path}")
+            return FileResponse(path)
+    
+    log_error("❌ index.html не найден ни в одной из директорий")
+    raise HTTPException(status_code=404, detail="index.html not found")
 
 
 @app.get("/api/health")
@@ -379,10 +394,6 @@ async def get_trades(
     except Exception as e:
         log_error(f"Ошибка получения истории сделок: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting trades: {str(e)}")
-
-
-# Монтируем статические файлы
-app.mount("/static", StaticFiles(directory="webapp/static"), name="static")
 
 
 if __name__ == "__main__":
