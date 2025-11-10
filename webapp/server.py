@@ -121,52 +121,41 @@ def get_user_from_init_data(init_data: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-# Определяем базовую директорию проекта
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Определяем директорию webapp (где находится этот файл server.py)
+WEBAPP_DIR = os.path.dirname(os.path.abspath(__file__))
+# Директория static находится рядом с server.py
+STATIC_DIR = os.path.join(WEBAPP_DIR, "static")
+
+log_info(f"🔍 Директория webapp: {WEBAPP_DIR}")
+log_info(f"🔍 Директория static: {STATIC_DIR}")
+log_info(f"📂 Рабочая директория: {os.getcwd()}")
 
 # Монтируем статические файлы ПЕРЕД маршрутами
-static_dir = os.path.join(BASE_DIR, "webapp", "static")
-log_info(f"🔍 Проверка директории статики: {static_dir}")
-log_info(f"📂 Рабочая директория: {os.getcwd()}")
-log_info(f"📁 Базовая директория проекта: {BASE_DIR}")
-
-if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
-    log_info(f"✅ Статические файлы смонтированы из {static_dir}")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    log_info(f"✅ Статические файлы смонтированы из {STATIC_DIR}")
 else:
-    log_error(f"❌ Директория статических файлов не найдена: {static_dir}")
-    # Попытка найти альтернативную директорию
-    alt_static = os.path.join(os.getcwd(), "webapp", "static")
-    if os.path.exists(alt_static):
-        app.mount("/static", StaticFiles(directory=alt_static), name="static")
-        log_info(f"✅ Использована альтернативная директория: {alt_static}")
-    else:
-        log_error(f"❌ Альтернативная директория тоже не найдена: {alt_static}")
+    log_error(f"❌ КРИТИЧЕСКАЯ ОШИБКА: Директория static не найдена по пути {STATIC_DIR}")
+    log_error(f"❌ Содержимое директории webapp: {os.listdir(WEBAPP_DIR) if os.path.exists(WEBAPP_DIR) else 'НЕ НАЙДЕНА'}")
 
 # ============= API ENDPOINTS =============
 
 @app.get("/")
 async def root():
     """Корневой endpoint - возвращает index.html"""
-    # Ищем index.html с использованием абсолютных путей
-    possible_paths = [
-        os.path.join(BASE_DIR, 'webapp', 'static', 'index.html'),
-        os.path.join(BASE_DIR, 'docs', 'index.html'),
-        os.path.join(os.getcwd(), 'webapp', 'static', 'index.html'),
-        os.path.join(os.getcwd(), 'static', 'index.html')
-    ]
+    # index.html находится в директории static рядом с server.py
+    index_path = os.path.join(STATIC_DIR, 'index.html')
     
-    log_info(f"🔍 Поиск index.html...")
-    for path in possible_paths:
-        log_info(f"  Проверяю: {path} - {'СУЩЕСТВУЕТ' if os.path.exists(path) else 'НЕ НАЙДЕН'}")
-        if os.path.exists(path):
-            log_info(f"📄 Отдаём index.html из {path}")
-            return FileResponse(path)
+    log_info(f"🔍 GET / - Запрос главной страницы")
+    log_info(f"� Ищем index.html по пути: {index_path}")
     
-    log_error("❌ index.html не найден ни в одной из директорий:")
-    for path in possible_paths:
-        log_error(f"  ❌ {path}")
-    raise HTTPException(status_code=404, detail="index.html not found")
+    if os.path.exists(index_path):
+        log_info(f"✅ Отдаём index.html из {index_path}")
+        return FileResponse(index_path)
+    else:
+        log_error(f"❌ index.html НЕ НАЙДЕН по пути: {index_path}")
+        log_error(f"📂 Содержимое STATIC_DIR: {os.listdir(STATIC_DIR) if os.path.exists(STATIC_DIR) else 'ДИРЕКТОРИЯ НЕ СУЩЕСТВУЕТ'}")
+        raise HTTPException(status_code=404, detail=f"index.html not found at {index_path}")
 
 
 @app.get("/api/health")
@@ -176,6 +165,19 @@ async def health_check():
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
         "bot_available": trading_bot is not None
+    }
+
+
+@app.get("/api/debug/paths")
+async def debug_paths():
+    """Отладочный эндпоинт для проверки путей"""
+    return {
+        "webapp_dir": WEBAPP_DIR,
+        "static_dir": STATIC_DIR,
+        "cwd": os.getcwd(),
+        "static_exists": os.path.exists(STATIC_DIR),
+        "static_contents": os.listdir(STATIC_DIR) if os.path.exists(STATIC_DIR) else [],
+        "index_exists": os.path.exists(os.path.join(STATIC_DIR, 'index.html'))
     }
 
 
