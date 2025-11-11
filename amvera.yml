@@ -14,3 +14,10 @@ run:
   scriptName: webapp_only.py
   persistenceMount: /data
   containerPort: 8000
+
+# Health check для проверки работоспособности
+healthcheck:
+  path: /ping
+  interval: 30
+  timeout: 10
+  retries: 3
