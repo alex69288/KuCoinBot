@@ -895,10 +895,12 @@
     // Загрузка статуса бота
     async function loadStatus() {
       try {
+        console.log('📊 Загрузка статуса...');
         const response = await fetch(`/api/status?init_data=${encodeURIComponent(getInitData())}`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
+        console.log('✅ Статус загружен:', data);
 
         // Обновляем данные позиций
         if (data.positions) {
@@ -929,10 +931,12 @@
     // Загрузка рыночных данных
     async function loadMarket() {
       try {
+        console.log('📈 Загрузка рынка...');
         const response = await fetch(`/api/market?init_data=${encodeURIComponent(getInitData())}`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
+        console.log('✅ Рынок загружен:', data);
 
         // Пара в формате: BTC/USDT (ПолноеНазвание)
         const symbol = data.symbol || 'BTC/USDT';
@@ -1462,12 +1466,24 @@
     }
 
     // Автообновление
+    let updateCounter = 0;
+    let lastUpdateTime = Date.now();
+    
     function startAutoUpdate() {
       if (updateInterval) {
         clearInterval(updateInterval);
       }
 
+      console.log('🔄 Автообновление запущено');
+      
       updateInterval = setInterval(() => {
+        const now = Date.now();
+        const interval = now - lastUpdateTime;
+        lastUpdateTime = now;
+        updateCounter++;
+        
+        console.log(`🔄 Обновление #${updateCounter} (интервал: ${interval}мс, вкладка: ${currentTab})`);
+        
         if (currentTab === 'home') {
           loadStatus();
           loadMarket();
