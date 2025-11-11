@@ -38,13 +38,17 @@ async def health():
 
 def main():
     """Запуск минимального сервера"""
+    # Настройка вывода для работы с любой кодировкой
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace') if hasattr(sys.stdout, 'reconfigure') else None
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace') if hasattr(sys.stderr, 'reconfigure') else None
+    
     print("=" * 60, flush=True)
-    print("🧪 ТЕСТОВЫЙ СЕРВЕР", flush=True)
+    print("[TEST] Minimal Test Server", flush=True)
     print("=" * 60, flush=True)
     
     port = int(os.getenv('PORT', 8000))
     
-    print(f"🚀 Запуск на порту {port}", flush=True)
+    print(f"[START] Starting on port {port}", flush=True)
     
     uvicorn.run(
         app,

@@ -15,36 +15,41 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 def main():
     """Запуск только Web App без торгового бота"""
+    # Настройка вывода для работы с любой кодировкой
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    
     start_time = time.time()
     
     print("=" * 60, flush=True)
-    print("🌐 ЗАПУСК WEB APP (только интерфейс)", flush=True)
+    print("[WEB APP] Starting Web App (interface only)", flush=True)
     print("=" * 60, flush=True)
     
     try:
         # Импортируем необходимые модули
-        print("📦 Импорт модулей...", flush=True)
+        print("[IMPORT] Loading modules...", flush=True)
         
-        print("  - Импорт uvicorn...", flush=True)
+        print("  - Importing uvicorn...", flush=True)
         import uvicorn
-        print("  ✅ uvicorn", flush=True)
+        print("  [OK] uvicorn", flush=True)
         
-        print("  - Импорт webapp.server...", flush=True)
+        print("  - Importing webapp.server...", flush=True)
         from webapp.server import app
-        print("  ✅ webapp.server", flush=True)
+        print("  [OK] webapp.server", flush=True)
         
         # Получаем порт из переменной окружения
         port = int(os.getenv('PORT', 8000))
         
         print("\n" + "=" * 60, flush=True)
-        print(f"✅ Инициализация завершена за {time.time() - start_time:.2f} сек", flush=True)
-        print(f"🚀 ЗАПУСК WEB APP НА ПОРТУ {port}", flush=True)
+        print(f"[OK] Initialization completed in {time.time() - start_time:.2f} sec", flush=True)
+        print(f"[START] Starting WEB APP on port {port}", flush=True)
         print("=" * 60, flush=True)
         print("", flush=True)
-        print("📝 ВАЖНО: Торговый бот будет запущен через веб-интерфейс", flush=True)
-        print("   после настройки переменных окружения в Amvera.", flush=True)
+        print("[INFO] Trading bot will be started via web interface", flush=True)
+        print("       after setting environment variables in Amvera.", flush=True)
         print("", flush=True)
-        print("🔧 Необходимые переменные окружения:", flush=True)
+        print("[ENV] Required environment variables:", flush=True)
         print("   - KUCOIN_API_KEY", flush=True)
         print("   - KUCOIN_SECRET_KEY", flush=True)
         print("   - KUCOIN_PASSPHRASE", flush=True)
@@ -54,7 +59,7 @@ def main():
         print("", flush=True)
         
         # Запускаем Uvicorn как ГЛАВНЫЙ процесс
-        print("🔄 Запуск Uvicorn сервера...", flush=True)
+        print("[UVICORN] Starting Uvicorn server...", flush=True)
         uvicorn.run(
             app,
             host="0.0.0.0",
@@ -65,19 +70,19 @@ def main():
         )
         
     except ImportError as e:
-        print(f"\n❌ ОШИБКА ИМПОРТА: {e}", flush=True)
-        print("Проверьте, что все зависимости установлены:", flush=True)
+        print(f"\n[ERROR] Import error: {e}", flush=True)
+        print("Check that all dependencies are installed:", flush=True)
         print("  pip install -r requirements.txt", flush=True)
         import traceback
         traceback.print_exc()
         sys.exit(1)
         
     except KeyboardInterrupt:
-        print("\n🛑 Получен сигнал остановки", flush=True)
+        print("\n[STOP] Received shutdown signal", flush=True)
         
     except Exception as e:
-        print(f"\n❌ КРИТИЧЕСКАЯ ОШИБКА: {e}", flush=True)
-        print(f"Тип ошибки: {type(e).__name__}", flush=True)
+        print(f"\n[CRITICAL ERROR] {e}", flush=True)
+        print(f"Error type: {type(e).__name__}", flush=True)
         import traceback
         traceback.print_exc()
         sys.exit(1)
