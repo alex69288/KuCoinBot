@@ -11,6 +11,6 @@ build:
   requirementsPath: requirements.txt
 
 run:
-  scriptName: start.py
+  scriptName: webapp_only.py
   persistenceMount: /data
   containerPort: 8000
