@@ -20,6 +20,7 @@ class TelegramBot:
         self.last_update_id = 0
         self.connection_issues = 0
         self.last_balance = None  # Для отслеживания изменений баланса
+        self.welcome_message_id = None  # ID приветственного сообщения для редактирования
         
         # Настройка прокси для Telegram (если указано в .env)
         self.proxies = None
@@ -43,14 +44,12 @@ class TelegramBot:
         if not self.test_connection():
             log_error("❌ Неверный Telegram токен или chat_id")
             return
+        # Загружаем ID предыдущего приветственного сообщения
+        self.load_welcome_message_id()
         # Запускаем слушатель сообщений
         self.start_message_listener()
-        # Устанавливаем команды бота в меню (синяя кнопка слева от поля ввода)
-        self.set_bot_commands()
-        # Отправляем кнопку Web App
-        self.send_webapp_button()
-        # Отправляем приветственное сообщение один раз при запуске
-        self.send_startup_message()
+        # Отправляем/обновляем приветственное сообщение с кнопкой WebApp
+        self.send_or_update_welcome_message()
         log_info("✅ Telegram бот успешно инициализирован")
 
     def test_connection(self):
@@ -258,15 +257,108 @@ Telegram WebApp требует HTTPS URL.
             log_error(f"❌ Ошибка отправки кнопки Web App: {e}")
             return False
     
-    def send_startup_message(self):
-        """Отправляет приветственное сообщение один раз при запуске бота"""
+    def send_or_update_welcome_message(self):
+        """Отправляет или обновляет приветственное сообщение с кнопкой WebApp"""
         if not self.token or not self.chat_id:
             return
+        
+        # Получаем URL WebApp
+        webapp_url = os.getenv('WEBAPP_URL')
+        if not webapp_url:
+            log_error("⚠️ WEBAPP_URL не установлен в .env. WebApp недоступен.")
+            return
+        
+        if not webapp_url.startswith('https://'):
+            log_error(f"⚠️ WebApp URL должен начинаться с https://. Текущий URL: {webapp_url}")
+            return
+        
+        # Формируем сообщение
+        current_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        message = f"""🤖 <b>AutoTrading Bot</b>
+
+Бот готов к работе!
+Откройте полнофункциональное веб-приложение для:
+
+📊 Мониторинг в реальном времени
+⚙️ Управление настройками  
+📈 Детальная статистика
+💰 Информация о балансе
+🎯 Управление позициями
+
+<i>Последнее обновление: {current_time}</i>
+
+Нажмите кнопку ниже для открытия приложения 👇"""
+        
+        reply_markup = {
+            "inline_keyboard": [[
+                {
+                    "text": "🚀 Открыть приложение",
+                    "web_app": {"url": webapp_url}
+                }
+            ]]
+        }
+        
         try:
-            message = '🤖 <b>Бот готов к работе!</b>\n\nИспользуйте синюю кнопку "Меню" слева от поля ввода или команду /start'
-            self.send_message(message)
+            # Пытаемся обновить существующее сообщение
+            if self.welcome_message_id:
+                url = f"https://api.telegram.org/bot{self.token}/editMessageText"
+                payload = {
+                    'chat_id': self.chat_id,
+                    'message_id': self.welcome_message_id,
+                    'text': message,
+                    'parse_mode': 'HTML',
+                    'reply_markup': reply_markup
+                }
+                
+                timeout = 15 if self.use_proxy else 8
+                response = requests.post(url, json=payload, timeout=timeout, proxies=self.proxies)
+                
+                if response.status_code == 200:
+                    log_info("✅ Приветственное сообщение обновлено")
+                    return
+                else:
+                    # Если не удалось обновить, отправим новое
+                    log_info("ℹ️ Не удалось обновить сообщение, отправляем новое")
+            
+            # Отправляем новое сообщение
+            url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+            payload = {
+                'chat_id': self.chat_id,
+                'text': message,
+                'parse_mode': 'HTML',
+                'reply_markup': reply_markup
+            }
+            
+            timeout = 15 if self.use_proxy else 8
+            response = requests.post(url, json=payload, timeout=timeout, proxies=self.proxies)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('ok') and 'result' in data:
+                    # Сохраняем ID сообщения для будущих обновлений
+                    self.welcome_message_id = data['result']['message_id']
+                    log_info("✅ Приветственное сообщение отправлено")
+                    # Сохраняем ID в файл для сохранения между перезапусками
+                    try:
+                        with open('.telegram_welcome_msg_id', 'w') as f:
+                            f.write(str(self.welcome_message_id))
+                    except:
+                        pass
+            else:
+                log_error(f"❌ Ошибка отправки приветственного сообщения: {response.text}")
+                
         except Exception as e:
-            log_error(f"❌ Ошибка отправки приветственного сообщения: {e}")
+            log_error(f"❌ Ошибка в send_or_update_welcome_message: {e}")
+    
+    def load_welcome_message_id(self):
+        """Загружает ID приветственного сообщения из файла"""
+        try:
+            if os.path.exists('.telegram_welcome_msg_id'):
+                with open('.telegram_welcome_msg_id', 'r') as f:
+                    self.welcome_message_id = int(f.read().strip())
+                    log_info(f"✅ Загружен ID приветственного сообщения: {self.welcome_message_id}")
+        except Exception as e:
+            log_error(f"⚠️ Не удалось загрузить ID приветственного сообщения: {e}")
 
     def start_message_listener(self):
         """Запуск слушателя сообщений"""

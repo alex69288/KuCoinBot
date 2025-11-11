@@ -30,116 +30,65 @@ class MessageHandler:
             return False
 
     def handle_message(self, message_text, chat_id=None):
-        """Основной обработчик сообщений"""
+        """Основной обработчик сообщений - только команда /start"""
         try:
-            # Сохраняем chat_id для последующего использования
-            if chat_id is not None:
-                # Если у нас нет сохраненного chat_id для меню EMA, сохраняем его
-                if self.last_ema_menu_chat_id is None:
-                    self.last_ema_menu_chat_id = chat_id
-            
-            if self.waiting_for_input:
-                self.handle_direct_input(message_text)
-                return
             # 🔧 БЕЗОПАСНАЯ ПРОВЕРКА: убеждаемся, что telegram инициализирован
             if not hasattr(self.bot, 'telegram') or self.bot.telegram is None:
                 log_error("❌ Telegram бот не инициализирован. Сообщение не может быть обработано.")
                 return
-            self.bot.telegram.send_message("⏳ Обрабатываю запрос...")
-            # Обработка кнопок "Назад"
-            if message_text in ['🔙 Назад к настройкам', '🔙 Назад']:
-                self.send_settings_menu()
-                return
-            if message_text == '🏠 Главное меню' or message_text == 'Меню' or message_text == '/menu':
-                self.send_main_menu_inline()
-                return
-            # Основные команды главного меню
-            if message_text == '/start':
-                self.send_main_menu_inline()
-            elif message_text == '/webapp':
-                # Переотправка кнопки Web App с актуальным URL
-                if hasattr(self.bot, 'telegram') and self.bot.telegram is not None:
-                    self.bot.telegram.send_webapp_button()
-                else:
-                    log_error("❌ Telegram бот не инициализирован")
-            elif message_text == '📊 Статус':
-                self.send_status()
-            elif message_text == '💼 Инфо аккаунта':
-                self.send_account_info()
-            elif message_text == '⚙️ Настройки':
-                self.send_settings_menu()
-            elif message_text == '📈 Сделки':
-                self.send_trade_history()
-            elif message_text == '📊 Аналитика':
-                self.send_analytics()
-            elif message_text == '⚡ Управление':
-                self.send_trading_control_menu()
-            elif message_text == '🔄 Обновить':
-                self.send_market_update()
-            elif message_text == '🚨 Экстренная остановка':
-                self.emergency_stop()
-            # Обработка кнопок настроек
-            elif '📈 EMA порог:' in message_text:
-                self.start_ema_threshold_input()
-            elif '💰 Размер позиции:' in message_text:
-                self.start_trade_amount_input()
-            elif '🎯 Стратегия:' in message_text:
-                self.send_strategy_menu()
-            elif '💱 Пара:' in message_text:
-                self.send_pairs_menu()
-            # Обработка ML настроек
-            elif '🤖 ML Настройки' in message_text:
-                self.send_ml_settings_menu()
-            elif any(cmd in message_text for cmd in ['🤖 ML:', '🎯 Порог покупки:', '🎯 Порог продажи:', '🔄 Переобучить модель']):
-                self.handle_ml_settings_selection(message_text)
-            # Обработка настроек EMA
-            elif '⚙️ Настройки EMA' in message_text:
-                self.send_ema_settings_menu()
-            elif '⚙️ Настройки рисков' in message_text:
-                self.send_risk_settings_menu()
-            elif any(cmd in message_text for cmd in ['💼 Макс. позиция:', '📉 Макс. убыток/день:', '🔴 Макс. убыточных:']):
-                self.handle_risk_settings_selection(message_text)
-            elif any(cmd in message_text for cmd in ['🎯 Take Profit:', '🛑 Stop Loss:', '📉 Trailing Stop:', '⏰ Min Hold Time:']):
-                self.handle_ema_settings_selection(message_text)
-            elif '🔄 Обновления:' in message_text:
-                self.toggle_price_updates()
-            # Обработка выбора стратегии
-            elif any(strategy_name in message_text for strategy_name in self.bot.settings.strategy_settings['available_strategies'].values()):
-                self.handle_strategy_selection(message_text)
-            # Обработка выбора пары
-            elif any(pair_name in message_text for pair_name in self.bot.settings.trading_pairs['available_pairs'].values()):
-                self.handle_pair_selection(message_text)
-            # Обработка управления торговлей
-            elif '📊 Торговля:' in message_text:
-                self.toggle_trading_enabled()
-            elif '🎯 Сигналы:' in message_text:
-                self.toggle_trade_signals()
-            elif '🔧 Режим:' in message_text:
-                self.toggle_demo_mode()
-            elif message_text == '🔄 Перезагрузить бот':
-                self.restart_bot()
-            # Обработка аналитики
-            elif message_text == '📈 Детальный отчет':
-                self.send_detailed_report()
-            elif message_text == '📊 Графики':
-                self.send_charts_info()
-            elif message_text == '🧹 Очистить статистику':
-                self.clear_statistics()
-            # 🔹 ОБРАБОТКА ПЕРЕКЛЮЧЕНИЯ РЕЖИМА TP
-            elif '🔄 TP режим:' in message_text:
-                self.toggle_take_profit_mode()
+            
+            # Обрабатываем только команду /start или /webapp
+            if message_text in ['/start', '/webapp', 'Меню', '🏠 Главное меню']:
+                # Обновляем приветственное сообщение с кнопкой WebApp
+                self.bot.telegram.send_or_update_welcome_message()
+            else:
+                # На любое другое сообщение отправляем напоминание об использовании WebApp
+                reminder = """
+ℹ️ <b>Используйте веб-приложение</b>
+
+Все функции управления ботом доступны в веб-приложении.
+Нажмите кнопку "🚀 Открыть приложение" выше.
+"""
+                self.bot.telegram.send_message(reminder)
         except Exception as e:
-            error_msg = f"❌ Ошибка обработки команды: {e}"
-            log_error(error_msg)
-            # 🔧 БЕЗОПАСНАЯ ПРОВЕРКА: убеждаемся, что telegram инициализирован перед отправкой ошибки
-            if hasattr(self.bot, 'telegram') and self.bot.telegram is not None:
-                try:
-                    self.bot.telegram.send_message(error_msg)
-                except Exception as send_error:
-                    log_error(f"❌ Не удалось отправить сообщение об ошибке: {send_error}")
+            log_error(f"❌ Ошибка обработки сообщения: {e}")
 
     def handle_callback(self, callback_data, callback_query=None):
-        """Обработка callback от inline кнопок с редактированием сообщений"""
+        """Обработка callback - перенаправляем на использование webapp"""
+        try:
+            log_info(f"🔘 Получен callback: {callback_data}")
+            
+            # На любой callback отправляем напоминание об использовании WebApp
+            reminder = """
+ℹ️ <b>Используйте веб-приложение</b>
+
+Все функции управления ботом доступны в веб-приложении.
+Нажмите кнопку "🚀 Открыть приложение" для полного доступа к функциям.
+"""
+            self.bot.telegram.send_message(reminder)
+            # Обновляем приветственное сообщение
+            self.bot.telegram.send_or_update_welcome_message()
+        except Exception as e:
+            log_error(f"❌ Ошибка обработки callback: {e}")
+    
+    # Старые обработчики - УДАЛЕНЫ, все функции теперь в webapp
+    # Оставляем только handle_message и handle_callback
+    
+    def old_handle_message_UNUSED(self, message_text, chat_id=None):
+        """СТАРЫЙ ОБРАБОТЧИК - НЕ ИСПОЛЬЗУЕТСЯ
+        Оставлен для справки, все функции перенесены в webapp"""
+        # Обработка кнопок "Назад" - удалено, т.к. все теперь в webapp
+        # Обработка основных команд - удалено, т.к. все теперь в webapp
+        # Обработка кнопок настроек - удалено, т.к. все теперь в webapp
+        # Обработка ML настроек - удалено, т.к. все теперь в webapp
+        # Обработка настроек EMA - удалено, т.к. все теперь в webapp
+        # Обработка настроек рисков - удалено, т.к. все теперь в webapp
+        # Все функции перенесены в webapp
+        pass
+    
+    def old_handle_callback_UNUSED(self, callback_data, callback_query=None):
+        """СТАРЫЙ ОБРАБОТЧИК CALLBACK - НЕ ИСПОЛЬЗУЕТСЯ
+        Оставлен для справки"""
         try:
             log_info(f"🔘 Обрабатываем callback: {callback_data}")
             
@@ -165,6 +114,40 @@ class MessageHandler:
                 self.send_analytics_inline()
             elif callback_data == "control":
                 self.send_trading_control_menu_inline()
+            
+            # Настройки
+            elif callback_data == "settings_pairs":
+                self.send_pairs_menu_inline()
+            elif callback_data == "settings_strategy":
+                self.send_strategy_menu_inline()
+            elif callback_data == "settings_trade_amount":
+                self.start_trade_amount_input()
+            elif callback_data == "settings_ema_threshold":
+                # Используем старую логику для настройки порога EMA
+                self.start_ema_threshold_input()
+            elif callback_data == "settings_ml":
+                self.send_ml_settings_menu_inline()
+            elif callback_data == "settings_ema":
+                self.send_ema_settings_menu_inline(chat_id, message_id)
+            elif callback_data == "settings_risk":
+                self.send_risk_settings_menu_inline()
+            elif callback_data == "settings_toggle_updates":
+                self.toggle_price_updates()
+                self.send_settings_menu_inline()
+            elif '🔄 Обновления:' in message_text:
+                self.toggle_price_updates()
+            # Обработка выбора стратегии
+            elif any(strategy_name in message_text for strategy_name in self.bot.settings.strategy_settings['available_strategies'].values()):
+                self.handle_strategy_selection(message_text)
+            # Обработка выбора пары
+            elif any(pair_name in message_text for pair_name in self.bot.settings.trading_pairs['available_pairs'].values()):
+                self.handle_pair_selection(message_text)
+            # Обработка управления торговлей
+            elif '📊 Торговля:' in message_text:
+                self.toggle_trading_enabled()
+            elif '🎯 Сигналы:' in message_text:
+                self.toggle_trade_signals()
+
             
             # Настройки
             elif callback_data == "settings_pairs":

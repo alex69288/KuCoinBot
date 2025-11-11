@@ -423,6 +423,488 @@ async def get_trades(
         raise HTTPException(status_code=500, detail=f"Error getting trades: {str(e)}")
 
 
+@app.get("/api/positions")
+async def get_positions(init_data: str = Query(...)):
+    """Получить открытые позиции"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        positions = []
+        
+        # Получаем текущую позицию
+        if trading_bot.position and trading_bot.position != 'none':
+            current_price = trading_bot.exchange.fetch_ticker(
+                trading_bot.settings.trading_pairs['active_pair']
+            )['last']
+            
+            pnl = 0
+            if trading_bot.position == 'long':
+                pnl = (current_price - trading_bot.entry_price) * trading_bot.current_position_size_usdt / trading_bot.entry_price
+            
+            positions.append({
+                "id": "current_position",
+                "pair": trading_bot.settings.trading_pairs['active_pair'],
+                "status": trading_bot.position,
+                "entry_price": trading_bot.entry_price,
+                "current_price": current_price,
+                "amount": trading_bot.current_position_size_usdt / trading_bot.entry_price if trading_bot.entry_price else 0,
+                "pnl": pnl,
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        return positions
+    except Exception as e:
+        log_error(f"Ошибка получения позиций: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting positions: {str(e)}")
+
+
+@app.post("/api/position/{position_id}/close")
+async def close_position(
+    position_id: str,
+    init_data: str = Body(..., embed=True)
+):
+    """Закрыть позицию вручную"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        if trading_bot.position and trading_bot.position != 'none':
+            # Закрываем позицию
+            result = trading_bot.close_position(reason="Закрыто вручную через WebApp")
+            log_info(f"📴 Позиция закрыта вручную через WebApp")
+            return {
+                "status": "success",
+                "message": "Позиция закрыта",
+                "result": result
+            }
+        else:
+            return {
+                "status": "info",
+                "message": "Нет открытой позиции"
+            }
+    except Exception as e:
+        log_error(f"Ошибка закрытия позиции: {e}")
+        raise HTTPException(status_code=500, detail=f"Error closing position: {str(e)}")
+
+
+@app.get("/api/analytics")
+async def get_analytics(init_data: str = Query(...)):
+    """Получить аналитику и статистику"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        metrics = trading_bot.metrics
+        
+        # Основная статистика
+        total_trades = getattr(metrics, 'total_trades', 0)
+        winning_trades = getattr(metrics, 'winning_trades', 0)
+        losing_trades = getattr(metrics, 'losing_trades', 0)
+        
+        win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+        
+        # Прибыли/убытки
+        total_profit = getattr(metrics, 'total_profit', 0.0)
+        avg_profit = (total_profit / total_trades) if total_trades > 0 else 0
+        
+        # Максимальные значения
+        max_win = getattr(metrics, 'max_win', 0.0)
+        max_loss = getattr(metrics, 'max_loss', 0.0)
+        
+        # Средние значения для прибыльных и убыточных сделок
+        avg_win = 0
+        avg_loss = 0
+        
+        if hasattr(metrics, 'trades_history') and metrics.trades_history:
+            profitable_trades = [t for t in metrics.trades_history if t.get('pnl', 0) > 0]
+            losing_trades_list = [t for t in metrics.trades_history if t.get('pnl', 0) < 0]
+            
+            if profitable_trades:
+                avg_win = sum(t['pnl'] for t in profitable_trades) / len(profitable_trades)
+            if losing_trades_list:
+                avg_loss = sum(t['pnl'] for t in losing_trades_list) / len(losing_trades_list)
+        
+        return {
+            "total_trades": total_trades,
+            "winning_trades": winning_trades,
+            "losing_trades": losing_trades,
+            "win_rate": round(win_rate, 2),
+            "total_profit": round(total_profit, 2),
+            "avg_profit": round(avg_profit, 2),
+            "avg_win": round(avg_win, 2),
+            "avg_loss": round(avg_loss, 2),
+            "max_win": round(max_win, 2),
+            "max_loss": round(max_loss, 2),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        log_error(f"Ошибка получения аналитики: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting analytics: {str(e)}")
+
+
+@app.post("/api/analytics/reset")
+async def reset_analytics(init_data: str = Body(..., embed=True)):
+    """Сбросить статистику"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        # Сбрасываем метрики
+        if hasattr(trading_bot.metrics, 'reset'):
+            trading_bot.metrics.reset()
+        else:
+            trading_bot.metrics.total_trades = 0
+            trading_bot.metrics.winning_trades = 0
+            trading_bot.metrics.losing_trades = 0
+            trading_bot.metrics.total_profit = 0.0
+            trading_bot.metrics.max_win = 0.0
+            trading_bot.metrics.max_loss = 0.0
+            if hasattr(trading_bot.metrics, 'trades_history'):
+                trading_bot.metrics.trades_history = []
+        
+        log_info("🗑️ Статистика сброшена через WebApp")
+        
+        return {
+            "status": "success",
+            "message": "Статистика сброшена"
+        }
+    except Exception as e:
+        log_error(f"Ошибка сброса статистики: {e}")
+        raise HTTPException(status_code=500, detail=f"Error resetting analytics: {str(e)}")
+
+
+class TradingSettingsUpdate(BaseModel):
+    active_pair: Optional[str] = None
+    active_strategy: Optional[str] = None
+    trade_amount_percent: Optional[float] = None
+
+
+@app.post("/api/settings/trading")
+async def update_trading_settings(
+    init_data: str = Body(...),
+    settings: TradingSettingsUpdate = Body(...)
+):
+    """Обновить торговые настройки"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        updated = []
+        
+        if settings.active_pair is not None:
+            trading_bot.settings.trading_pairs['active_pair'] = settings.active_pair
+            updated.append(f"Пара: {settings.active_pair}")
+        
+        if settings.active_strategy is not None:
+            trading_bot.settings.strategy_settings['active_strategy'] = settings.active_strategy
+            updated.append(f"Стратегия: {settings.active_strategy}")
+        
+        if settings.trade_amount_percent is not None:
+            trading_bot.settings.settings['trade_amount_percent'] = settings.trade_amount_percent
+            updated.append(f"Размер позиции: {settings.trade_amount_percent}%")
+        
+        # Сохраняем настройки
+        trading_bot.settings.save_settings()
+        
+        log_info(f"⚙️ Торговые настройки обновлены через WebApp: {', '.join(updated)}")
+        
+        return {
+            "status": "success",
+            "message": "Торговые настройки обновлены",
+            "updated": updated
+        }
+    except Exception as e:
+        log_error(f"Ошибка обновления торговых настроек: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating trading settings: {str(e)}")
+
+
+class EmaSettingsUpdate(BaseModel):
+    ema_fast_period: Optional[int] = None
+    ema_slow_period: Optional[int] = None
+    ema_threshold: Optional[float] = None
+
+
+@app.post("/api/settings/ema")
+async def update_ema_settings(
+    init_data: str = Body(...),
+    settings: EmaSettingsUpdate = Body(...)
+):
+    """Обновить настройки EMA"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        strategy = trading_bot.get_active_strategy()
+        updated = []
+        
+        if settings.ema_fast_period is not None:
+            strategy.settings['ema_fast_period'] = settings.ema_fast_period
+            updated.append(f"Быстрая EMA: {settings.ema_fast_period}")
+        
+        if settings.ema_slow_period is not None:
+            strategy.settings['ema_slow_period'] = settings.ema_slow_period
+            updated.append(f"Медленная EMA: {settings.ema_slow_period}")
+        
+        if settings.ema_threshold is not None:
+            strategy.settings['ema_threshold'] = settings.ema_threshold
+            updated.append(f"Порог EMA: {settings.ema_threshold}%")
+        
+        # Сохраняем настройки
+        trading_bot.settings.save_settings()
+        
+        log_info(f"📈 EMA настройки обновлены через WebApp: {', '.join(updated)}")
+        
+        return {
+            "status": "success",
+            "message": "EMA настройки обновлены",
+            "updated": updated
+        }
+    except Exception as e:
+        log_error(f"Ошибка обновления EMA настроек: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating EMA settings: {str(e)}")
+
+
+class RiskSettingsUpdate(BaseModel):
+    take_profit_percent: Optional[float] = None
+    stop_loss_percent: Optional[float] = None
+    max_position_size: Optional[float] = None
+    max_daily_loss: Optional[float] = None
+
+
+@app.post("/api/settings/risk")
+async def update_risk_settings(
+    init_data: str = Body(...),
+    settings: RiskSettingsUpdate = Body(...)
+):
+    """Обновить настройки риск-менеджмента"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        strategy = trading_bot.get_active_strategy()
+        updated = []
+        
+        if settings.take_profit_percent is not None:
+            strategy.settings['take_profit_percent'] = settings.take_profit_percent
+            updated.append(f"Take Profit: {settings.take_profit_percent}%")
+        
+        if settings.stop_loss_percent is not None:
+            strategy.settings['stop_loss_percent'] = settings.stop_loss_percent
+            updated.append(f"Stop Loss: {settings.stop_loss_percent}%")
+        
+        if settings.max_position_size is not None:
+            trading_bot.settings.risk_settings['max_position_size'] = settings.max_position_size
+            updated.append(f"Макс. позиция: {settings.max_position_size} USDT")
+        
+        if settings.max_daily_loss is not None:
+            trading_bot.settings.risk_settings['max_daily_loss'] = settings.max_daily_loss
+            updated.append(f"Макс. убыток/день: {settings.max_daily_loss} USDT")
+        
+        # Сохраняем настройки
+        trading_bot.settings.save_settings()
+        
+        log_info(f"🛡️ Риск настройки обновлены через WebApp: {', '.join(updated)}")
+        
+        return {
+            "status": "success",
+            "message": "Риск настройки обновлены",
+            "updated": updated
+        }
+    except Exception as e:
+        log_error(f"Ошибка обновления риск настроек: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating risk settings: {str(e)}")
+
+
+class MLSettingsUpdate(BaseModel):
+    ml_enabled: Optional[bool] = None
+    ml_buy_threshold: Optional[float] = None
+    ml_sell_threshold: Optional[float] = None
+
+
+@app.post("/api/settings/ml")
+async def update_ml_settings(
+    init_data: str = Body(...),
+    settings: MLSettingsUpdate = Body(...)
+):
+    """Обновить ML настройки"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        strategy = trading_bot.get_active_strategy()
+        updated = []
+        
+        if settings.ml_enabled is not None:
+            strategy.settings['ml_enabled'] = settings.ml_enabled
+            updated.append(f"ML: {'включен' if settings.ml_enabled else 'выключен'}")
+        
+        if settings.ml_buy_threshold is not None:
+            strategy.settings['ml_buy_threshold'] = settings.ml_buy_threshold
+            updated.append(f"Порог покупки: {settings.ml_buy_threshold}")
+        
+        if settings.ml_sell_threshold is not None:
+            strategy.settings['ml_sell_threshold'] = settings.ml_sell_threshold
+            updated.append(f"Порог продажи: {settings.ml_sell_threshold}")
+        
+        # Сохраняем настройки
+        trading_bot.settings.save_settings()
+        
+        log_info(f"🤖 ML настройки обновлены через WebApp: {', '.join(updated)}")
+        
+        return {
+            "status": "success",
+            "message": "ML настройки обновлены",
+            "updated": updated
+        }
+    except Exception as e:
+        log_error(f"Ошибка обновления ML настроек: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating ML settings: {str(e)}")
+
+
+@app.post("/api/ml/retrain")
+async def retrain_ml_model(init_data: str = Body(..., embed=True)):
+    """Переобучить ML модель"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        strategy = trading_bot.get_active_strategy()
+        
+        # Проверяем, есть ли у стратегии ML модель
+        if hasattr(strategy, 'ml_model') and hasattr(strategy.ml_model, 'train'):
+            strategy.ml_model.train()
+            log_info("🤖 ML модель переобучена через WebApp")
+            return {
+                "status": "success",
+                "message": "ML модель успешно переобучена"
+            }
+        else:
+            return {
+                "status": "info",
+                "message": "ML модель недоступна для текущей стратегии"
+            }
+    except Exception as e:
+        log_error(f"Ошибка переобучения ML модели: {e}")
+        raise HTTPException(status_code=500, detail=f"Error retraining ML model: {str(e)}")
+
+
+class GeneralSettingsUpdate(BaseModel):
+    trading_enabled: Optional[bool] = None
+    demo_mode: Optional[bool] = None
+    enable_price_updates: Optional[bool] = None
+    trailing_stop: Optional[bool] = None
+
+
+@app.post("/api/settings/general")
+async def update_general_settings(
+    init_data: str = Body(...),
+    settings: GeneralSettingsUpdate = Body(...)
+):
+    """Обновить общие настройки"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        updated = []
+        
+        if settings.trading_enabled is not None:
+            trading_bot.settings.settings['trading_enabled'] = settings.trading_enabled
+            updated.append(f"Торговля: {'включена' if settings.trading_enabled else 'выключена'}")
+        
+        if settings.demo_mode is not None:
+            trading_bot.settings.settings['demo_mode'] = settings.demo_mode
+            updated.append(f"Демо режим: {'включен' if settings.demo_mode else 'выключен'}")
+        
+        if settings.enable_price_updates is not None:
+            trading_bot.settings.settings['enable_price_updates'] = settings.enable_price_updates
+            updated.append(f"Обновления цены: {'включены' if settings.enable_price_updates else 'выключены'}")
+        
+        if settings.trailing_stop is not None:
+            strategy = trading_bot.get_active_strategy()
+            strategy.settings['trailing_stop'] = settings.trailing_stop
+            updated.append(f"Trailing Stop: {'включен' if settings.trailing_stop else 'выключен'}")
+        
+        # Сохраняем настройки
+        trading_bot.settings.save_settings()
+        
+        log_info(f"🔧 Общие настройки обновлены через WebApp: {', '.join(updated)}")
+        
+        return {
+            "status": "success",
+            "message": "Общие настройки обновлены",
+            "updated": updated
+        }
+    except Exception as e:
+        log_error(f"Ошибка обновления общих настроек: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating general settings: {str(e)}")
+
+
+@app.get("/api/trade-history")
+async def get_trade_history(
+    init_data: str = Query(...),
+    limit: int = Query(10, ge=1, le=50)
+):
+    """Получить историю сделок (упрощенная версия)"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        history = []
+        
+        if hasattr(trading_bot.metrics, 'trades_history'):
+            history = trading_bot.metrics.trades_history[-limit:]
+        
+        return history
+    except Exception as e:
+        log_error(f"Ошибка получения истории сделок: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting trade history: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     log_info("🌐 Запуск Web App сервера...")
