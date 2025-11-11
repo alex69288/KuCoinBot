@@ -56,11 +56,11 @@ def main():
         from core.bot import AdvancedTradingBot
         print("  ✅ core.bot импортирован", flush=True)
         
-        print("  ⏱️ Импортируем main_with_webapp...", flush=True)
-        from main_with_webapp import main as app_main
+        print("  ⏱️ Импортируем webapp_main...", flush=True)
+        from webapp_main import main as app_main
         print("✅ Главный модуль импортирован", flush=True)
         
-        print("🚀 Запуск приложения...", flush=True)
+        print("🚀 Запуск приложения (Web App как главный процесс)...", flush=True)
         app_main()
         return 0
     except Exception as e:
