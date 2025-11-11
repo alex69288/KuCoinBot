@@ -34,17 +34,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Определяем пути
-WEBAPP_DIR = Path(__file__).parent
+# Определяем пути - пробуем несколько вариантов
+SCRIPT_DIR = Path(__file__).parent
+WEBAPP_DIR = SCRIPT_DIR / "webapp"
 STATIC_DIR = WEBAPP_DIR / "static"
 
+# Если webapp директория не найдена, ищем static рядом со скриптом
+if not WEBAPP_DIR.exists():
+    STATIC_DIR = SCRIPT_DIR / "static"
+
+print(f"[INFO] Script directory: {SCRIPT_DIR}", flush=True)
 print(f"[INFO] Webapp directory: {WEBAPP_DIR}", flush=True)
 print(f"[INFO] Static directory: {STATIC_DIR}", flush=True)
+print(f"[INFO] Static exists: {STATIC_DIR.exists()}", flush=True)
 
 # Монтируем статические файлы
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
     print(f"[OK] Static files mounted from {STATIC_DIR}", flush=True)
+    # Список файлов в static
+    try:
+        files = list(STATIC_DIR.glob("*"))
+        print(f"[INFO] Static files: {[f.name for f in files]}", flush=True)
+    except Exception as e:
+        print(f"[WARNING] Could not list static files: {e}", flush=True)
 else:
     print(f"[WARNING] Static directory not found: {STATIC_DIR}", flush=True)
 
@@ -60,11 +73,30 @@ async def root():
     """Main page - returns index.html"""
     index_path = STATIC_DIR / "index.html"
     
+    print(f"[DEBUG] Looking for index.html at: {index_path}", flush=True)
+    print(f"[DEBUG] Path exists: {index_path.exists()}", flush=True)
+    
     if index_path.exists():
         print(f"[OK] Serving index.html from {index_path}", flush=True)
         return FileResponse(str(index_path))
     else:
         print(f"[ERROR] index.html not found at {index_path}", flush=True)
+        print(f"[DEBUG] Current working directory: {os.getcwd()}", flush=True)
+        print(f"[DEBUG] Script location: {Path(__file__).parent}", flush=True)
+        
+        # Пробуем найти в других местах
+        alternatives = [
+            Path("webapp/static/index.html"),
+            Path("static/index.html"),
+            Path(__file__).parent / "webapp" / "static" / "index.html"
+        ]
+        
+        for alt in alternatives:
+            print(f"[DEBUG] Trying alternative: {alt} - exists: {alt.exists()}", flush=True)
+            if alt.exists():
+                print(f"[OK] Found index.html at alternative location: {alt}", flush=True)
+                return FileResponse(str(alt))
+        
         # Возвращаем простую HTML страницу
         return HTMLResponse(content="""
 <!DOCTYPE html>
@@ -138,6 +170,20 @@ async def get_status():
         "status": "ready",
         "message": "Web App is running. Trading bot can be started via interface.",
         "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/api/debug/paths")
+async def debug_paths():
+    """Debug endpoint to check file paths"""
+    index_path = STATIC_DIR / "index.html"
+    return {
+        "script_dir": str(Path(__file__).parent),
+        "cwd": os.getcwd(),
+        "static_dir": str(STATIC_DIR),
+        "static_exists": STATIC_DIR.exists(),
+        "index_path": str(index_path),
+        "index_exists": index_path.exists(),
+        "static_files": [f.name for f in STATIC_DIR.glob("*")] if STATIC_DIR.exists() else []
     }
 
 def main():
