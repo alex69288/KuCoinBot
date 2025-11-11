@@ -262,7 +262,7 @@ async def get_market_data(
             symbol = trading_bot.settings.trading_pairs['active_pair']
         
         # Получаем данные о рынке
-        ticker = trading_bot.exchange.fetch_ticker(symbol)
+        ticker = trading_bot.exchange.get_ticker(symbol)
         
         return {
             "symbol": symbol,
@@ -438,9 +438,10 @@ async def get_positions(init_data: str = Query(...)):
         
         # Получаем текущую позицию
         if trading_bot.position and trading_bot.position != 'none':
-            current_price = trading_bot.exchange.fetch_ticker(
+            ticker = trading_bot.exchange.get_ticker(
                 trading_bot.settings.trading_pairs['active_pair']
-            )['last']
+            )
+            current_price = ticker['last'] if ticker else 0
             
             pnl = 0
             if trading_bot.position == 'long':
