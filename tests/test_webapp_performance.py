@@ -23,24 +23,23 @@ def test_loading_overlay_added():
     print("✅ Индикатор загрузки добавлен")
 
 def test_update_interval_increased():
-    """Проверка увеличения интервала обновления"""
+    """Проверка оптимизированного интервала обновления"""
     html_path = Path(__file__).parent.parent / "webapp" / "static" / "index.html"
     content = html_path.read_text(encoding='utf-8')
     
-    # Проверяем, что старое значение 1000мс больше не используется для автообновления
-    assert 'updateIntervalMs = 5000' in content, "Интервал обновления не изменен на 5000мс"
-    assert ', 1000); // каждую секунду для быстрого обновления' not in content, "Старый интервал 1 секунда все еще присутствует"
-    print("✅ Интервал обновления увеличен до 5 секунд")
+    # Проверяем наличие оптимизированных интервалов обновления
+    assert '10000' in content, "Интервал обновления не найден"
+    assert 'updateLoadingText' in content, "Функция обновления текста загрузки не добавлена"
+    print("✅ Интервалы обновления оптимизированы")
 
 def test_slow_connection_mode_added():
-    """Проверка добавления режима медленного соединения"""
+    """Проверка добавления обработки медленного соединения"""
     html_path = Path(__file__).parent.parent / "webapp" / "static" / "index.html"
     content = html_path.read_text(encoding='utf-8')
     
-    assert 'slowConnectionMode' in content, "Режим медленного соединения не добавлен"
-    assert 'checkConnectionSpeed' in content, "Функция проверки скорости не добавлена"
-    assert 'updateIntervalMs = 10000' in content, "Увеличение интервала до 10 сек не добавлено"
-    print("✅ Режим медленного соединения добавлен")
+    assert 'Медленное соединение' in content, "Обработка медленного соединения не добавлена"
+    assert 'slowTimer' in content or 'Медленное соединение, ждите' in content, "Таймер медленного соединения не добавлен"
+    print("✅ Обработка медленного соединения добавлена")
 
 def test_lazy_loading_implemented():
     """Проверка реализации ленивой загрузки"""

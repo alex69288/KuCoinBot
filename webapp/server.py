@@ -15,6 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, HTTPException, Query, Body, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -29,6 +30,9 @@ app = FastAPI(
     description="Telegram Web App для управления торговым ботом",
     version="1.0.0"
 )
+
+# Добавляем сжатие GZip для уменьшения размера передаваемых данных
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # Сжимаем ответы больше 1KB
 
 # Настройка CORS для работы с Telegram Web App
 app.add_middleware(
@@ -132,10 +136,30 @@ log_info(f"[INFO] Директория webapp: {WEBAPP_DIR}")
 log_info(f"[INFO] Директория static: {STATIC_DIR}")
 log_info(f"[DIR] Рабочая директория: {os.getcwd()}")
 
-# Монтируем статические файлы ПЕРЕД маршрутами
+# Создаем класс для кэширования статических файлов
+class CachedStaticFiles(StaticFiles):
+    """StaticFiles с поддержкой кэширования для оптимизации загрузки"""
+    
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        
+        # Добавляем заголовки кэширования для статических ресурсов
+        if path.endswith(('.css', '.js', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.woff', '.woff2')):
+            # Кэшируем на 1 день
+            response.headers['Cache-Control'] = 'public, max-age=86400, immutable'
+        elif path.endswith('.html'):
+            # HTML кэшируем минимально (5 минут) для получения обновлений
+            response.headers['Cache-Control'] = 'public, max-age=300, must-revalidate'
+        
+        # Добавляем сжатие
+        response.headers['Vary'] = 'Accept-Encoding'
+        
+        return response
+
+# Монтируем статические файлы ПЕРЕД маршрутами с оптимизацией кэширования
 if os.path.exists(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    log_info(f"[OK] Статические файлы смонтированы из {STATIC_DIR}")
+    app.mount("/static", CachedStaticFiles(directory=STATIC_DIR), name="static")
+    log_info(f"[OK] Статические файлы смонтированы из {STATIC_DIR} с кэшированием")
 else:
     log_error(f"[ERROR] КРИТИЧЕСКАЯ ОШИБКА: Директория static не найдена по пути {STATIC_DIR}")
     log_error(f"[ERROR] Содержимое директории webapp: {os.listdir(WEBAPP_DIR) if os.path.exists(WEBAPP_DIR) else 'НЕ НАЙДЕНА'}")
