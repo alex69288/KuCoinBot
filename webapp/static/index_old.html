@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KuCoin Trading Bot</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary-color: #2196F3;
+      --success-color: #4CAF50;
+      --danger-color: #f44336;
+      --warning-color: #ff9800;
+      --bg-primary: var(--tg-theme-bg-color, #ffffff);
+      --bg-secondary: var(--tg-theme-secondary-bg-color, #f5f5f5);
+      --text-primary: var(--tg-theme-text-color, #000000);
+      --text-secondary: var(--tg-theme-hint-color, #999999);
+      --border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 16px;
+      padding-bottom: 80px;
+      overflow-x: hidden;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .header .subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .info-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-active {
+      background: var(--success-color);
+      color: white;
+    }
+
+    .status-inactive {
+      background: var(--danger-color);
+      color: white;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 12px;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .btn-success {
+      background: var(--success-color);
+      color: white;
+    }
+
+    .btn-danger {
+      background: var(--danger-color);
+      color: white;
+    }
+
+    .btn-warning {
+      background: var(--warning-color);
+      color: white;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+
+    .spinner {
+      border: 3px solid var(--border-color);
+      border-top: 3px solid var(--primary-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .price-change-positive {
+      color: var(--success-color);
+    }
+
+    .price-change-negative {
+      color: var(--danger-color);
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-primary);
+      padding: 16px;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-secondary);
+      padding: 12px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: slideDown 0.3s ease-out;
+      z-index: 1000;
+    }
+
+    @keyframes slideDown {
+      from {
+        transform: translateX(-50%) translateY(-20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h1>🤖 Trading Bot</h1>
+    <p class="subtitle">KuCoin Автоматическая торговля</p>
+  </div>
+
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Загрузка...</p>
+  </div>
+
+  <div id="content" style="display: none;">
+    <!-- Статус бота -->
+    <div class="card">
+      <div class="card-title">📊 Статус бота</div>
+      <div class="info-row">
+        <span class="info-label">Торговля</span>
+        <span class="status-badge" id="trading-status">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Баланс</span>
+        <span class="info-value" id="balance">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Позиция</span>
+        <span class="info-value" id="position">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Прибыль/Убыток</span>
+        <span class="info-value" id="pnl">-</span>
+      </div>
+    </div>
+
+    <!-- Рыночные данные -->
+    <div class="card">
+      <div class="card-title">💹 Рынок</div>
+      <div class="info-row">
+        <span class="info-label">Пара</span>
+        <span class="info-value" id="market-symbol">BTC/USDT</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Цена</span>
+        <span class="info-value" id="market-price">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Изменение 24ч</span>
+        <span class="info-value" id="market-change">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Объем 24ч</span>
+        <span class="info-value" id="market-volume">-</span>
+      </div>
+    </div>
+
+    <!-- Управление -->
+    <div class="card">
+      <div class="card-title">⚙️ Управление</div>
+      <button class="btn btn-success" id="btn-start" onclick="startBot()">
+        ▶️ Запустить торговлю
+      </button>
+      <button class="btn btn-danger" id="btn-stop" onclick="stopBot()" style="display: none;">
+        ⏸️ Остановить торговлю
+      </button>
+      <button class="btn btn-warning" onclick="openSettings()">
+        ⚙️ Настройки
+      </button>
+      <button class="btn btn-primary" onclick="refreshData()">
+        🔄 Обновить данные
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    tg.enableClosingConfirmation();
+
+    let updateInterval;
+
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', function () {
+      console.log('🚀 WebApp загружен');
+      console.log('📱 Telegram WebApp доступен:', typeof tg !== 'undefined');
+      console.log('🔑 Init data:', tg.initData ? 'Есть' : 'Отсутствует');
+      loadData();
+      startAutoUpdate();
+    });
+
+    // Получение init_data для авторизации
+    function getInitData() {
+      return tg.initData || '';
+    }
+
+    // Загрузка данных
+    async function loadData() {
+      try {
+        console.log('📊 Начало загрузки данных...');
+        await Promise.all([loadStatus(), loadMarket()]);
+        console.log('✅ Данные загружены успешно');
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+      } catch (error) {
+        console.error('❌ Ошибка загрузки данных:', error);
+        console.error('❌ Детали ошибки:', error.message, error.stack);
+        showNotification(`Ошибка: ${error.message || 'Неизвестная ошибка'}`);
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    // Загрузка статуса бота
+    async function loadStatus() {
+      console.log('📡 Загрузка статуса...');
+      const response = await fetch(`/api/status?init_data=${encodeURIComponent(getInitData())}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('📊 Статус получен:', data);
+      console.log('📊 Тип данных:', {
+        trading_enabled: typeof data.trading_enabled,
+        balance: typeof data.balance,
+        position: typeof data.position,
+        pnl: typeof data.pnl
+      });
+
+      // Обновляем статус торговли
+      const statusBadge = document.getElementById('trading-status');
+      if (data.trading_enabled) {
+        statusBadge.textContent = 'Активна';
+        statusBadge.className = 'status-badge status-active';
+        document.getElementById('btn-start').style.display = 'none';
+        document.getElementById('btn-stop').style.display = 'block';
+      } else {
+        statusBadge.textContent = 'Неактивна';
+        statusBadge.className = 'status-badge status-inactive';
+        document.getElementById('btn-start').style.display = 'block';
+        document.getElementById('btn-stop').style.display = 'none';
+      }
+
+      // Обновляем данные
+      const balance = typeof data.balance === 'number' ? data.balance : (data.balance?.total_usdt || 0);
+      document.getElementById('balance').textContent = `${balance.toFixed(2)} USDT`;
+      document.getElementById('position').textContent = data.position || 'Нет позиции';
+
+      const pnl = data.pnl || 0;
+      const pnlElement = document.getElementById('pnl');
+      pnlElement.textContent = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} USDT`;
+      pnlElement.className = `info-value ${pnl >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
+    }
+
+    // Загрузка рыночных данных
+    async function loadMarket() {
+      try {
+        console.log('📈 Загрузка рынка...');
+        const response = await fetch(`/api/market?init_data=${encodeURIComponent(getInitData())}`);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('📊 Рынок получен:', data);
+        console.log('📊 Тип данных рынка:', {
+          symbol: typeof data.symbol,
+          current_price: typeof data.current_price,
+          change_24h: typeof data.change_24h
+        });
+
+        document.getElementById('market-symbol').textContent = data.symbol || 'BTC/USDT';
+        document.getElementById('market-price').textContent = `$${data.current_price?.toFixed(2) || '0.00'}`;
+
+        const change = data.change_24h || 0;
+        const changeElement = document.getElementById('market-change');
+        changeElement.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+        changeElement.className = `info-value ${change >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
+
+        document.getElementById('market-volume').textContent = `$${formatNumber(data.volume_24h || 0)}`;
+      } catch (error) {
+        console.error('Ошибка загрузки рынка:', error);
+      }
+    }
+
+    // Запуск торговли
+    async function startBot() {
+      try {
+        const response = await fetch('/api/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData() })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showNotification('✅ Торговля запущена');
+          await loadStatus();
+        } else {
+          showNotification('❌ ' + (result.message || 'Ошибка запуска'));
+        }
+      } catch (error) {
+        console.error('Ошибка запуска:', error);
+        showNotification('❌ Ошибка запуска');
+      }
+    }
+
+    // Остановка торговли
+    async function stopBot() {
+      try {
+        const response = await fetch('/api/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData() })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showNotification('⏸️ Торговля остановлена');
+          await loadStatus();
+        } else {
+          showNotification('❌ ' + (result.message || 'Ошибка остановки'));
+        }
+      } catch (error) {
+        console.error('Ошибка остановки:', error);
+        showNotification('❌ Ошибка остановки');
+      }
+    }
+
+    // Обновление данных
+    async function refreshData() {
+      showNotification('🔄 Обновление...');
+      await loadData();
+    }
+
+    // Открыть настройки
+    function openSettings() {
+      tg.showPopup({
+        title: 'Настройки',
+        message: 'Настройки доступны через Telegram бота командой /settings',
+        buttons: [{ type: 'ok' }]
+      });
+    }
+
+    // Автообновление
+    function startAutoUpdate() {
+      updateInterval = setInterval(() => {
+        loadStatus();
+        loadMarket();
+      }, 5000); // каждые 5 секунд
+    }
+
+    // Показать уведомление
+    function showNotification(message) {
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+    }
+
+    // Форматирование чисел
+    function formatNumber(num) {
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(2) + 'M';
+      } else if (num >= 1000) {
+        return (num / 1000).toFixed(2) + 'K';
+      }
+      return num.toFixed(2);
+    }
+
+    // Очистка при закрытии
+    window.addEventListener('beforeunload', () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+      }
+    });
+  </script>
+</body>
+
+</html>

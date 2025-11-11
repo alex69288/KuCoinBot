@@ -485,7 +485,7 @@ async def get_positions(init_data: str = Query(...)):
         raise HTTPException(status_code=500, detail=f"Error getting positions: {str(e)}")
 
 
-@app.post("/api/position/{position_id}/close")
+@app.post("/api/positions/{position_id}/close")
 async def close_position(
     position_id: str,
     init_data: str = Body(..., embed=True)
@@ -516,6 +516,34 @@ async def close_position(
     except Exception as e:
         log_error(f"Ошибка закрытия позиции: {e}")
         raise HTTPException(status_code=500, detail=f"Error closing position: {str(e)}")
+
+
+@app.post("/api/positions/close-all")
+async def close_all_positions(init_data: str = Body(..., embed=True)):
+    """Закрыть все открытые позиции"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        closed_count = 0
+        if trading_bot.position and trading_bot.position != 'none':
+            # Закрываем позицию
+            result = trading_bot.close_position(reason="Все позиции закрыты вручную через WebApp")
+            closed_count = 1
+            log_info(f"📴 Все позиции закрыты вручную через WebApp (закрыто: {closed_count})")
+        
+        return {
+            "status": "success",
+            "message": f"Закрыто позиций: {closed_count}",
+            "closed_count": closed_count
+        }
+    except Exception as e:
+        log_error(f"Ошибка закрытия всех позиций: {e}")
+        raise HTTPException(status_code=500, detail=f"Error closing all positions: {str(e)}")
 
 
 @app.get("/api/analytics")

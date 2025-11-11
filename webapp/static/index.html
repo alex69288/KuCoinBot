@@ -29,28 +29,78 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg-primary);
       color: var(--text-primary);
-      padding: 16px;
-      padding-bottom: 80px;
+      padding: 0;
+      padding-bottom: 70px;
       overflow-x: hidden;
     }
 
     .header {
-      text-align: center;
-      margin-bottom: 20px;
-      padding: 16px;
-      background: var(--bg-secondary);
-      border-radius: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-primary);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
     .header h1 {
-      font-size: 24px;
-      margin-bottom: 8px;
-      color: var(--text-primary);
+      font-size: 20px;
+      margin-bottom: 4px;
     }
 
     .header .subtitle {
-      font-size: 14px;
+      font-size: 12px;
       color: var(--text-secondary);
+    }
+
+    /* Вкладки */
+    .tabs {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      background: var(--bg-primary);
+      border-top: 1px solid var(--border-color);
+      z-index: 100;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 8px;
+      text-align: center;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+
+    .tab-icon {
+      font-size: 20px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* Контент */
+    .content {
+      padding: 16px;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
     }
 
     .card {
@@ -62,10 +112,13 @@
     }
 
     .card-title {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 600;
       margin-bottom: 12px;
       color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .info-row {
@@ -81,12 +134,12 @@
     }
 
     .info-label {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--text-secondary);
     }
 
     .info-value {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       color: var(--text-primary);
     }
@@ -119,6 +172,10 @@
       cursor: pointer;
       transition: all 0.3s;
       margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
     .btn:active {
@@ -150,32 +207,6 @@
       cursor: not-allowed;
     }
 
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-secondary);
-    }
-
-    .spinner {
-      border: 3px solid var(--border-color);
-      border-top: 3px solid var(--primary-color);
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 16px;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
     .price-change-positive {
       color: var(--success-color);
     }
@@ -184,14 +215,145 @@
       color: var(--danger-color);
     }
 
-    .controls {
-      position: fixed;
-      bottom: 0;
+    /* Форма настроек */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .form-select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .form-switch {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+    }
+
+    .switch {
+      position: relative;
+      width: 50px;
+      height: 28px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
       left: 0;
       right: 0;
-      background: var(--bg-primary);
-      padding: 16px;
-      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.3s;
+      border-radius: 28px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: var(--success-color);
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(22px);
+    }
+
+    /* Позиции */
+    .position-card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--primary-color);
+    }
+
+    .position-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .position-symbol {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .position-pnl {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* История */
+    .trade-item {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+
+    .trade-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .trade-type {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .trade-type-buy {
+      background: var(--success-color);
+      color: white;
+    }
+
+    .trade-type-sell {
+      background: var(--danger-color);
+      color: white;
     }
 
     .notification {
@@ -199,197 +361,476 @@
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: var(--bg-secondary);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
       padding: 12px 24px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      animation: slideDown 0.3s ease-out;
+      border-radius: 8px;
       z-index: 1000;
+      animation: slideDown 0.3s ease;
     }
 
     @keyframes slideDown {
       from {
-        transform: translateX(-50%) translateY(-20px);
         opacity: 0;
+        transform: translate(-50%, -20px);
       }
 
       to {
-        transform: translateX(-50%) translateY(0);
         opacity: 1;
+        transform: translate(-50%, 0);
       }
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-item {
+      background: var(--bg-secondary);
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
     }
   </style>
 </head>
 
 <body>
   <div class="header">
-    <h1>🤖 Trading Bot</h1>
-    <p class="subtitle">KuCoin Автоматическая торговля</p>
+    <h1>🤖 AutoTradingBot</h1>
+    <div class="subtitle">KuCoin Trading Bot v4.0</div>
   </div>
 
-  <div id="loading" class="loading">
-    <div class="spinner"></div>
-    <p>Загрузка...</p>
+  <div class="content">
+    <!-- Вкладка: Главная -->
+    <div id="tab-home" class="tab-content active">
+      <div class="card">
+        <div class="card-title">📊 Состояние</div>
+        <div class="info-row">
+          <span class="info-label">Статус</span>
+          <span id="trading-status" class="status-badge status-inactive">Загрузка...</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Баланс</span>
+          <span id="balance" class="info-value">0.00 USDT</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">P&L</span>
+          <span id="pnl" class="info-value">+0.00 USDT</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Позиция</span>
+          <span id="position" class="info-value">Нет позиции</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📈 Рынок</div>
+        <div class="info-row">
+          <span class="info-label">Пара</span>
+          <span id="market-symbol" class="info-value">BTC/USDT</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Цена</span>
+          <span id="market-price" class="info-value">$104327.90</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Изменение 24ч</span>
+          <span id="market-change" class="info-value">-1.37%</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Объем 24ч</span>
+          <span id="market-volume" class="info-value">$18.96K</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка: Управление -->
+    <div id="tab-control" class="tab-content">
+      <div class="card">
+        <div class="card-title">⚙️ Управление торговлей</div>
+        <button id="btn-start" class="btn btn-success" onclick="startBot()">
+          <span>▶️</span> Запустить торговлю
+        </button>
+        <button id="btn-stop" class="btn btn-danger" onclick="stopBot()" style="display: none;">
+          <span>⏸️</span> Остановить торговлю
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎯 Быстрые действия</div>
+        <button class="btn btn-warning" onclick="closeAllPositions()">
+          <span>❌</span> Закрыть все позиции
+        </button>
+        <button class="btn btn-primary" onclick="refreshData()">
+          <span>🔄</span> Обновить данные
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 Торговые настройки</div>
+        <div class="form-group">
+          <label class="form-label">Торговая пара</label>
+          <select id="trading-pair" class="form-select" onchange="updateTradingPair()">
+            <option value="BTC/USDT">BTC/USDT</option>
+            <option value="ETH/USDT">ETH/USDT</option>
+            <option value="BNB/USDT">BNB/USDT</option>
+            <option value="SOL/USDT">SOL/USDT</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Стратегия</label>
+          <select id="strategy" class="form-select" onchange="updateStrategy()">
+            <option value="ema_ml">EMA + ML</option>
+            <option value="macd_rsi">MACD + RSI</option>
+            <option value="bollinger">Bollinger Bands</option>
+            <option value="price_action">Price Action</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Размер позиции (%)</label>
+          <input type="number" id="position-size" class="form-input" value="10" min="1" max="100" step="1"
+            onchange="updatePositionSize()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка: Настройки -->
+    <div id="tab-settings" class="tab-content">
+      <div class="card">
+        <div class="card-title">🛡️ Риск-менеджмент</div>
+        <div class="form-group">
+          <label class="form-label">Take Profit (%)</label>
+          <input type="number" id="take-profit" class="form-input" value="2.0" min="0.1" max="10" step="0.1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stop Loss (%)</label>
+          <input type="number" id="stop-loss" class="form-input" value="1.5" min="0.1" max="10" step="0.1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Макс. размер позиции (USDT)</label>
+          <input type="number" id="max-position" class="form-input" value="100" min="10" max="10000" step="10">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Макс. убыток/день (USDT)</label>
+          <input type="number" id="max-daily-loss" class="form-input" value="50" min="5" max="1000" step="5">
+        </div>
+        <button class="btn btn-primary" onclick="saveRiskSettings()">
+          <span>💾</span> Сохранить настройки риска
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📈 EMA Настройки</div>
+        <div class="form-group">
+          <label class="form-label">Быстрая EMA (период)</label>
+          <input type="number" id="ema-fast" class="form-input" value="9" min="3" max="50" step="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Медленная EMA (период)</label>
+          <input type="number" id="ema-slow" class="form-input" value="21" min="10" max="200" step="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Порог пересечения (%)</label>
+          <input type="number" id="ema-threshold" class="form-input" value="0.25" min="0.01" max="2" step="0.01">
+        </div>
+        <button class="btn btn-primary" onclick="saveEmaSettings()">
+          <span>💾</span> Сохранить настройки EMA
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🤖 ML Настройки</div>
+        <div class="form-switch">
+          <span class="form-label">Использовать ML</span>
+          <label class="switch">
+            <input type="checkbox" id="ml-enabled" onchange="toggleML()">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Порог покупки</label>
+          <input type="number" id="ml-buy-threshold" class="form-input" value="0.6" min="0" max="1" step="0.05">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Порог продажи</label>
+          <input type="number" id="ml-sell-threshold" class="form-input" value="0.4" min="0" max="1" step="0.05">
+        </div>
+        <button class="btn btn-primary" onclick="saveMLSettings()">
+          <span>💾</span> Сохранить настройки ML
+        </button>
+        <button class="btn btn-warning" onclick="retrainML()">
+          <span>🔄</span> Переобучить модель
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔧 Общие настройки</div>
+        <div class="form-switch">
+          <span class="form-label">Демо режим</span>
+          <label class="switch">
+            <input type="checkbox" id="demo-mode" onchange="toggleDemoMode()">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="form-switch">
+          <span class="form-label">Trailing Stop</span>
+          <label class="switch">
+            <input type="checkbox" id="trailing-stop" onchange="toggleTrailingStop()">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="form-switch">
+          <span class="form-label">Уведомления о цене</span>
+          <label class="switch">
+            <input type="checkbox" id="price-updates" onchange="togglePriceUpdates()">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка: Позиции -->
+    <div id="tab-positions" class="tab-content">
+      <div class="card">
+        <div class="card-title">📍 Открытые позиции</div>
+        <div id="positions-list">
+          <div class="loading">Загрузка...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка: История -->
+    <div id="tab-history" class="tab-content">
+      <div class="card">
+        <div class="card-title">📜 История сделок</div>
+        <div id="history-list">
+          <div class="loading">Загрузка...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка: Аналитика -->
+    <div id="tab-analytics" class="tab-content">
+      <div class="stat-grid">
+        <div class="stat-item">
+          <div class="stat-label">Всего сделок</div>
+          <div id="total-trades" class="stat-value">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Прибыльных</div>
+          <div id="profitable-trades" class="stat-value">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Win Rate</div>
+          <div id="win-rate" class="stat-value">0%</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Общий P&L</div>
+          <div id="total-pnl" class="stat-value">0 USDT</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 Детальная статистика</div>
+        <div class="info-row">
+          <span class="info-label">Средняя прибыль</span>
+          <span id="avg-profit" class="info-value">0.00 USDT</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Средний убыток</span>
+          <span id="avg-loss" class="info-value">0.00 USDT</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Макс. прибыль</span>
+          <span id="max-profit" class="info-value">0.00 USDT</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Макс. убыток</span>
+          <span id="max-loss" class="info-value">0.00 USDT</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <button class="btn btn-danger" onclick="resetAnalytics()">
+          <span>🗑️</span> Сбросить статистику
+        </button>
+      </div>
+    </div>
   </div>
 
-  <div id="content" style="display: none;">
-    <!-- Статус бота -->
-    <div class="card">
-      <div class="card-title">📊 Статус бота</div>
-      <div class="info-row">
-        <span class="info-label">Торговля</span>
-        <span class="status-badge" id="trading-status">-</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Баланс</span>
-        <span class="info-value" id="balance">-</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Позиция</span>
-        <span class="info-value" id="position">-</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Прибыль/Убыток</span>
-        <span class="info-value" id="pnl">-</span>
-      </div>
-    </div>
-
-    <!-- Рыночные данные -->
-    <div class="card">
-      <div class="card-title">💹 Рынок</div>
-      <div class="info-row">
-        <span class="info-label">Пара</span>
-        <span class="info-value" id="market-symbol">BTC/USDT</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Цена</span>
-        <span class="info-value" id="market-price">-</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Изменение 24ч</span>
-        <span class="info-value" id="market-change">-</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Объем 24ч</span>
-        <span class="info-value" id="market-volume">-</span>
-      </div>
-    </div>
-
-    <!-- Управление -->
-    <div class="card">
-      <div class="card-title">⚙️ Управление</div>
-      <button class="btn btn-success" id="btn-start" onclick="startBot()">
-        ▶️ Запустить торговлю
-      </button>
-      <button class="btn btn-danger" id="btn-stop" onclick="stopBot()" style="display: none;">
-        ⏸️ Остановить торговлю
-      </button>
-      <button class="btn btn-warning" onclick="openSettings()">
-        ⚙️ Настройки
-      </button>
-      <button class="btn btn-primary" onclick="refreshData()">
-        🔄 Обновить данные
-      </button>
-    </div>
+  <!-- Нижнее меню вкладок -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('home')">
+      <span class="tab-icon">🏠</span>
+      <span>Главная</span>
+    </button>
+    <button class="tab" onclick="switchTab('control')">
+      <span class="tab-icon">🎮</span>
+      <span>Управление</span>
+    </button>
+    <button class="tab" onclick="switchTab('settings')">
+      <span class="tab-icon">⚙️</span>
+      <span>Настройки</span>
+    </button>
+    <button class="tab" onclick="switchTab('positions')">
+      <span class="tab-icon">📍</span>
+      <span>Позиции</span>
+    </button>
+    <button class="tab" onclick="switchTab('history')">
+      <span class="tab-icon">📜</span>
+      <span>История</span>
+    </button>
+    <button class="tab" onclick="switchTab('analytics')">
+      <span class="tab-icon">📊</span>
+      <span>Аналитика</span>
+    </button>
   </div>
 
   <script>
     const tg = window.Telegram.WebApp;
+    tg.ready();
     tg.expand();
-    tg.enableClosingConfirmation();
 
-    let updateInterval;
+    let updateInterval = null;
+    let currentTab = 'home';
 
-    // Инициализация
-    document.addEventListener('DOMContentLoaded', function () {
-      console.log('🚀 WebApp загружен');
-      console.log('📱 Telegram WebApp доступен:', typeof tg !== 'undefined');
-      console.log('🔑 Init data:', tg.initData ? 'Есть' : 'Отсутствует');
-      loadData();
-      startAutoUpdate();
-    });
-
-    // Получение init_data для авторизации
+    // Получение init data
     function getInitData() {
-      return tg.initData || '';
+      return tg.initData || 'debug_mode';
     }
 
-    // Загрузка данных
-    async function loadData() {
-      try {
-        console.log('📊 Начало загрузки данных...');
-        await Promise.all([loadStatus(), loadMarket()]);
-        console.log('✅ Данные загружены успешно');
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('content').style.display = 'block';
-      } catch (error) {
-        console.error('❌ Ошибка загрузки данных:', error);
-        console.error('❌ Детали ошибки:', error.message, error.stack);
-        showNotification(`Ошибка: ${error.message || 'Неизвестная ошибка'}`);
-        document.getElementById('loading').style.display = 'none';
+    // Переключение вкладок
+    function switchTab(tabName) {
+      currentTab = tabName;
+
+      // Скрываем все вкладки
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+
+      // Показываем активную
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+
+      // Обновляем кнопки
+      document.querySelectorAll('.tab').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.closest('.tab').classList.add('active');
+
+      // Загружаем данные для вкладки
+      loadTabData(tabName);
+    }
+
+    // Загрузка данных для вкладки
+    function loadTabData(tabName) {
+      switch (tabName) {
+        case 'home':
+          loadStatus();
+          loadMarket();
+          break;
+        case 'control':
+          loadStatus();
+          loadSettings();
+          break;
+        case 'settings':
+          loadSettings();
+          break;
+        case 'positions':
+          loadPositions();
+          break;
+        case 'history':
+          loadHistory();
+          break;
+        case 'analytics':
+          loadAnalytics();
+          break;
       }
+    }
+
+    // Загрузка всех данных
+    async function loadData() {
+      await Promise.all([
+        loadStatus(),
+        loadMarket()
+      ]);
     }
 
     // Загрузка статуса бота
     async function loadStatus() {
-      console.log('📡 Загрузка статуса...');
-      const response = await fetch(`/api/status?init_data=${encodeURIComponent(getInitData())}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      try {
+        const response = await fetch(`/api/status?init_data=${encodeURIComponent(getInitData())}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        // Обновляем статус торговли
+        const statusBadge = document.getElementById('trading-status');
+        if (data.trading_enabled) {
+          statusBadge.textContent = 'Активна';
+          statusBadge.className = 'status-badge status-active';
+          document.getElementById('btn-start').style.display = 'none';
+          document.getElementById('btn-stop').style.display = 'block';
+        } else {
+          statusBadge.textContent = 'Неактивна';
+          statusBadge.className = 'status-badge status-inactive';
+          document.getElementById('btn-start').style.display = 'block';
+          document.getElementById('btn-stop').style.display = 'none';
+        }
+
+        // Обновляем данные
+        const balance = typeof data.balance === 'number' ? data.balance : (data.balance?.total_usdt || 0);
+        document.getElementById('balance').textContent = `${balance.toFixed(2)} USDT`;
+        document.getElementById('position').textContent = data.position || 'Нет позиции';
+
+        const pnl = data.pnl || 0;
+        const pnlElement = document.getElementById('pnl');
+        pnlElement.textContent = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} USDT`;
+        pnlElement.className = `info-value ${pnl >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
+      } catch (error) {
+        console.error('Ошибка загрузки статуса:', error);
       }
-      
-      const data = await response.json();
-      console.log('📊 Статус получен:', data);
-      console.log('📊 Тип данных:', {
-        trading_enabled: typeof data.trading_enabled,
-        balance: typeof data.balance,
-        position: typeof data.position,
-        pnl: typeof data.pnl
-      });
-
-      // Обновляем статус торговли
-      const statusBadge = document.getElementById('trading-status');
-      if (data.trading_enabled) {
-        statusBadge.textContent = 'Активна';
-        statusBadge.className = 'status-badge status-active';
-        document.getElementById('btn-start').style.display = 'none';
-        document.getElementById('btn-stop').style.display = 'block';
-      } else {
-        statusBadge.textContent = 'Неактивна';
-        statusBadge.className = 'status-badge status-inactive';
-        document.getElementById('btn-start').style.display = 'block';
-        document.getElementById('btn-stop').style.display = 'none';
-      }
-
-      // Обновляем данные
-      const balance = typeof data.balance === 'number' ? data.balance : (data.balance?.total_usdt || 0);
-      document.getElementById('balance').textContent = `${balance.toFixed(2)} USDT`;
-      document.getElementById('position').textContent = data.position || 'Нет позиции';
-
-      const pnl = data.pnl || 0;
-      const pnlElement = document.getElementById('pnl');
-      pnlElement.textContent = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} USDT`;
-      pnlElement.className = `info-value ${pnl >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
     }
 
     // Загрузка рыночных данных
     async function loadMarket() {
       try {
-        console.log('📈 Загрузка рынка...');
         const response = await fetch(`/api/market?init_data=${encodeURIComponent(getInitData())}`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
         const data = await response.json();
-        console.log('📊 Рынок получен:', data);
-        console.log('📊 Тип данных рынка:', {
-          symbol: typeof data.symbol,
-          current_price: typeof data.current_price,
-          change_24h: typeof data.change_24h
-        });
 
         document.getElementById('market-symbol').textContent = data.symbol || 'BTC/USDT';
         document.getElementById('market-price').textContent = `$${data.current_price?.toFixed(2) || '0.00'}`;
@@ -405,10 +846,179 @@
       }
     }
 
-    // Запуск торговли
+    // Загрузка настроек
+    async function loadSettings() {
+      try {
+        const response = await fetch(`/api/settings?init_data=${encodeURIComponent(getInitData())}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        // Торговые настройки
+        if (data.trading_pair) {
+          document.getElementById('trading-pair').value = data.trading_pair;
+        }
+        if (data.strategy) {
+          document.getElementById('strategy').value = data.strategy;
+        }
+        if (data.trade_amount_percent) {
+          document.getElementById('position-size').value = data.trade_amount_percent;
+        }
+
+        // Риск настройки
+        if (data.risk_settings) {
+          document.getElementById('take-profit').value = data.risk_settings.take_profit_percent || 2.0;
+          document.getElementById('stop-loss').value = data.risk_settings.stop_loss_percent || 1.5;
+          document.getElementById('max-position').value = data.risk_settings.max_position_size || 100;
+          document.getElementById('max-daily-loss').value = data.risk_settings.max_daily_loss || 50;
+        }
+
+        // EMA настройки
+        if (data.ema_settings) {
+          document.getElementById('ema-fast').value = data.ema_settings.ema_fast_period || 9;
+          document.getElementById('ema-slow').value = data.ema_settings.ema_slow_period || 21;
+          document.getElementById('ema-threshold').value = (data.ema_settings.ema_threshold || 0.0025) * 100;
+        }
+
+        // ML настройки
+        if (data.ml_settings) {
+          document.getElementById('ml-enabled').checked = data.ml_settings.ml_enabled || false;
+          document.getElementById('ml-buy-threshold').value = data.ml_settings.ml_buy_threshold || 0.6;
+          document.getElementById('ml-sell-threshold').value = data.ml_settings.ml_sell_threshold || 0.4;
+        }
+
+        // Общие настройки
+        document.getElementById('demo-mode').checked = data.demo_mode || false;
+        document.getElementById('trailing-stop').checked = data.trailing_stop || false;
+        document.getElementById('price-updates').checked = data.enable_price_updates || false;
+      } catch (error) {
+        console.error('Ошибка загрузки настроек:', error);
+      }
+    }
+
+    // Загрузка позиций
+    async function loadPositions() {
+      try {
+        const response = await fetch(`/api/positions?init_data=${encodeURIComponent(getInitData())}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        const container = document.getElementById('positions-list');
+
+        if (!data.positions || data.positions.length === 0) {
+          container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Нет открытых позиций</div></div>';
+          return;
+        }
+
+        container.innerHTML = data.positions.map(pos => `
+          <div class="position-card">
+            <div class="position-header">
+              <span class="position-symbol">${pos.symbol || 'N/A'}</span>
+              <span class="position-pnl ${pos.pnl >= 0 ? 'price-change-positive' : 'price-change-negative'}">
+                ${pos.pnl >= 0 ? '+' : ''}${(pos.pnl || 0).toFixed(2)} USDT
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Размер</span>
+              <span class="info-value">${(pos.amount || 0).toFixed(6)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Цена входа</span>
+              <span class="info-value">${(pos.entry_price || 0).toFixed(2)} USDT</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Текущая цена</span>
+              <span class="info-value">${(pos.current_price || 0).toFixed(2)} USDT</span>
+            </div>
+            <button class="btn btn-danger" onclick="closePosition('${pos.id || ''}')">
+              <span>❌</span> Закрыть позицию
+            </button>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Ошибка загрузки позиций:', error);
+        document.getElementById('positions-list').innerHTML = '<div class="empty-state">Ошибка загрузки позиций</div>';
+      }
+    }
+
+    // Загрузка истории
+    async function loadHistory() {
+      try {
+        const response = await fetch(`/api/trade-history?init_data=${encodeURIComponent(getInitData())}&limit=20`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        const container = document.getElementById('history-list');
+
+        if (!data || data.length === 0) {
+          container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>История сделок пуста</div></div>';
+          return;
+        }
+
+        container.innerHTML = data.map(trade => `
+          <div class="trade-item">
+            <div class="trade-header">
+              <span class="trade-type trade-type-${trade.type === 'buy' ? 'buy' : 'sell'}">${trade.type === 'buy' ? 'ПОКУПКА' : 'ПРОДАЖА'}</span>
+              <span>${trade.timestamp || ''}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Пара</span>
+              <span class="info-value">${trade.symbol || 'N/A'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Цена</span>
+              <span class="info-value">${(trade.price || 0).toFixed(2)} USDT</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Объем</span>
+              <span class="info-value">${(trade.amount || 0).toFixed(6)}</span>
+            </div>
+            ${trade.pnl !== undefined ? `
+            <div class="info-row">
+              <span class="info-label">P&L</span>
+              <span class="info-value ${trade.pnl >= 0 ? 'price-change-positive' : 'price-change-negative'}">
+                ${trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)} USDT
+              </span>
+            </div>
+            ` : ''}
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Ошибка загрузки истории:', error);
+        document.getElementById('history-list').innerHTML = '<div class="empty-state">Ошибка загрузки истории</div>';
+      }
+    }
+
+    // Загрузка аналитики
+    async function loadAnalytics() {
+      try {
+        const response = await fetch(`/api/analytics?init_data=${encodeURIComponent(getInitData())}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        document.getElementById('total-trades').textContent = data.total_trades || 0;
+        document.getElementById('profitable-trades').textContent = data.profitable_trades || 0;
+        document.getElementById('win-rate').textContent = `${(data.win_rate || 0).toFixed(1)}%`;
+
+        const totalPnl = data.total_pnl || 0;
+        const totalPnlElement = document.getElementById('total-pnl');
+        totalPnlElement.textContent = `${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)} USDT`;
+        totalPnlElement.className = `stat-value ${totalPnl >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
+
+        document.getElementById('avg-profit').textContent = `${(data.avg_profit || 0).toFixed(2)} USDT`;
+        document.getElementById('avg-loss').textContent = `${(data.avg_loss || 0).toFixed(2)} USDT`;
+        document.getElementById('max-profit').textContent = `${(data.max_profit || 0).toFixed(2)} USDT`;
+        document.getElementById('max-loss').textContent = `${(data.max_loss || 0).toFixed(2)} USDT`;
+      } catch (error) {
+        console.error('Ошибка загрузки аналитики:', error);
+      }
+    }
+
+    // Управление ботом
     async function startBot() {
       try {
-        const response = await fetch('/api/start', {
+        const response = await fetch('/api/bot/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ init_data: getInitData() })
@@ -427,10 +1037,9 @@
       }
     }
 
-    // Остановка торговли
     async function stopBot() {
       try {
-        const response = await fetch('/api/stop', {
+        const response = await fetch('/api/bot/stop', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ init_data: getInitData() })
@@ -449,26 +1058,269 @@
       }
     }
 
-    // Обновление данных
-    async function refreshData() {
-      showNotification('🔄 Обновление...');
-      await loadData();
+    // Обновление настроек
+    async function updateTradingPair() {
+      const pair = document.getElementById('trading-pair').value;
+      await updateTradingSettings({ active_pair: pair });
     }
 
-    // Открыть настройки
-    function openSettings() {
-      tg.showPopup({
-        title: 'Настройки',
-        message: 'Настройки доступны через Telegram бота командой /settings',
-        buttons: [{ type: 'ok' }]
-      });
+    async function updateStrategy() {
+      const strategy = document.getElementById('strategy').value;
+      await updateTradingSettings({ active_strategy: strategy });
+    }
+
+    async function updatePositionSize() {
+      const size = parseFloat(document.getElementById('position-size').value);
+      await updateTradingSettings({ trade_amount_percent: size });
+    }
+
+    async function updateTradingSettings(settings) {
+      try {
+        const response = await fetch('/api/settings/trading', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData(), settings })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          showNotification('✅ Настройки обновлены');
+        } else {
+          showNotification('❌ Ошибка обновления');
+        }
+      } catch (error) {
+        console.error('Ошибка обновления настроек:', error);
+        showNotification('❌ Ошибка обновления');
+      }
+    }
+
+    async function saveRiskSettings() {
+      const settings = {
+        take_profit_percent: parseFloat(document.getElementById('take-profit').value),
+        stop_loss_percent: parseFloat(document.getElementById('stop-loss').value),
+        max_position_size: parseFloat(document.getElementById('max-position').value),
+        max_daily_loss: parseFloat(document.getElementById('max-daily-loss').value)
+      };
+
+      try {
+        const response = await fetch('/api/settings/risk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData(), settings })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          showNotification('✅ Настройки риска сохранены');
+        } else {
+          showNotification('❌ Ошибка сохранения');
+        }
+      } catch (error) {
+        console.error('Ошибка сохранения настроек риска:', error);
+        showNotification('❌ Ошибка сохранения');
+      }
+    }
+
+    async function saveEmaSettings() {
+      const settings = {
+        ema_fast_period: parseInt(document.getElementById('ema-fast').value),
+        ema_slow_period: parseInt(document.getElementById('ema-slow').value),
+        ema_threshold: parseFloat(document.getElementById('ema-threshold').value) / 100
+      };
+
+      try {
+        const response = await fetch('/api/settings/ema', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData(), settings })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          showNotification('✅ Настройки EMA сохранены');
+        } else {
+          showNotification('❌ Ошибка сохранения');
+        }
+      } catch (error) {
+        console.error('Ошибка сохранения настроек EMA:', error);
+        showNotification('❌ Ошибка сохранения');
+      }
+    }
+
+    async function saveMLSettings() {
+      const settings = {
+        ml_enabled: document.getElementById('ml-enabled').checked,
+        ml_buy_threshold: parseFloat(document.getElementById('ml-buy-threshold').value),
+        ml_sell_threshold: parseFloat(document.getElementById('ml-sell-threshold').value)
+      };
+
+      try {
+        const response = await fetch('/api/settings/ml', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData(), settings })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          showNotification('✅ Настройки ML сохранены');
+        } else {
+          showNotification('❌ Ошибка сохранения');
+        }
+      } catch (error) {
+        console.error('Ошибка сохранения настроек ML:', error);
+        showNotification('❌ Ошибка сохранения');
+      }
+    }
+
+    async function retrainML() {
+      try {
+        showNotification('🤖 Переобучение ML модели...');
+        const response = await fetch('/api/ml/retrain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData() })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          showNotification('✅ ML модель переобучена');
+        } else {
+          showNotification('ℹ️ ' + (result.message || 'ML недоступен'));
+        }
+      } catch (error) {
+        console.error('Ошибка переобучения ML:', error);
+        showNotification('❌ Ошибка переобучения');
+      }
+    }
+
+    async function toggleML() {
+      const enabled = document.getElementById('ml-enabled').checked;
+      await saveMLSettings();
+    }
+
+    async function toggleDemoMode() {
+      const enabled = document.getElementById('demo-mode').checked;
+      await updateGeneralSettings({ demo_mode: enabled });
+    }
+
+    async function toggleTrailingStop() {
+      const enabled = document.getElementById('trailing-stop').checked;
+      await updateGeneralSettings({ trailing_stop: enabled });
+    }
+
+    async function togglePriceUpdates() {
+      const enabled = document.getElementById('price-updates').checked;
+      await updateGeneralSettings({ enable_price_updates: enabled });
+    }
+
+    async function updateGeneralSettings(settings) {
+      try {
+        const response = await fetch('/api/settings/general', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData(), settings })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          showNotification('✅ Настройки обновлены');
+        } else {
+          showNotification('❌ Ошибка обновления');
+        }
+      } catch (error) {
+        console.error('Ошибка обновления настроек:', error);
+        showNotification('❌ Ошибка обновления');
+      }
+    }
+
+    async function closePosition(positionId) {
+      try {
+        const response = await fetch(`/api/positions/${positionId}/close`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData() })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          showNotification('✅ Позиция закрыта');
+          await loadPositions();
+        } else {
+          showNotification('❌ Ошибка закрытия');
+        }
+      } catch (error) {
+        console.error('Ошибка закрытия позиции:', error);
+        showNotification('❌ Ошибка закрытия');
+      }
+    }
+
+    async function closeAllPositions() {
+      if (!confirm('Закрыть все открытые позиции?')) return;
+
+      try {
+        const response = await fetch('/api/positions/close-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData() })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          showNotification('✅ Все позиции закрыты');
+          await loadPositions();
+        } else {
+          showNotification('❌ Ошибка закрытия');
+        }
+      } catch (error) {
+        console.error('Ошибка закрытия позиций:', error);
+        showNotification('❌ Ошибка закрытия');
+      }
+    }
+
+    async function resetAnalytics() {
+      if (!confirm('Сбросить всю статистику?')) return;
+
+      try {
+        const response = await fetch('/api/analytics/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData() })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          showNotification('✅ Статистика сброшена');
+          await loadAnalytics();
+        } else {
+          showNotification('❌ Ошибка сброса');
+        }
+      } catch (error) {
+        console.error('Ошибка сброса статистики:', error);
+        showNotification('❌ Ошибка сброса');
+      }
+    }
+
+    async function refreshData() {
+      showNotification('🔄 Обновление...');
+      await loadTabData(currentTab);
     }
 
     // Автообновление
     function startAutoUpdate() {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+      }
+
       updateInterval = setInterval(() => {
-        loadStatus();
-        loadMarket();
+        if (currentTab === 'home') {
+          loadStatus();
+          loadMarket();
+        } else if (currentTab === 'positions') {
+          loadPositions();
+        } else if (currentTab === 'analytics') {
+          loadAnalytics();
+        }
       }, 5000); // каждые 5 секунд
     }
 
@@ -493,6 +1345,12 @@
       }
       return num.toFixed(2);
     }
+
+    // Инициализация
+    window.addEventListener('load', () => {
+      loadData();
+      startAutoUpdate();
+    });
 
     // Очистка при закрытии
     window.addEventListener('beforeunload', () => {
