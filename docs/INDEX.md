@@ -9,6 +9,7 @@
 
 ### 🚀 Быстрый старт
 - [QUICKSTART_AMVERA.md](QUICKSTART_AMVERA.md) - Быстрый старт на Amvera
+- [AMVERA_WEBAPP_SETUP.md](AMVERA_WEBAPP_SETUP.md) - ⚡ Настройка WEBAPP_URL на Amvera
 - [WEBAPP_QUICKSTART.md](WEBAPP_QUICKSTART.md) - Быстрый старт веб-приложения
 - [QUICK_COMMANDS.md](QUICK_COMMANDS.md) - Быстрые команды
 
@@ -39,6 +40,7 @@
 - [VISUAL_DIAGRAM.md](VISUAL_DIAGRAM.md) - Визуальная диаграмма проекта
 
 ### 🌐 Веб-интерфейс
+- [WEBAPP_MIGRATION_PLAN.md](WEBAPP_MIGRATION_PLAN.md) - 🎯 План миграции функционала в WebApp
 - [webapp/README.md](../webapp/README.md) - Документация веб-приложения
 - [WEBAPP_SETUP.md](WEBAPP_SETUP.md) - Настройка Web App для Telegram (исправление WebAppPopupParamInvalid)
 
