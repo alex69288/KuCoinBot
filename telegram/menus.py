@@ -1,6 +1,7 @@
 """
 МЕНЮ TELEGRAM БОТА
 """
+import os
 from utils.logger import log_info
 
 class MenuManager:
@@ -563,25 +564,35 @@ class MenuManager:
 💡 <b>Выберите действие:</b>
 """
 
-        inline_keyboard = {
-            'inline_keyboard': [
-                [
-                    {'text': '📊 Статус', 'callback_data': 'status'},
-                    {'text': '💼 Аккаунт', 'callback_data': 'account_info'}
-                ],
-                [
-                    {'text': '📈 Сделки', 'callback_data': 'trades'},
-                    {'text': '📊 Аналитика', 'callback_data': 'analytics'}
-                ],
-                [
-                    {'text': '⚙️ Настройки', 'callback_data': 'settings'},
-                    {'text': '⚡ Управление', 'callback_data': 'control'}
-                ],
-                [
-                    {'text': '🔄 Обновить', 'callback_data': 'refresh'},
-                    {'text': '🌐 Открыть приложение', 'web_app': {'url': 'https://your-domain.com/webapp'}}
-                ]
+        # Получаем WEBAPP_URL из переменной окружения
+        webapp_url = os.getenv('WEBAPP_URL', '')
+        
+        # Формируем inline-клавиатуру
+        keyboard_rows = [
+            [
+                {'text': '📊 Статус', 'callback_data': 'status'},
+                {'text': '💼 Аккаунт', 'callback_data': 'account_info'}
+            ],
+            [
+                {'text': '📈 Сделки', 'callback_data': 'trades'},
+                {'text': '📊 Аналитика', 'callback_data': 'analytics'}
+            ],
+            [
+                {'text': '⚙️ Настройки', 'callback_data': 'settings'},
+                {'text': '⚡ Управление', 'callback_data': 'control'}
             ]
+        ]
+        
+        # Добавляем кнопку WebApp только если URL настроен правильно
+        last_row = [{'text': '🔄 Обновить', 'callback_data': 'refresh'}]
+        
+        if webapp_url and webapp_url != 'https://your-server.com' and webapp_url.startswith('https://'):
+            last_row.append({'text': '🚀 Открыть Web App', 'web_app': {'url': webapp_url}})
+        
+        keyboard_rows.append(last_row)
+        
+        inline_keyboard = {
+            'inline_keyboard': keyboard_rows
         }
 
         return message, inline_keyboard
