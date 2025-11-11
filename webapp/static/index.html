@@ -15,15 +15,19 @@
     }
 
     :root {
-      --primary-color: #2196F3;
-      --success-color: #4CAF50;
-      --danger-color: #f44336;
-      --warning-color: #ff9800;
-      --bg-primary: var(--tg-theme-bg-color, #ffffff);
-      --bg-secondary: var(--tg-theme-secondary-bg-color, #f5f5f5);
-      --text-primary: var(--tg-theme-text-color, #000000);
-      --text-secondary: var(--tg-theme-hint-color, #999999);
-      --border-color: rgba(0, 0, 0, 0.1);
+      --primary-color: #00bcd4;
+      /* Акцентный бирюзовый */
+      --success-color: #4caf50;
+      --danger-color: #e53935;
+      --warning-color: #ffb300;
+      --accent-color: #ff4081;
+      /* Ярко-розовый для выделения */
+      --bg-primary: var(--tg-theme-bg-color, #181c24);
+      --bg-secondary: var(--tg-theme-secondary-bg-color, #232a36);
+      --text-primary: var(--tg-theme-text-color, #f5f5f5);
+      --text-secondary: var(--tg-theme-hint-color, #b0b8c1);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     }
 
     body {
@@ -33,6 +37,7 @@
       padding: 0;
       padding-bottom: 70px;
       overflow-x: hidden;
+      min-height: 100vh;
     }
 
     .header {
@@ -42,7 +47,7 @@
       background: var(--bg-primary);
       padding: 12px 16px;
       border-bottom: 1px solid var(--border-color);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      box-shadow: var(--card-shadow);
     }
 
     .header h1 {
@@ -62,10 +67,10 @@
       left: 0;
       right: 0;
       display: flex;
-      background: var(--bg-primary);
+      background: var(--bg-secondary);
       border-top: 1px solid var(--border-color);
       z-index: 100;
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
     }
 
     .tab {
@@ -82,7 +87,8 @@
 
     .tab.active {
       color: var(--primary-color);
-      font-weight: 600;
+      font-weight: 700;
+      text-shadow: 0 0 6px var(--primary-color, #00bcd4);
     }
 
     .tab-icon {
@@ -109,7 +115,8 @@
       border-radius: 12px;
       padding: 16px;
       margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--border-color);
     }
 
     .card-title {
@@ -184,23 +191,27 @@
     }
 
     .btn-primary {
-      background: var(--primary-color);
-      color: white;
+      background: linear-gradient(90deg, var(--primary-color) 60%, var(--accent-color) 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 188, 212, 0.15);
     }
 
     .btn-success {
       background: var(--success-color);
-      color: white;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
     }
 
     .btn-danger {
       background: var(--danger-color);
-      color: white;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(229, 57, 53, 0.15);
     }
 
     .btn-warning {
       background: var(--warning-color);
-      color: white;
+      color: #232a36;
+      box-shadow: 0 2px 8px rgba(255, 179, 0, 0.15);
     }
 
     .btn:disabled {
