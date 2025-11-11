@@ -202,53 +202,50 @@ async def get_bot_status(init_data: str = Query(..., description="Telegram Web A
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
-        # Получаем данные о балансе
-        balance = trading_bot.exchange.get_balance()
+        # Получаем текущую цену
+        current_price = 0
+        try:
+            ticker = trading_bot.exchange.get_ticker(trading_bot.settings.trading_pairs['active_pair'])
+            current_price = ticker.get('last', 0) if ticker else 0
+        except:
+            pass
         
-        # Получаем текущую позицию - возвращаем простую строку для frontend
-        position_text = "Нет позиции"
-        if trading_bot.position == 'long':
-            if trading_bot.entry_price:
-                position_text = f"Long @ {trading_bot.entry_price:.2f} USDT"
-            else:
-                position_text = "Long"
-        elif trading_bot.position == 'short':
-            position_text = "Short"
-        
-        # Рассчитываем PNL если есть позиция
-        pnl = 0.0
-        if trading_bot.position == 'long' and trading_bot.entry_price:
-            try:
-                current_price = trading_bot.exchange.get_ticker(trading_bot.settings.trading_pairs['active_pair']).get('last', 0)
-                if current_price and trading_bot.current_position_size_usdt:
-                    pnl = (current_price - trading_bot.entry_price) / trading_bot.entry_price * trading_bot.current_position_size_usdt
-            except:
-                pass
-        
-        # Получаем активные настройки
-        settings_info = {
-            "active_pair": trading_bot.settings.trading_pairs['active_pair'],
-            "active_strategy": trading_bot.settings.strategy_settings['active_strategy'],
-            "risk_per_trade": trading_bot.settings.risk_settings.get('risk_per_trade', 1.0),
-            "max_positions": trading_bot.settings.risk_settings.get('max_positions', 3)
+        # Получаем информацию о позициях
+        positions_info = {
+            "open_count": 0,
+            "size_usdt": 0,
+            "entry_price": 0,
+            "current_profit_percent": 0,
+            "current_profit_usdt": 0,
+            "to_take_profit": 0,
+            "tp_target": trading_bot.settings.risk_settings.get('take_profit_percent', 2.0),
+            "fee_percent": 0.2,
+            "fee_usdt": 0
         }
         
-        # Получаем последние метрики
-        metrics = {
-            "total_trades": getattr(trading_bot.metrics, 'total_trades', 0),
-            "winning_trades": getattr(trading_bot.metrics, 'winning_trades', 0),
-            "losing_trades": getattr(trading_bot.metrics, 'losing_trades', 0),
-            "total_profit": getattr(trading_bot.metrics, 'total_profit', 0.0)
-        }
+        # Если есть открытая позиция
+        if trading_bot.position and trading_bot.position != 'none' and trading_bot.entry_price:
+            positions_info["open_count"] = 1
+            positions_info["size_usdt"] = trading_bot.current_position_size_usdt or 0
+            positions_info["entry_price"] = trading_bot.entry_price
+            
+            # Рассчитываем текущую прибыль
+            if current_price and trading_bot.position == 'long':
+                profit_percent = ((current_price - trading_bot.entry_price) / trading_bot.entry_price) * 100
+                profit_usdt = profit_percent / 100 * positions_info["size_usdt"]
+                positions_info["current_profit_percent"] = profit_percent
+                positions_info["current_profit_usdt"] = profit_usdt
+                
+                # Рассчитываем до Take Profit
+                tp_target = positions_info["tp_target"]
+                positions_info["to_take_profit"] = tp_target - profit_percent
+                
+                # Комиссии (0.2% на вход + 0.2% на выход)
+                positions_info["fee_usdt"] = positions_info["size_usdt"] * 0.004
         
         # Формируем ответ в формате, ожидаемом frontend
         return {
-            "trading_enabled": getattr(trading_bot.settings.settings, 'trading_enabled', False),
-            "balance": balance.get('total_usdt', 0.0) if balance else 0.0,
-            "position": position_text,
-            "pnl": pnl,
-            "settings": settings_info,
-            "metrics": metrics,
+            "positions": positions_info,
             "last_update": datetime.now().isoformat()
         }
     except Exception as e:
@@ -282,6 +279,59 @@ async def get_market_data(
         if not ticker:
             raise HTTPException(status_code=500, detail="Failed to fetch ticker data")
         
+        # Получаем данные EMA
+        ema_info = {
+            "signal": "wait",
+            "text": "BBEPX",
+            "percent": 0
+        }
+        
+        try:
+            # Получаем активную стратегию
+            strategy = getattr(trading_bot, 'strategy', None)
+            if strategy and hasattr(strategy, 'ema_fast') and hasattr(strategy, 'ema_slow'):
+                ema_fast = strategy.ema_fast
+                ema_slow = strategy.ema_slow
+                if ema_fast and ema_slow:
+                    ema_diff = ((ema_fast - ema_slow) / ema_slow) * 100
+                    ema_info["percent"] = ema_diff
+                    
+                    threshold = trading_bot.settings.strategy_settings.get('ema_threshold', 0.25)
+                    if ema_diff > threshold:
+                        ema_info["signal"] = "buy"
+                        ema_info["text"] = "BBEPX"
+                    elif ema_diff < -threshold:
+                        ema_info["signal"] = "sell"
+                        ema_info["text"] = "НИЖЕ"
+                    else:
+                        ema_info["signal"] = "wait"
+                        ema_info["text"] = "НЕЙТРАЛЬНО"
+        except Exception as e:
+            log_error(f"Ошибка получения EMA: {e}")
+        
+        # Получаем сигнал от стратегии
+        signal = "wait"
+        try:
+            if hasattr(trading_bot, 'last_signal'):
+                signal = trading_bot.last_signal or "wait"
+        except:
+            pass
+        
+        # Получаем прогноз ML
+        ml_info = {
+            "prediction": 0.5,
+            "confidence": 0
+        }
+        
+        try:
+            if hasattr(trading_bot, 'ml_model') and trading_bot.ml_model:
+                # Получаем последний прогноз
+                if hasattr(trading_bot, 'last_ml_prediction'):
+                    ml_info["prediction"] = trading_bot.last_ml_prediction or 0.5
+                    ml_info["confidence"] = abs(ml_info["prediction"] - 0.5) * 2
+        except Exception as e:
+            log_error(f"Ошибка получения ML прогноза: {e}")
+        
         # Формируем ответ в формате, ожидаемом frontend
         return {
             "symbol": symbol,
@@ -289,7 +339,10 @@ async def get_market_data(
             "high_24h": ticker.get('high', 0),
             "low_24h": ticker.get('low', 0),
             "volume_24h": ticker.get('volume', 0),
-            "change_24h": ticker.get('change', 0),  # ← Исправлено с price_change_24h
+            "change_24h": ticker.get('change', 0),
+            "ema": ema_info,
+            "signal": signal,
+            "ml": ml_info,
             "timestamp": datetime.now().isoformat()
         }
     except HTTPException:

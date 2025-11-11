@@ -436,43 +436,65 @@
   <div class="content">
     <!-- Вкладка: Главная -->
     <div id="tab-home" class="tab-content active">
+      <!-- Обновление рынка -->
       <div class="card">
-        <div class="card-title">📊 Состояние</div>
+        <div class="card-title">📊 ОБНОВЛЕНИЕ РЫНКА</div>
         <div class="info-row">
-          <span class="info-label">Статус</span>
-          <span id="trading-status" class="status-badge status-inactive">Загрузка...</span>
+          <span class="info-label">🪙 Пара:</span>
+          <span id="market-symbol" class="info-value">B Bitcoin</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Баланс</span>
-          <span id="balance" class="info-value">0.00 USDT</span>
+          <span class="info-label">💰 Цена:</span>
+          <span id="market-price" class="info-value">103685.90 USDT</span>
         </div>
         <div class="info-row">
-          <span class="info-label">P&L</span>
-          <span id="pnl" class="info-value">+0.00 USDT</span>
+          <span class="info-label">📊 24ч:</span>
+          <span id="market-change-24h" class="info-value price-change-positive">+1.52%</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Позиция</span>
-          <span id="position" class="info-value">Нет позиции</span>
+          <span class="info-label">📈 EMA:</span>
+          <span id="market-ema" class="info-value">🟢 BBEPX (+0.46%)</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">🎯 Сигнал:</span>
+          <span id="market-signal" class="info-value">⚪ ОЖИДАНИЕ</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">🤖 ML:</span>
+          <span id="market-ml" class="info-value">🟡 НЕЙТРАЛЬНОЕ (51,1%)</span>
         </div>
       </div>
 
+      <!-- Позиция открыта -->
       <div class="card">
-        <div class="card-title">📈 Рынок</div>
+        <div class="card-title">🏠 ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ %)</div>
         <div class="info-row">
-          <span class="info-label">Пара</span>
-          <span id="market-symbol" class="info-value">BTC/USDT</span>
+          <span class="info-label">� Количество открытых позиций:</span>
+          <span id="position-count" class="info-value">2</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Цена</span>
-          <span id="market-price" class="info-value">$104327.90</span>
+          <span class="info-label">💵 Размер ставки:</span>
+          <span id="position-size" class="info-value">2.0 USDT</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Изменение 24ч</span>
-          <span id="market-change" class="info-value">-1.37%</span>
+          <span class="info-label">📍 Цена входа (TP):</span>
+          <span id="position-entry-price" class="info-value">110185.70 USDT</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Объем 24ч</span>
-          <span id="market-volume" class="info-value">$18.96K</span>
+          <span class="info-label">💵 Текущая прибыль:</span>
+          <span id="position-current-profit" class="info-value price-change-negative">-5.90% (-0.1239 USDT)</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">🎯 До Take Profit:</span>
+          <span id="position-to-tp" class="info-value">±8.2%</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">🎯 Цель TP:</span>
+          <span id="position-tp-target" class="info-value">2%</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">💸 Комиссии:</span>
+          <span id="position-fees" class="info-value">0.2% (0.0042 USDT)</span>
         </div>
       </div>
     </div>
@@ -796,29 +818,22 @@
 
         const data = await response.json();
 
-        // Обновляем статус торговли
-        const statusBadge = document.getElementById('trading-status');
-        if (data.trading_enabled) {
-          statusBadge.textContent = 'Активна';
-          statusBadge.className = 'status-badge status-active';
-          document.getElementById('btn-start').style.display = 'none';
-          document.getElementById('btn-stop').style.display = 'block';
-        } else {
-          statusBadge.textContent = 'Неактивна';
-          statusBadge.className = 'status-badge status-inactive';
-          document.getElementById('btn-start').style.display = 'block';
-          document.getElementById('btn-stop').style.display = 'none';
+        // Обновляем данные позиций
+        if (data.positions) {
+          document.getElementById('position-count').textContent = data.positions.open_count || 0;
+          document.getElementById('position-size').textContent = `${(data.positions.size_usdt || 0).toFixed(2)} USDT`;
+          document.getElementById('position-entry-price').textContent = `${(data.positions.entry_price || 0).toFixed(2)} USDT`;
+          
+          const currentProfit = data.positions.current_profit_percent || 0;
+          const currentProfitUsdt = data.positions.current_profit_usdt || 0;
+          const profitElement = document.getElementById('position-current-profit');
+          profitElement.textContent = `${currentProfit >= 0 ? '+' : ''}${currentProfit.toFixed(2)}% (${currentProfit >= 0 ? '+' : ''}${currentProfitUsdt.toFixed(4)} USDT)`;
+          profitElement.className = `info-value ${currentProfit >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
+          
+          document.getElementById('position-to-tp').textContent = `±${(data.positions.to_take_profit || 0).toFixed(1)}%`;
+          document.getElementById('position-tp-target').textContent = `${(data.positions.tp_target || 2).toFixed(0)}%`;
+          document.getElementById('position-fees').textContent = `${(data.positions.fee_percent || 0.2).toFixed(1)}% (${(data.positions.fee_usdt || 0).toFixed(4)} USDT)`;
         }
-
-        // Обновляем данные
-        const balance = typeof data.balance === 'number' ? data.balance : (data.balance?.total_usdt || 0);
-        document.getElementById('balance').textContent = `${balance.toFixed(2)} USDT`;
-        document.getElementById('position').textContent = data.position || 'Нет позиции';
-
-        const pnl = data.pnl || 0;
-        const pnlElement = document.getElementById('pnl');
-        pnlElement.textContent = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} USDT`;
-        pnlElement.className = `info-value ${pnl >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
       } catch (error) {
         console.error('Ошибка загрузки статуса:', error);
       }
@@ -832,15 +847,44 @@
 
         const data = await response.json();
 
-        document.getElementById('market-symbol').textContent = data.symbol || 'BTC/USDT';
-        document.getElementById('market-price').textContent = `$${data.current_price?.toFixed(2) || '0.00'}`;
+        // Обновляем информацию о паре
+        const symbolMap = {
+          'BTC/USDT': 'B Bitcoin',
+          'ETH/USDT': 'E Ethereum',
+          'BNB/USDT': 'BNB',
+          'SOL/USDT': 'SOL'
+        };
+        document.getElementById('market-symbol').textContent = symbolMap[data.symbol] || data.symbol || 'B Bitcoin';
+        
+        // Обновляем цену
+        document.getElementById('market-price').textContent = `${data.current_price?.toFixed(2) || '0.00'} USDT`;
 
+        // Обновляем изменение 24ч
         const change = data.change_24h || 0;
-        const changeElement = document.getElementById('market-change');
+        const changeElement = document.getElementById('market-change-24h');
         changeElement.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
         changeElement.className = `info-value ${change >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
 
-        document.getElementById('market-volume').textContent = `$${formatNumber(data.volume_24h || 0)}`;
+        // Обновляем EMA
+        if (data.ema) {
+          const emaIcon = data.ema.signal === 'buy' ? '🟢' : data.ema.signal === 'sell' ? '🔴' : '⚪';
+          const emaPercent = data.ema.percent || 0;
+          document.getElementById('market-ema').textContent = `${emaIcon} ${data.ema.text || 'BBEPX'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
+        }
+
+        // Обновляем сигнал
+        if (data.signal) {
+          const signalIcon = data.signal === 'buy' ? '🟢' : data.signal === 'sell' ? '🔴' : '⚪';
+          const signalText = data.signal === 'buy' ? 'ПОКУПКА' : data.signal === 'sell' ? 'ПРОДАЖА' : 'ОЖИДАНИЕ';
+          document.getElementById('market-signal').textContent = `${signalIcon} ${signalText}`;
+        }
+
+        // Обновляем ML
+        if (data.ml) {
+          const mlIcon = data.ml.prediction > 0.6 ? '🟢' : data.ml.prediction < 0.4 ? '🔴' : '🟡';
+          const mlText = data.ml.prediction > 0.6 ? 'ПОКУПКА' : data.ml.prediction < 0.4 ? 'ПРОДАЖА' : 'НЕЙТРАЛЬНОЕ';
+          document.getElementById('market-ml').textContent = `${mlIcon} ${mlText} (${(data.ml.prediction * 100).toFixed(1)}%)`;
+        }
       } catch (error) {
         console.error('Ошибка загрузки рынка:', error);
       }
