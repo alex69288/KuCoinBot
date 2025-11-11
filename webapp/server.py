@@ -261,18 +261,23 @@ async def get_market_data(
         if not symbol:
             symbol = trading_bot.settings.trading_pairs['active_pair']
         
-        # Получаем данные о рынке
+        # Получаем данные о рынке через метод get_ticker из exchange.py
         ticker = trading_bot.exchange.get_ticker(symbol)
+        
+        if not ticker:
+            raise HTTPException(status_code=500, detail="Failed to fetch ticker data")
         
         return {
             "symbol": symbol,
             "current_price": ticker.get('last'),
             "high_24h": ticker.get('high'),
             "low_24h": ticker.get('low'),
-            "volume_24h": ticker.get('quoteVolume'),
-            "price_change_24h": ticker.get('percentage'),
+            "volume_24h": ticker.get('volume'),
+            "price_change_24h": ticker.get('change'),
             "timestamp": datetime.now().isoformat()
         }
+    except HTTPException:
+        raise
     except Exception as e:
         log_error(f"Ошибка получения данных рынка: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting market data: {str(e)}")

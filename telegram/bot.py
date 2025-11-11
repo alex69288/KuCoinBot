@@ -44,11 +44,11 @@ class TelegramBot:
         if not self.test_connection():
             log_error("❌ Неверный Telegram токен или chat_id")
             return
-        # Загружаем ID предыдущего приветственного сообщения
-        self.load_welcome_message_id()
+        # Очищаем чат при перезапуске бота
+        self.clear_chat()
         # Запускаем слушатель сообщений
         self.start_message_listener()
-        # Отправляем/обновляем приветственное сообщение с кнопкой WebApp
+        # Отправляем приветственное сообщение с кнопкой WebApp (всегда новое)
         self.send_or_update_welcome_message()
         log_info("✅ Telegram бот успешно инициализирован")
 
@@ -257,6 +257,68 @@ Telegram WebApp требует HTTPS URL.
             log_error(f"❌ Ошибка отправки кнопки Web App: {e}")
             return False
     
+    def clear_chat(self):
+        """Удаляет все сообщения в чате (до 100 последних)"""
+        if not self.token or not self.chat_id:
+            return
+        
+        try:
+            log_info("🧹 Очистка чата Telegram...")
+            
+            # Получаем последние сообщения
+            url = f"https://api.telegram.org/bot{self.token}/getUpdates"
+            params = {'limit': 100, 'offset': -1}
+            timeout = 15 if self.use_proxy else 8
+            response = requests.get(url, params=params, timeout=timeout, proxies=self.proxies)
+            
+            if response.status_code != 200:
+                log_error(f"❌ Не удалось получить историю сообщений: {response.text}")
+                return
+            
+            data = response.json()
+            if not data.get('ok'):
+                return
+            
+            # Собираем ID сообщений для удаления
+            message_ids = []
+            for update in data.get('result', []):
+                if 'message' in update:
+                    msg = update['message']
+                    if msg.get('chat', {}).get('id') == int(self.chat_id):
+                        message_ids.append(msg['message_id'])
+            
+            # Удаляем сообщения
+            deleted_count = 0
+            for msg_id in message_ids:
+                try:
+                    delete_url = f"https://api.telegram.org/bot{self.token}/deleteMessage"
+                    delete_payload = {
+                        'chat_id': self.chat_id,
+                        'message_id': msg_id
+                    }
+                    del_response = requests.post(delete_url, json=delete_payload, timeout=timeout, proxies=self.proxies)
+                    if del_response.status_code == 200:
+                        deleted_count += 1
+                    time.sleep(0.05)  # Небольшая задержка между удалениями
+                except:
+                    pass
+            
+            # Удаляем сохранённый ID приветственного сообщения
+            self.welcome_message_id = None
+            try:
+                if os.path.exists('.telegram_welcome_msg_id'):
+                    os.remove('.telegram_welcome_msg_id')
+            except:
+                pass
+            
+            if deleted_count > 0:
+                log_info(f"✅ Удалено сообщений: {deleted_count}")
+            else:
+                log_info("ℹ️ Нет сообщений для удаления")
+                
+        except Exception as e:
+            log_error(f"⚠️ Ошибка при очистке чата: {e}")
+    
     def send_or_update_welcome_message(self):
         """Отправляет или обновляет приветственное сообщение с кнопкой WebApp"""
         if not self.token or not self.chat_id:
@@ -274,9 +336,10 @@ Telegram WebApp требует HTTPS URL.
         
         # Формируем сообщение
         current_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-        message = f"""🤖 <b>AutoTrading Bot</b>
+        message = f"""🤖 <b>Trading Bot</b>
 
-Бот готов к работе!
+<b>KuCoin Автоматическая торговля</b>
+
 Откройте полнофункциональное веб-приложение для:
 
 📊 Мониторинг в реальном времени
@@ -285,9 +348,9 @@ Telegram WebApp требует HTTPS URL.
 💰 Информация о балансе
 🎯 Управление позициями
 
-<i>Последнее обновление: {current_time}</i>
+<i>Запущено: {current_time}</i>
 
-Нажмите кнопку ниже для открытия приложения 👇"""
+@yadarrblahenani_bot"""
         
         reply_markup = {
             "inline_keyboard": [[
@@ -299,28 +362,21 @@ Telegram WebApp требует HTTPS URL.
         }
         
         try:
-            # Пытаемся обновить существующее сообщение
-            if self.welcome_message_id:
-                url = f"https://api.telegram.org/bot{self.token}/editMessageText"
-                payload = {
+            # Отправляем новое сообщение с анимацией (typing action)
+            # Показываем "печатает..." для эффекта
+            try:
+                typing_url = f"https://api.telegram.org/bot{self.token}/sendChatAction"
+                typing_payload = {
                     'chat_id': self.chat_id,
-                    'message_id': self.welcome_message_id,
-                    'text': message,
-                    'parse_mode': 'HTML',
-                    'reply_markup': reply_markup
+                    'action': 'typing'
                 }
-                
-                timeout = 15 if self.use_proxy else 8
-                response = requests.post(url, json=payload, timeout=timeout, proxies=self.proxies)
-                
-                if response.status_code == 200:
-                    log_info("✅ Приветственное сообщение обновлено")
-                    return
-                else:
-                    # Если не удалось обновить, отправим новое
-                    log_info("ℹ️ Не удалось обновить сообщение, отправляем новое")
+                timeout = 5 if self.use_proxy else 3
+                requests.post(typing_url, json=typing_payload, timeout=timeout, proxies=self.proxies)
+                time.sleep(1)  # Небольшая пауза для эффекта анимации
+            except:
+                pass
             
-            # Отправляем новое сообщение
+            # Отправляем новое приветственное сообщение
             url = f"https://api.telegram.org/bot{self.token}/sendMessage"
             payload = {
                 'chat_id': self.chat_id,
@@ -335,31 +391,14 @@ Telegram WebApp требует HTTPS URL.
             if response.status_code == 200:
                 data = response.json()
                 if data.get('ok') and 'result' in data:
-                    # Сохраняем ID сообщения для будущих обновлений
                     self.welcome_message_id = data['result']['message_id']
                     log_info("✅ Приветственное сообщение отправлено")
-                    # Сохраняем ID в файл для сохранения между перезапусками
-                    try:
-                        with open('.telegram_welcome_msg_id', 'w') as f:
-                            f.write(str(self.welcome_message_id))
-                    except:
-                        pass
             else:
                 log_error(f"❌ Ошибка отправки приветственного сообщения: {response.text}")
                 
         except Exception as e:
             log_error(f"❌ Ошибка в send_or_update_welcome_message: {e}")
     
-    def load_welcome_message_id(self):
-        """Загружает ID приветственного сообщения из файла"""
-        try:
-            if os.path.exists('.telegram_welcome_msg_id'):
-                with open('.telegram_welcome_msg_id', 'r') as f:
-                    self.welcome_message_id = int(f.read().strip())
-                    log_info(f"✅ Загружен ID приветственного сообщения: {self.welcome_message_id}")
-        except Exception as e:
-            log_error(f"⚠️ Не удалось загрузить ID приветственного сообщения: {e}")
-
     def start_message_listener(self):
         """Запуск слушателя сообщений"""
         def listener():
