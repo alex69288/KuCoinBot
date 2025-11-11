@@ -744,6 +744,51 @@
   </div>
 
   <script>
+    // === ИКОНКИ: инициализация SVG-спрайта и автозамена .icon-* на inline SVG ===
+    async function setupSvgIcons() {
+      try {
+        // Загружаем и внедряем /static/icons.svg в DOM (скрыто)
+        const res = await fetch('/static/icons.svg');
+        if (!res.ok) throw new Error(`Не удалось загрузить icons.svg: HTTP ${res.status}`);
+        const svgText = await res.text();
+        const holder = document.createElement('div');
+        holder.style.position = 'absolute';
+        holder.style.width = '0';
+        holder.style.height = '0';
+        holder.style.overflow = 'hidden';
+        holder.style.visibility = 'hidden';
+        holder.innerHTML = svgText;
+        document.body.prepend(holder);
+
+        const processIconEl = (el) => {
+          if (!el || el.dataset.iconProcessed === '1') return;
+          let iconId = null;
+          for (const cls of el.classList) {
+            if (cls.startsWith('icon-') && cls !== 'icon-svg') { iconId = cls; break; }
+          }
+          if (!iconId) return;
+          el.classList.add('icon-svg');
+          el.dataset.iconProcessed = '1';
+          el.innerHTML = `<svg class="icon" aria-hidden="true" focusable="false"><use href="#${iconId}"></use></svg>`;
+        };
+
+        document.querySelectorAll('.icon').forEach(processIconEl);
+
+        const obs = new MutationObserver((mutations) => {
+          mutations.forEach((m) => {
+            m.addedNodes && m.addedNodes.forEach((node) => {
+              if (node.nodeType !== 1) return;
+              if (node.classList && node.classList.contains('icon')) processIconEl(node);
+              if (node.querySelectorAll) node.querySelectorAll('.icon').forEach(processIconEl);
+            });
+          });
+        });
+        obs.observe(document.documentElement, { childList: true, subtree: true });
+      } catch (e) {
+        console.error('Ошибка инициализации SVG-спрайта:', e);
+      }
+    }
+
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
@@ -869,23 +914,23 @@
 
         // Обновляем EMA
         if (data.ema) {
-          const emaIcon = data.ema.signal === 'buy' ? '<span class="icon icon-circle-green"></span>' : data.ema.signal === 'sell' ? '<span class="icon icon-circle-red"></span>' : '<span class="icon icon-circle-white"></span>';
+          const emaIconId = data.ema.signal === 'buy' ? 'icon-circle-green' : data.ema.signal === 'sell' ? 'icon-circle-red' : 'icon-circle-white';
           const emaPercent = data.ema.percent || 0;
-          document.getElementById('market-ema').textContent = `${emaIcon} ${data.ema.text || 'BBEPX'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
+          document.getElementById('market-ema').innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${emaIconId}"></use></svg> ${data.ema.text || 'BBEPX'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
         }
 
         // Обновляем сигнал
         if (data.signal) {
-          const signalIcon = data.signal === 'buy' ? '<span class="icon icon-circle-green"></span>' : data.signal === 'sell' ? '<span class="icon icon-circle-red"></span>' : '<span class="icon icon-circle-white"></span>';
+          const signalIconId = data.signal === 'buy' ? 'icon-circle-green' : data.signal === 'sell' ? 'icon-circle-red' : 'icon-circle-white';
           const signalText = data.signal === 'buy' ? 'ПОКУПКА' : data.signal === 'sell' ? 'ПРОДАЖА' : 'ОЖИДАНИЕ';
-          document.getElementById('market-signal').textContent = `${signalIcon} ${signalText}`;
+          document.getElementById('market-signal').innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${signalIconId}"></use></svg> ${signalText}`;
         }
 
         // Обновляем ML
         if (data.ml) {
-          const mlIcon = data.ml.prediction > 0.6 ? '<span class="icon icon-circle-green"></span>' : data.ml.prediction < 0.4 ? '<span class="icon icon-circle-red"></span>' : '<span class="icon icon-circle-yellow"></span>';
+          const mlIconId = data.ml.prediction > 0.6 ? 'icon-circle-green' : data.ml.prediction < 0.4 ? 'icon-circle-red' : 'icon-circle-yellow';
           const mlText = data.ml.prediction > 0.6 ? 'ПОКУПКА' : data.ml.prediction < 0.4 ? 'ПРОДАЖА' : 'НЕЙТРАЛЬНОЕ';
-          document.getElementById('market-ml').textContent = `${mlIcon} ${mlText} (${(data.ml.prediction * 100).toFixed(1)}%)`;
+          document.getElementById('market-ml').innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${mlIconId}"></use></svg> ${mlText} (${(data.ml.prediction * 100).toFixed(1)}%)`;
         }
       } catch (error) {
         console.error('Ошибка загрузки рынка:', error);
@@ -1374,7 +1419,8 @@
     function showNotification(message) {
       const notification = document.createElement('div');
       notification.className = 'notification';
-      notification.textContent = message;
+      // Разрешаем HTML, чтобы иконки отображались
+      notification.innerHTML = message;
       document.body.appendChild(notification);
 
       setTimeout(() => {
@@ -1393,7 +1439,8 @@
     }
 
     // Инициализация
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
+      await setupSvgIcons();
       loadData();
       startAutoUpdate();
     });
