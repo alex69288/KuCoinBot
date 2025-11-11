@@ -103,7 +103,10 @@ class TelegramBot:
                     try:
                         result = response.json()
                         if result.get('ok') and 'result' in result:
-                            return result['result'].get('message_id')
+                            msg_id = result['result'].get('message_id')
+                            if msg_id:
+                                self.save_message_id(msg_id)  # Сохраняем ID для последующего удаления
+                            return msg_id
                     except:
                         pass
                     return True
@@ -257,38 +260,69 @@ Telegram WebApp требует HTTPS URL.
             log_error(f"❌ Ошибка отправки кнопки Web App: {e}")
             return False
     
+    def save_message_id(self, message_id):
+        """Сохраняет ID отправленного сообщения для последующего удаления"""
+        if not message_id:
+            return
+        
+        try:
+            import json
+            message_ids_file = '.telegram_message_ids.json'
+            message_ids = []
+            
+            # Загружаем существующие ID
+            if os.path.exists(message_ids_file):
+                try:
+                    with open(message_ids_file, 'r') as f:
+                        saved_data = json.load(f)
+                        message_ids = saved_data.get('message_ids', [])
+                except:
+                    pass
+            
+            # Добавляем новый ID (избегаем дубликатов)
+            if message_id not in message_ids:
+                message_ids.append(message_id)
+                
+                # Ограничиваем количество хранимых ID (последние 100)
+                if len(message_ids) > 100:
+                    message_ids = message_ids[-100:]
+                
+                # Сохраняем обновлённый список
+                with open(message_ids_file, 'w') as f:
+                    json.dump({'message_ids': message_ids}, f)
+        except Exception as e:
+            # Не критично, если не удалось сохранить
+            pass
+    
     def clear_chat(self):
-        """Удаляет все сообщения в чате (до 100 последних)"""
+        """Удаляет сохранённые сообщения бота из чата"""
         if not self.token or not self.chat_id:
             return
         
         try:
             log_info("🧹 Очистка чата Telegram...")
             
-            # Получаем последние сообщения
-            url = f"https://api.telegram.org/bot{self.token}/getUpdates"
-            params = {'limit': 100, 'offset': -1}
-            timeout = 15 if self.use_proxy else 8
-            response = requests.get(url, params=params, timeout=timeout, proxies=self.proxies)
-            
-            if response.status_code != 200:
-                log_error(f"❌ Не удалось получить историю сообщений: {response.text}")
-                return
-            
-            data = response.json()
-            if not data.get('ok'):
-                return
-            
-            # Собираем ID сообщений для удаления
+            import json
+            # Загружаем ID сохранённых сообщений
+            message_ids_file = '.telegram_message_ids.json'
             message_ids = []
-            for update in data.get('result', []):
-                if 'message' in update:
-                    msg = update['message']
-                    if msg.get('chat', {}).get('id') == int(self.chat_id):
-                        message_ids.append(msg['message_id'])
+            
+            if os.path.exists(message_ids_file):
+                try:
+                    with open(message_ids_file, 'r') as f:
+                        saved_data = json.load(f)
+                        message_ids = saved_data.get('message_ids', [])
+                except:
+                    pass
+            
+            if not message_ids:
+                log_info("ℹ️ Нет сохранённых сообщений для удаления")
+                return
             
             # Удаляем сообщения
             deleted_count = 0
+            timeout = 15 if self.use_proxy else 8
+            
             for msg_id in message_ids:
                 try:
                     delete_url = f"https://api.telegram.org/bot{self.token}/deleteMessage"
@@ -297,13 +331,21 @@ Telegram WebApp требует HTTPS URL.
                         'message_id': msg_id
                     }
                     del_response = requests.post(delete_url, json=delete_payload, timeout=timeout, proxies=self.proxies)
-                    if del_response.status_code == 200:
+                    if del_response.status_code == 200 or del_response.json().get('ok'):
                         deleted_count += 1
                     time.sleep(0.05)  # Небольшая задержка между удалениями
-                except:
+                except Exception as e:
+                    # Сообщение может быть уже удалено вручную
                     pass
             
-            # Удаляем сохранённый ID приветственного сообщения
+            # Очищаем файл с ID сообщений
+            try:
+                if os.path.exists(message_ids_file):
+                    os.remove(message_ids_file)
+            except:
+                pass
+            
+            # Удаляем старый файл приветственного сообщения
             self.welcome_message_id = None
             try:
                 if os.path.exists('.telegram_welcome_msg_id'):
@@ -311,10 +353,7 @@ Telegram WebApp требует HTTPS URL.
             except:
                 pass
             
-            if deleted_count > 0:
-                log_info(f"✅ Удалено сообщений: {deleted_count}")
-            else:
-                log_info("ℹ️ Нет сообщений для удаления")
+            log_info(f"✅ Удалено сообщений: {deleted_count} из {len(message_ids)}")
                 
         except Exception as e:
             log_error(f"⚠️ Ошибка при очистке чата: {e}")
