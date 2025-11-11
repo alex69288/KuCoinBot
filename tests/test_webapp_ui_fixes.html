@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест исправлений WebApp UI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #181c24;
+            color: #f5f5f5;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .test-section {
+            background: #232a36;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .test-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #00bcd4;
+        }
+        
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .test-pass {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid #4caf50;
+        }
+        
+        .test-fail {
+            background: rgba(229, 57, 53, 0.2);
+            color: #e53935;
+            border: 1px solid #e53935;
+        }
+        
+        .test-info {
+            background: rgba(0, 188, 212, 0.2);
+            color: #00bcd4;
+            border: 1px solid #00bcd4;
+        }
+        
+        button {
+            padding: 12px 20px;
+            background: #00bcd4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #0097a7;
+        }
+        
+        .icon-test {
+            display: inline-block;
+            margin: 0 5px;
+            font-size: 24px;
+        }
+        
+        .value-demo {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 10px 0;
+            padding: 15px;
+            background: rgba(0, 188, 212, 0.1);
+            border-radius: 8px;
+            display: inline-block;
+        }
+        
+        .value-flash-up {
+            animation: flashUp 1.8s ease;
+        }
+
+        .value-flash-down {
+            animation: flashDown 1.8s ease;
+        }
+
+        @keyframes flashUp {
+            0%, 50% {
+                color: #4caf50;
+                transform: scale(1.05);
+                text-shadow: 0 0 8px #4caf50;
+            }
+            100% {
+                color: inherit;
+                transform: scale(1);
+                text-shadow: none;
+            }
+        }
+
+        @keyframes flashDown {
+            0%, 50% {
+                color: #e53935;
+                transform: scale(1.05);
+                text-shadow: 0 0 8px #e53935;
+            }
+            100% {
+                color: inherit;
+                transform: scale(1);
+                text-shadow: none;
+            }
+        }
+        
+        .log {
+            background: #1a1d24;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест исправлений WebApp UI</h1>
+    
+    <!-- Тест 1: Иконки SVG -->
+    <div class="test-section">
+        <div class="test-title">✅ Тест 1: Проверка цвета иконок SVG</div>
+        <div id="icon-test-result" class="test-result test-info">
+            Проверка иконок...
+        </div>
+        <div style="margin-top: 15px;">
+            <p>Иконки должны быть белого цвета (не серого):</p>
+            <div style="font-size: 32px; margin: 10px 0;">
+                <span class="icon-test">🤖</span>
+                <span class="icon-test">📊</span>
+                <span class="icon-test">💰</span>
+                <span class="icon-test">⚙️</span>
+                <span class="icon-test">🎯</span>
+            </div>
+        </div>
+        <button onclick="testIcons()">Проверить иконки</button>
+    </div>
+    
+    <!-- Тест 2: Автообновление -->
+    <div class="test-section">
+        <div class="test-title">🔄 Тест 2: Проверка автообновления</div>
+        <div id="auto-update-result" class="test-result test-info">
+            Ожидание обновлений...
+        </div>
+        <div>
+            <p>Счётчик обновлений: <strong id="update-counter">0</strong></p>
+            <p>Последнее обновление: <strong id="last-update">-</strong></p>
+            <p>Интервал: <strong id="update-interval">-</strong></p>
+        </div>
+        <button onclick="startAutoUpdate()">Запустить автообновление</button>
+        <button onclick="stopAutoUpdate()">Остановить</button>
+        <div class="log" id="update-log"></div>
+    </div>
+    
+    <!-- Тест 3: Анимация -->
+    <div class="test-section">
+        <div class="test-title">✨ Тест 3: Проверка анимации изменений</div>
+        <div id="animation-test-result" class="test-result test-info">
+            Готов к тестированию анимации
+        </div>
+        <div style="text-align: center;">
+            <div class="value-demo" id="demo-value">100.00 USDT</div>
+        </div>
+        <div style="margin-top: 15px;">
+            <button onclick="animateUp()">📈 Анимация роста</button>
+            <button onclick="animateDown()">📉 Анимация падения</button>
+        </div>
+        <p style="margin-top: 10px; font-size: 13px; color: #b0b8c1;">
+            ℹ️ Анимация должна длиться ~1.8 секунды с увеличением масштаба и свечением
+        </p>
+    </div>
+    
+    <!-- Тест 4: Видимость страницы -->
+    <div class="test-section">
+        <div class="test-title">👁️ Тест 4: Проверка обработчика видимости</div>
+        <div id="visibility-result" class="test-result test-info">
+            Страница видима
+        </div>
+        <p style="font-size: 13px; color: #b0b8c1; margin-top: 10px;">
+            ℹ️ Попробуйте переключить вкладку браузера или свернуть окно, чтобы проверить обработку изменения видимости
+        </p>
+        <div class="log" id="visibility-log"></div>
+    </div>
+
+    <script>
+        let updateInterval = null;
+        let updateCounter = 0;
+        let lastUpdateTime = Date.now();
+        
+        // Тест 1: Иконки
+        function testIcons() {
+            const result = document.getElementById('icon-test-result');
+            // В реальном приложении проверяем загрузку SVG
+            const svgLoaded = document.querySelector('svg') !== null;
+            
+            if (svgLoaded) {
+                result.className = 'test-result test-pass';
+                result.textContent = '✅ SVG-спрайты загружены. Проверьте визуально, что иконки белого цвета.';
+            } else {
+                result.className = 'test-result test-info';
+                result.textContent = '⚠️ SVG-спрайты не обнаружены в DOM. Используются эмодзи для демонстрации.';
+            }
+        }
+        
+        // Тест 2: Автообновление
+        function startAutoUpdate() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            
+            updateCounter = 0;
+            lastUpdateTime = Date.now();
+            
+            const result = document.getElementById('auto-update-result');
+            result.className = 'test-result test-pass';
+            result.textContent = '✅ Автообновление запущено (интервал: 2 секунды)';
+            
+            addUpdateLog('🔄 Автообновление запущено');
+            
+            updateInterval = setInterval(() => {
+                if (document.hidden) {
+                    addUpdateLog('⏸️ Страница скрыта, пропускаем обновление');
+                    return;
+                }
+                
+                const now = Date.now();
+                const interval = now - lastUpdateTime;
+                lastUpdateTime = now;
+                updateCounter++;
+                
+                document.getElementById('update-counter').textContent = updateCounter;
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+                document.getElementById('update-interval').textContent = `${interval}мс`;
+                
+                addUpdateLog(`🔄 Обновление #${updateCounter} (интервал: ${interval}мс)`);
+                
+                // Проверяем, что интервал близок к 2000мс (±200мс допуск)
+                if (updateCounter > 1 && (interval < 1800 || interval > 2200)) {
+                    result.className = 'test-result test-fail';
+                    result.textContent = `⚠️ Интервал не соответствует ожидаемому: ${interval}мс вместо ~2000мс`;
+                }
+            }, 2000);
+        }
+        
+        function stopAutoUpdate() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+                
+                const result = document.getElementById('auto-update-result');
+                result.className = 'test-result test-info';
+                result.textContent = `⏹️ Автообновление остановлено. Выполнено обновлений: ${updateCounter}`;
+                
+                addUpdateLog('⏹️ Автообновление остановлено');
+            }
+        }
+        
+        function addUpdateLog(message) {
+            const log = document.getElementById('update-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.insertBefore(entry, log.firstChild);
+            
+            // Ограничиваем количество записей
+            while (log.children.length > 20) {
+                log.removeChild(log.lastChild);
+            }
+        }
+        
+        // Тест 3: Анимация
+        function animateUp() {
+            const elem = document.getElementById('demo-value');
+            const currentValue = parseFloat(elem.textContent);
+            const newValue = currentValue + 10.50;
+            
+            elem.classList.remove('value-flash-up', 'value-flash-down');
+            void elem.offsetWidth; // Перезапуск анимации
+            elem.classList.add('value-flash-up');
+            elem.textContent = `${newValue.toFixed(2)} USDT`;
+            
+            setTimeout(() => {
+                elem.classList.remove('value-flash-up');
+                document.getElementById('animation-test-result').className = 'test-result test-pass';
+                document.getElementById('animation-test-result').textContent = '✅ Анимация роста завершена';
+            }, 1900);
+        }
+        
+        function animateDown() {
+            const elem = document.getElementById('demo-value');
+            const currentValue = parseFloat(elem.textContent);
+            const newValue = currentValue - 8.30;
+            
+            elem.classList.remove('value-flash-up', 'value-flash-down');
+            void elem.offsetWidth;
+            elem.classList.add('value-flash-down');
+            elem.textContent = `${newValue.toFixed(2)} USDT`;
+            
+            setTimeout(() => {
+                elem.classList.remove('value-flash-down');
+                document.getElementById('animation-test-result').className = 'test-result test-pass';
+                document.getElementById('animation-test-result').textContent = '✅ Анимация падения завершена';
+            }, 1900);
+        }
+        
+        // Тест 4: Видимость страницы
+        document.addEventListener('visibilitychange', () => {
+            const result = document.getElementById('visibility-result');
+            const log = document.getElementById('visibility-log');
+            
+            if (document.hidden) {
+                result.className = 'test-result test-info';
+                result.textContent = '🙈 Страница скрыта';
+                addVisibilityLog('🙈 Страница скрыта');
+            } else {
+                result.className = 'test-result test-pass';
+                result.textContent = '👁️ Страница снова видна';
+                addVisibilityLog('👁️ Страница снова видна - принудительное обновление');
+            }
+        });
+        
+        function addVisibilityLog(message) {
+            const log = document.getElementById('visibility-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.insertBefore(entry, log.firstChild);
+            
+            while (log.children.length > 10) {
+                log.removeChild(log.lastChild);
+            }
+        }
+        
+        // Инициализация
+        window.addEventListener('load', () => {
+            testIcons();
+            addVisibilityLog('✅ Тестовая страница загружена');
+        });
+    </script>
+</body>
+</html>
