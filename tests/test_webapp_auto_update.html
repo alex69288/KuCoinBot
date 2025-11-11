@@ -1,225 +1,240 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест автообновления WebApp</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background: #1a1a1a;
-            color: #fff;
-        }
-        .test-card {
-            background: #2a2a2a;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .test-title {
-            font-size: 24px;
-            margin-bottom: 20px;
-            color: #4CAF50;
-        }
-        .counter {
-            font-size: 48px;
-            font-weight: bold;
-            text-align: center;
-            margin: 20px 0;
-            color: #2196F3;
-        }
-        .log {
-            background: #1a1a1a;
-            padding: 15px;
-            border-radius: 8px;
-            max-height: 300px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        .log-entry {
-            margin: 5px 0;
-            padding: 5px;
-            border-left: 3px solid #4CAF50;
-            padding-left: 10px;
-        }
-        .status {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            margin: 10px 0;
-        }
-        .status.running {
-            background: #4CAF50;
-            color: white;
-        }
-        .status.stopped {
-            background: #f44336;
-            color: white;
-        }
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .btn-start {
-            background: #4CAF50;
-            color: white;
-        }
-        .btn-stop {
-            background: #f44336;
-            color: white;
-        }
-        .btn-clear {
-            background: #2196F3;
-            color: white;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест автообновления WebApp</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+
+    .test-card {
+      background: #2a2a2a;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+
+    .test-title {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #4CAF50;
+    }
+
+    .counter {
+      font-size: 48px;
+      font-weight: bold;
+      text-align: center;
+      margin: 20px 0;
+      color: #2196F3;
+    }
+
+    .log {
+      background: #1a1a1a;
+      padding: 15px;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #4CAF50;
+      padding-left: 10px;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      margin: 10px 0;
+    }
+
+    .status.running {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .status.stopped {
+      background: #f44336;
+      color: white;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .btn-start {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-stop {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-clear {
+      background: #2196F3;
+      color: white;
+    }
+  </style>
 </head>
+
 <body>
-    <div class="test-card">
-        <div class="test-title">🧪 Тест автообновления WebApp</div>
-        
-        <div>
-            <span class="status running" id="status">Работает</span>
-        </div>
+  <div class="test-card">
+    <div class="test-title">🧪 Тест автообновления WebApp</div>
 
-        <div>
-            <button class="btn-start" onclick="startTest()">▶️ Старт</button>
-            <button class="btn-stop" onclick="stopTest()">⏹️ Стоп</button>
-            <button class="btn-clear" onclick="clearLog()">🗑️ Очистить лог</button>
-        </div>
-
-        <div class="counter" id="counter">0</div>
-        <div style="text-align: center; color: #888;">
-            Счетчик обновлений (каждую секунду)
-        </div>
+    <div>
+      <span class="status running" id="status">Работает</span>
     </div>
 
-    <div class="test-card">
-        <div class="test-title">📋 Лог обновлений</div>
-        <div class="log" id="log"></div>
+    <div>
+      <button class="btn-start" onclick="startTest()">▶️ Старт</button>
+      <button class="btn-stop" onclick="stopTest()">⏹️ Стоп</button>
+      <button class="btn-clear" onclick="clearLog()">🗑️ Очистить лог</button>
     </div>
 
-    <div class="test-card">
-        <div class="test-title">ℹ️ Информация о тесте</div>
-        <div style="line-height: 1.8;">
-            <strong>Интервал обновления:</strong> 1000 мс (1 секунда)<br>
-            <strong>Начало теста:</strong> <span id="startTime">-</span><br>
-            <strong>Последнее обновление:</strong> <span id="lastUpdate">-</span><br>
-            <strong>Всего обновлений:</strong> <span id="totalUpdates">0</span><br>
-            <strong>Средний интервал:</strong> <span id="avgInterval">-</span>
-        </div>
+    <div class="counter" id="counter">0</div>
+    <div style="text-align: center; color: #888;">
+      Счетчик обновлений (каждую секунду)
     </div>
+  </div>
 
-    <script>
-        let counter = 0;
-        let updateInterval = null;
-        let startTime = null;
-        let lastUpdateTime = null;
-        let intervals = [];
+  <div class="test-card">
+    <div class="test-title">📋 Лог обновлений</div>
+    <div class="log" id="log"></div>
+  </div>
 
-        function addLog(message) {
-            const logDiv = document.getElementById('log');
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            const now = new Date();
-            entry.textContent = `[${now.toLocaleTimeString()}.${now.getMilliseconds().toString().padStart(3, '0')}] ${message}`;
-            logDiv.appendChild(entry);
-            logDiv.scrollTop = logDiv.scrollHeight;
-        }
+  <div class="test-card">
+    <div class="test-title">ℹ️ Информация о тесте</div>
+    <div style="line-height: 1.8;">
+      <strong>Интервал обновления:</strong> 1000 мс (1 секунда)<br>
+      <strong>Начало теста:</strong> <span id="startTime">-</span><br>
+      <strong>Последнее обновление:</strong> <span id="lastUpdate">-</span><br>
+      <strong>Всего обновлений:</strong> <span id="totalUpdates">0</span><br>
+      <strong>Средний интервал:</strong> <span id="avgInterval">-</span>
+    </div>
+  </div>
 
-        function updateCounter() {
-            const now = Date.now();
-            
-            if (lastUpdateTime) {
-                const interval = now - lastUpdateTime;
-                intervals.push(interval);
-                addLog(`Обновление #${counter + 1} (интервал: ${interval} мс)`);
-            } else {
-                addLog(`Первое обновление`);
-            }
-            
-            lastUpdateTime = now;
-            counter++;
-            document.getElementById('counter').textContent = counter;
-            document.getElementById('lastUpdate').textContent = new Date(now).toLocaleTimeString();
-            document.getElementById('totalUpdates').textContent = counter;
-            
-            if (intervals.length > 0) {
-                const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-                document.getElementById('avgInterval').textContent = `${avg.toFixed(2)} мс`;
-            }
-        }
+  <script>
+    let counter = 0;
+    let updateInterval = null;
+    let startTime = null;
+    let lastUpdateTime = null;
+    let intervals = [];
 
-        function startTest() {
-            if (updateInterval) {
-                addLog('⚠️ Тест уже запущен');
-                return;
-            }
+    function addLog(message) {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const now = new Date();
+      entry.textContent = `[${now.toLocaleTimeString()}.${now.getMilliseconds().toString().padStart(3, '0')}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
 
-            startTime = new Date();
-            lastUpdateTime = null;
-            document.getElementById('startTime').textContent = startTime.toLocaleTimeString();
-            document.getElementById('status').textContent = 'Работает';
-            document.getElementById('status').className = 'status running';
-            
-            addLog('✅ Тест запущен');
-            
-            // Первое обновление сразу
-            updateCounter();
-            
-            // Затем каждую секунду
-            updateInterval = setInterval(() => {
-                updateCounter();
-            }, 1000);
-        }
+    function updateCounter() {
+      const now = Date.now();
 
-        function stopTest() {
-            if (!updateInterval) {
-                addLog('⚠️ Тест не запущен');
-                return;
-            }
+      if (lastUpdateTime) {
+        const interval = now - lastUpdateTime;
+        intervals.push(interval);
+        addLog(`Обновление #${counter + 1} (интервал: ${interval} мс)`);
+      } else {
+        addLog(`Первое обновление`);
+      }
 
-            clearInterval(updateInterval);
-            updateInterval = null;
-            
-            document.getElementById('status').textContent = 'Остановлен';
-            document.getElementById('status').className = 'status stopped';
-            
-            addLog('⏹️ Тест остановлен');
-            
-            if (intervals.length > 0) {
-                const min = Math.min(...intervals);
-                const max = Math.max(...intervals);
-                const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-                addLog(`📊 Статистика: Мин=${min}мс, Макс=${max}мс, Средн=${avg.toFixed(2)}мс`);
-            }
-        }
+      lastUpdateTime = now;
+      counter++;
+      document.getElementById('counter').textContent = counter;
+      document.getElementById('lastUpdate').textContent = new Date(now).toLocaleTimeString();
+      document.getElementById('totalUpdates').textContent = counter;
 
-        function clearLog() {
-            document.getElementById('log').innerHTML = '';
-            addLog('🗑️ Лог очищен');
-        }
+      if (intervals.length > 0) {
+        const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+        document.getElementById('avgInterval').textContent = `${avg.toFixed(2)} мс`;
+      }
+    }
 
-        // Автозапуск при загрузке страницы
-        window.addEventListener('load', () => {
-            addLog('🔧 Страница загружена');
-            startTest();
-        });
+    function startTest() {
+      if (updateInterval) {
+        addLog('⚠️ Тест уже запущен');
+        return;
+      }
 
-        // Очистка при закрытии
-        window.addEventListener('beforeunload', () => {
-            if (updateInterval) {
-                clearInterval(updateInterval);
-            }
-        });
-    </script>
+      startTime = new Date();
+      lastUpdateTime = null;
+      document.getElementById('startTime').textContent = startTime.toLocaleTimeString();
+      document.getElementById('status').textContent = 'Работает';
+      document.getElementById('status').className = 'status running';
+
+      addLog('✅ Тест запущен');
+
+      // Первое обновление сразу
+      updateCounter();
+
+      // Затем каждую секунду
+      updateInterval = setInterval(() => {
+        updateCounter();
+      }, 1000);
+    }
+
+    function stopTest() {
+      if (!updateInterval) {
+        addLog('⚠️ Тест не запущен');
+        return;
+      }
+
+      clearInterval(updateInterval);
+      updateInterval = null;
+
+      document.getElementById('status').textContent = 'Остановлен';
+      document.getElementById('status').className = 'status stopped';
+
+      addLog('⏹️ Тест остановлен');
+
+      if (intervals.length > 0) {
+        const min = Math.min(...intervals);
+        const max = Math.max(...intervals);
+        const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+        addLog(`📊 Статистика: Мин=${min}мс, Макс=${max}мс, Средн=${avg.toFixed(2)}мс`);
+      }
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+      addLog('🗑️ Лог очищен');
+    }
+
+    // Автозапуск при загрузке страницы
+    window.addEventListener('load', () => {
+      addLog('🔧 Страница загружена');
+      startTest();
+    });
+
+    // Очистка при закрытии
+    window.addEventListener('beforeunload', () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+      }
+    });
+  </script>
 </body>
+
 </html>
