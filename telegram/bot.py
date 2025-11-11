@@ -171,11 +171,46 @@ class TelegramBot:
     def send_webapp_button(self):
         """Отправляет кнопку для открытия Web App"""
         try:
-            webapp_url = os.getenv('WEBAPP_URL', 'https://your-server.com')
-            log_info(f"🌐 Создание кнопки Web App с URL: {webapp_url}")
+            webapp_url = os.getenv('WEBAPP_URL', '')
+            log_info(f"🌐 Проверка URL Web App: {webapp_url if webapp_url else 'не установлен'}")
             
-            if webapp_url == 'https://your-server.com':
-                log_error("⚠️ WEBAPP_URL не установлена! Используется заглушка. Установите переменную окружения WEBAPP_URL.")
+            # Проверяем, что URL существует и это HTTPS
+            if not webapp_url or webapp_url == 'https://your-server.com':
+                log_error("⚠️ WEBAPP_URL не установлена или некорректна!")
+                message = """
+⚠️ <b>Web App не настроен</b>
+
+Для использования Web App необходимо:
+1️⃣ Развернуть бот на сервере с HTTPS
+2️⃣ Установить переменную WEBAPP_URL в .env
+
+<b>Варианты развертывания:</b>
+🌐 Amvera.io (рекомендуется)
+🌐 Railway.app
+🌐 Ngrok (для тестирования)
+
+<i>Используйте команды бота через меню (/start)</i>
+"""
+                self.send_message(message)
+                return False
+            
+            # Проверяем, что это HTTPS URL (Telegram требует HTTPS для WebApp)
+            if not webapp_url.startswith('https://'):
+                log_error(f"⚠️ WebApp URL должен начинаться с https://. Текущий URL: {webapp_url}")
+                message = """
+⚠️ <b>Некорректный URL Web App</b>
+
+Telegram WebApp требует HTTPS URL.
+Локальные адреса (http://localhost) не поддерживаются.
+
+<b>Используйте:</b>
+• Ngrok для локального тестирования
+• Amvera.io для продакшна
+
+<i>Используйте команды бота через меню (/start)</i>
+"""
+                self.send_message(message)
+                return False
             
             message = """
 🌐 <b>Web App доступен!</b>

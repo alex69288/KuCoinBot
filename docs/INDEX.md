@@ -38,6 +38,7 @@
 
 ### 🌐 Веб-интерфейс
 - [webapp/README.md](../webapp/README.md) - Документация веб-приложения
+- [WEBAPP_SETUP.md](WEBAPP_SETUP.md) - Настройка Web App для Telegram (исправление WebAppPopupParamInvalid)
 
 ---
 
