@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест исправления кнопок</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      margin: 10px 5px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover {
+      opacity: 0.8;
+    }
+
+    .btn-start {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-stop {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-test {
+      background: #2196F3;
+      color: white;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+
+    .error {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .success {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>🧪 Тест исправления кнопок Web App</h1>
+    <p>Этот файл тестирует исправленные функции работы с Telegram Web App API.</p>
+
+    <div>
+      <button class="btn btn-test" onclick="testOldMethod()">Старый метод (showAlert - ошибка)</button>
+      <button class="btn btn-test" onclick="testNewMethod()">Новый метод (showPopup - правильно)</button>
+    </div>
+
+    <div>
+      <button class="btn btn-start" onclick="testStartBot()">Тест: Запустить бота</button>
+      <button class="btn btn-stop" onclick="testStopBot()">Тест: Остановить бота</button>
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>📋 Объяснение исправления</h2>
+    <p><strong>Проблема:</strong> Использование <code>tg.showAlert(message)</code> вызывало ошибку
+      <code>WebAppPopupParamInvalid</code></p>
+    <p><strong>Решение:</strong> Использование <code>tg.showPopup({ title, message, buttons })</code> с правильными
+      параметрами</p>
+    <p><strong>Формат showPopup:</strong></p>
+    <pre>tg.showPopup({
+  title: 'Заголовок',
+  message: 'Текст сообщения',
+  buttons: [{ type: 'ok' }]
+});</pre>
+  </div>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    const tg = window.Telegram?.WebApp || {
+      showAlert: (msg) => alert(`showAlert: ${msg}`),
+      showPopup: (params) => alert(`showPopup: ${params.title}\n${params.message}`)
+    };
+
+    function showResult(message, isError = false) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.className = 'result ' + (isError ? 'error' : 'success');
+      resultDiv.innerHTML = `<strong>${isError ? '❌ Ошибка:' : '✅ Успешно:'}</strong> ${message}`;
+    }
+
+    // Старый метод (вызывает ошибку)
+    function testOldMethod() {
+      try {
+        tg.showAlert('Это вызовет ошибку WebAppPopupParamInvalid');
+        showResult('showAlert вызван, но может быть ошибка в реальном Telegram');
+      } catch (error) {
+        showResult(`Ошибка: ${error.message}`, true);
+      }
+    }
+
+    // Новый метод (правильный)
+    function testNewMethod() {
+      try {
+        tg.showPopup({
+          title: 'Тест',
+          message: 'Это правильный способ показа уведомлений!',
+          buttons: [{ type: 'ok' }]
+        });
+        showResult('showPopup вызван успешно!');
+      } catch (error) {
+        showResult(`Ошибка: ${error.message}`, true);
+      }
+    }
+
+    // Тест запуска бота
+    async function testStartBot() {
+      try {
+        showResult('Отправка запроса на запуск бота...');
+        const response = await fetch('/api/bot/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ init_data: 'test' })
+        });
+
+        const result = await response.json();
+
+        tg.showPopup({
+          title: 'Бот',
+          message: result.message || 'Готово',
+          buttons: [{ type: 'ok' }]
+        });
+
+        showResult(`Ответ получен: ${result.message}`);
+      } catch (error) {
+        tg.showPopup({
+          title: 'Ошибка',
+          message: error.message || 'Произошла ошибка',
+          buttons: [{ type: 'ok' }]
+        });
+        showResult(`Ошибка: ${error.message}`, true);
+      }
+    }
+
+    // Тест остановки бота
+    async function testStopBot() {
+      try {
+        showResult('Отправка запроса на остановку бота...');
+        const response = await fetch('/api/bot/stop', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ init_data: 'test' })
+        });
+
+        const result = await response.json();
+
+        tg.showPopup({
+          title: 'Бот',
+          message: result.message || 'Готово',
+          buttons: [{ type: 'ok' }]
+        });
+
+        showResult(`Ответ получен: ${result.message}`);
+      } catch (error) {
+        tg.showPopup({
+          title: 'Ошибка',
+          message: error.message || 'Произошла ошибка',
+          buttons: [{ type: 'ok' }]
+        });
+        showResult(`Ошибка: ${error.message}`, true);
+      }
+    }
+
+    // При загрузке страницы
+    window.addEventListener('load', () => {
+      showResult('Страница загружена. Можно тестировать кнопки.', false);
+    });
+  </script>
+</body>
+
+</html>

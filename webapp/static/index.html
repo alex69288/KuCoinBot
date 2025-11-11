@@ -408,10 +408,21 @@
         });
 
         const result = await response.json();
-        tg.showAlert(result.message);
+
+        // Используем showPopup вместо showAlert для корректной работы
+        tg.showPopup({
+          title: 'Бот',
+          message: result.message || 'Готово',
+          buttons: [{ type: 'ok' }]
+        });
+
         loadData();
       } catch (error) {
-        tg.showAlert(`Ошибка: ${error.message}`);
+        tg.showPopup({
+          title: 'Ошибка',
+          message: error.message || 'Произошла ошибка',
+          buttons: [{ type: 'ok' }]
+        });
       }
     }
 
@@ -427,10 +438,21 @@
         });
 
         const result = await response.json();
-        tg.showAlert(result.message);
+
+        // Используем showPopup вместо showAlert для корректной работы
+        tg.showPopup({
+          title: 'Бот',
+          message: result.message || 'Готово',
+          buttons: [{ type: 'ok' }]
+        });
+
         loadData();
       } catch (error) {
-        tg.showAlert(`Ошибка: ${error.message}`);
+        tg.showPopup({
+          title: 'Ошибка',
+          message: error.message || 'Произошла ошибка',
+          buttons: [{ type: 'ok' }]
+        });
       }
     }
 
