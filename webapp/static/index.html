@@ -4,6 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#181c24">
   <title>KuCoin Trading Bot</title>
   <link rel="stylesheet" href="/static/icons.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -15,6 +17,7 @@
     }
 
     :root {
+      color-scheme: dark;
       --primary-color: #00bcd4;
       /* Акцентный бирюзовый */
       --success-color: #4caf50;
@@ -22,10 +25,10 @@
       --warning-color: #ffb300;
       --accent-color: #ff4081;
       /* Ярко-розовый для выделения */
-      --bg-primary: var(--tg-theme-bg-color, #181c24);
-      --bg-secondary: var(--tg-theme-secondary-bg-color, #232a36);
-      --text-primary: var(--tg-theme-text-color, #f5f5f5);
-      --text-secondary: var(--tg-theme-hint-color, #b0b8c1);
+      --bg-primary: #181c24;
+      --bg-secondary: #232a36;
+      --text-primary: #f5f5f5;
+      --text-secondary: #b0b8c1;
       --border-color: rgba(255, 255, 255, 0.08);
       --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     }
@@ -219,7 +222,9 @@
     }
 
     @keyframes flashUp {
-      0%, 50% {
+
+      0%,
+      50% {
         color: var(--success-color);
         transform: scale(1.05);
         text-shadow: 0 0 8px var(--success-color);
@@ -233,7 +238,9 @@
     }
 
     @keyframes flashDown {
-      0%, 50% {
+
+      0%,
+      50% {
         color: var(--danger-color);
         transform: scale(1.05);
         text-shadow: 0 0 8px var(--danger-color);
@@ -454,6 +461,47 @@
       font-size: 18px;
       font-weight: 600;
       color: var(--text-primary);
+    }
+
+    /* Исправление для иконок - они должны наследовать цвет */
+    .icon svg,
+    .icon-svg svg,
+    .icon use {
+      fill: currentColor !important;
+    }
+
+    /* Иконки в табах */
+    .tab .icon svg,
+    .tab .icon-svg svg {
+      fill: currentColor !important;
+    }
+
+    .tab.active .icon svg,
+    .tab.active .icon-svg svg {
+      fill: var(--primary-color) !important;
+    }
+
+    /* Иконки в заголовках карточек */
+    .card-title .icon svg,
+    .card-title .icon-svg svg {
+      fill: var(--primary-color) !important;
+    }
+
+    /* Иконки в статусах */
+    .icon-circle-green svg {
+      fill: var(--success-color) !important;
+    }
+
+    .icon-circle-red svg {
+      fill: var(--danger-color) !important;
+    }
+
+    .icon-circle-yellow svg {
+      fill: var(--warning-color) !important;
+    }
+
+    .icon-circle-white svg {
+      fill: var(--text-primary) !important;
     }
   </style>
 </head>
@@ -816,9 +864,21 @@
       }
     }
 
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+    // Инициализация Telegram WebApp с проверкой доступности
+    let tg = null;
+    try {
+      if (window.Telegram && window.Telegram.WebApp) {
+        tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        tg.enableClosingConfirmation();
+        console.log('✅ Telegram WebApp инициализирован');
+      } else {
+        console.warn('⚠️ Telegram WebApp недоступен, работаем в режиме отладки');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка инициализации Telegram WebApp:', error);
+    }
 
     let updateInterval = null;
     let currentTab = 'home';
@@ -841,7 +901,14 @@
 
     // Получение init data
     function getInitData() {
-      return tg.initData || 'debug_mode';
+      try {
+        if (tg && tg.initData) {
+          return tg.initData;
+        }
+      } catch (error) {
+        console.error('Ошибка получения initData:', error);
+      }
+      return 'debug_mode';
     }
 
     // Переключение вкладок
@@ -1506,7 +1573,7 @@
         } else if (currentTab === 'analytics') {
           loadAnalytics();
         }
-      }, 2000); // каждые 2 секунды для стабильности
+      }, 1000); // каждую секунду для быстрого обновления
     }
 
     // Обработчик изменения видимости страницы
@@ -1542,9 +1609,30 @@
 
     // Инициализация
     window.addEventListener('load', async () => {
-      await setupSvgIcons();
-      loadData();
-      startAutoUpdate();
+      console.log('🚀 Приложение загружается...');
+
+      try {
+        // Загружаем иконки
+        await setupSvgIcons();
+        console.log('✅ Иконки загружены');
+
+        // Загружаем данные с таймаутом
+        const loadTimeout = setTimeout(() => {
+          console.warn('⚠️ Загрузка данных занимает слишком много времени');
+          showNotification('⏳ Соединение медленное, загрузка...');
+        }, 3000);
+
+        await loadData();
+        clearTimeout(loadTimeout);
+        console.log('✅ Данные загружены');
+
+        // Запускаем автообновление
+        startAutoUpdate();
+        console.log('✅ Автообновление запущено');
+      } catch (error) {
+        console.error('❌ Ошибка инициализации:', error);
+        showNotification('❌ Ошибка загрузки данных');
+      }
     });
 
     // Очистка при закрытии
