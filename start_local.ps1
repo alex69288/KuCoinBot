@@ -80,14 +80,45 @@ if ($needInstall) {
 
 # Проверка переменных окружения
 Write-Info "🔍 Проверка переменных окружения..."
-python tests/check_env.py 2>$null
+python tests/check_env.py
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Warning "⚠️  Некоторые переменные окружения не настроены"
-    Write-Info "📝 Проверьте файл .env и убедитесь, что все ключи заполнены"
-    $continue = Read-Host "Продолжить запуск? (y/n)"
-    if ($continue -ne "y") {
-        Write-Info "Запуск отменен"
+    Write-Warning "`n⚠️  Некоторые переменные окружения не настроены!"
+    Write-Host ""
+    Write-Info "📝 Для запуска бота необходимо заполнить файл .env:"
+    Write-Host ""
+    Write-Host "   1. Откройте файл .env в текстовом редакторе" -ForegroundColor Cyan
+    Write-Host "   2. Замените 'your_..._here' на реальные значения:" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "      KUCOIN_API_KEY=ваш_реальный_ключ" -ForegroundColor Yellow
+    Write-Host "      KUCOIN_SECRET_KEY=ваш_реальный_секрет" -ForegroundColor Yellow
+    Write-Host "      KUCOIN_PASSPHRASE=ваша_реальная_фраза" -ForegroundColor Yellow
+    Write-Host "      TELEGRAM_BOT_TOKEN=токен_от_BotFather" -ForegroundColor Yellow
+    Write-Host "      TELEGRAM_CHAT_ID=ваш_chat_id" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Info "💡 Где получить ключи:"
+    Write-Host "   - KuCoin API: https://www.kucoin.com/account/api" -ForegroundColor Cyan
+    Write-Host "   - Telegram Bot: @BotFather в Telegram" -ForegroundColor Cyan
+    Write-Host "   - Chat ID: @userinfobot в Telegram" -ForegroundColor Cyan
+    Write-Host ""
+    
+    $openFile = Read-Host "Открыть файл .env для редактирования? (y/n)"
+    if ($openFile -eq "y") {
+        notepad .env
+        Write-Info "`nНажмите Enter после сохранения изменений в .env..."
+        Read-Host
+        
+        # Проверяем снова
+        Write-Info "🔍 Повторная проверка переменных окружения..."
+        python tests/check_env.py
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error-Custom "`n❌ Переменные всё ещё не настроены. Запуск невозможен."
+            Write-Info "Настройте переменные и запустите скрипт снова: .\start_local.ps1"
+            exit 1
+        }
+    } else {
+        Write-Info "Запуск отменен. Настройте .env и запустите снова: .\start_local.ps1"
         exit 0
     }
 }

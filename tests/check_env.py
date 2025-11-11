@@ -3,6 +3,10 @@
 """
 import os
 import sys
+from dotenv import load_dotenv
+
+# Загружаем переменные из .env файла (для локальной разработки)
+load_dotenv()
 
 def check_environment():
     """Проверяет наличие всех необходимых переменных окружения"""

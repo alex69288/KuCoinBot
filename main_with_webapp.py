@@ -7,6 +7,10 @@ import os
 import time
 import traceback
 import threading
+from dotenv import load_dotenv
+
+# Загружаем переменные из .env файла (для локальной разработки)
+load_dotenv()
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.logger import log_info, log_error
