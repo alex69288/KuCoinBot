@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>KuCoin Trading Bot</title>
+  <link rel="stylesheet" href="/static/icons.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * {
@@ -429,7 +430,7 @@
 
 <body>
   <div class="header">
-    <h1>🤖 AutoTradingBot</h1>
+    <h1><span class="icon icon-robot"></span> AutoTradingBot</h1>
     <div class="subtitle">KuCoin Trading Bot v4.0</div>
   </div>
 
@@ -438,62 +439,63 @@
     <div id="tab-home" class="tab-content active">
       <!-- Обновление рынка -->
       <div class="card">
-        <div class="card-title">📊 ОБНОВЛЕНИЕ РЫНКА</div>
+        <div class="card-title"><span class="icon icon-chart"></span> ОБНОВЛЕНИЕ РЫНКА</div>
         <div class="info-row">
-          <span class="info-label">🪙 Пара:</span>
+          <span class="info-label"><span class="icon icon-money"></span> Пара:</span>
           <span id="market-symbol" class="info-value">B Bitcoin</span>
         </div>
         <div class="info-row">
-          <span class="info-label">💰 Цена:</span>
+          <span class="info-label"><span class="icon icon-money"></span> Цена:</span>
           <span id="market-price" class="info-value">103685.90 USDT</span>
         </div>
         <div class="info-row">
-          <span class="info-label">📊 24ч:</span>
+          <span class="info-label"><span class="icon icon-chart"></span> 24ч:</span>
           <span id="market-change-24h" class="info-value price-change-positive">+1.52%</span>
         </div>
         <div class="info-row">
-          <span class="info-label">📈 EMA:</span>
-          <span id="market-ema" class="info-value">🟢 BBEPX (+0.46%)</span>
+          <span class="info-label"><span class="icon icon-ema"></span> EMA:</span>
+          <span id="market-ema" class="info-value"><span class="icon icon-circle-green"></span> BBEPX (+0.46%)</span>
         </div>
         <div class="info-row">
-          <span class="info-label">🎯 Сигнал:</span>
-          <span id="market-signal" class="info-value">⚪ ОЖИДАНИЕ</span>
+          <span class="info-label"><span class="icon icon-target"></span> Сигнал:</span>
+          <span id="market-signal" class="info-value"><span class="icon icon-circle-white"></span> ОЖИДАНИЕ</span>
         </div>
         <div class="info-row">
-          <span class="info-label">🤖 ML:</span>
-          <span id="market-ml" class="info-value">🟡 НЕЙТРАЛЬНОЕ (51,1%)</span>
+          <span class="info-label"><span class="icon icon-robot"></span> ML:</span>
+          <span id="market-ml" class="info-value"><span class="icon icon-circle-yellow"></span> НЕЙТРАЛЬНОЕ
+            (51,1%)</span>
         </div>
       </div>
 
       <!-- Позиция открыта -->
       <div class="card">
-        <div class="card-title">🏠 ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ %)</div>
+        <div class="card-title"><span class="icon icon-home"></span> ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ %)</div>
         <div class="info-row">
           <span class="info-label">� Количество открытых позиций:</span>
           <span id="position-count" class="info-value">2</span>
         </div>
         <div class="info-row">
-          <span class="info-label">💵 Размер ставки:</span>
+          <span class="info-label"><span class="icon icon-money"></span> Размер ставки:</span>
           <span id="position-size" class="info-value">2.0 USDT</span>
         </div>
         <div class="info-row">
-          <span class="info-label">📍 Цена входа (TP):</span>
+          <span class="info-label"><span class="icon icon-pin"></span> Цена входа (TP):</span>
           <span id="position-entry-price" class="info-value">110185.70 USDT</span>
         </div>
         <div class="info-row">
-          <span class="info-label">💵 Текущая прибыль:</span>
+          <span class="info-label"><span class="icon icon-money"></span> Текущая прибыль:</span>
           <span id="position-current-profit" class="info-value price-change-negative">-5.90% (-0.1239 USDT)</span>
         </div>
         <div class="info-row">
-          <span class="info-label">🎯 До Take Profit:</span>
+          <span class="info-label"><span class="icon icon-target"></span> До Take Profit:</span>
           <span id="position-to-tp" class="info-value">±8.2%</span>
         </div>
         <div class="info-row">
-          <span class="info-label">🎯 Цель TP:</span>
+          <span class="info-label"><span class="icon icon-target"></span> Цель TP:</span>
           <span id="position-tp-target" class="info-value">2%</span>
         </div>
         <div class="info-row">
-          <span class="info-label">💸 Комиссии:</span>
+          <span class="info-label"><span class="icon icon-card"></span> Комиссии:</span>
           <span id="position-fees" class="info-value">0.2% (0.0042 USDT)</span>
         </div>
       </div>
@@ -502,27 +504,27 @@
     <!-- Вкладка: Управление -->
     <div id="tab-control" class="tab-content">
       <div class="card">
-        <div class="card-title">⚙️ Управление торговлей</div>
+        <div class="card-title"><span class="icon icon-settings"></span> Управление торговлей</div>
         <button id="btn-start" class="btn btn-success" onclick="startBot()">
-          <span>▶️</span> Запустить торговлю
+          <span><span class="icon icon-play"></span></span> Запустить торговлю
         </button>
         <button id="btn-stop" class="btn btn-danger" onclick="stopBot()" style="display: none;">
-          <span>⏸️</span> Остановить торговлю
+          <span><span class="icon icon-pause"></span>️</span> Остановить торговлю
         </button>
       </div>
 
       <div class="card">
-        <div class="card-title">🎯 Быстрые действия</div>
+        <div class="card-title"><span class="icon icon-target"></span> Быстрые действия</div>
         <button class="btn btn-warning" onclick="closeAllPositions()">
-          <span>❌</span> Закрыть все позиции
+          <span><span class="icon icon-close"></span></span> Закрыть все позиции
         </button>
         <button class="btn btn-primary" onclick="refreshData()">
-          <span>🔄</span> Обновить данные
+          <span><span class="icon icon-refresh"></span></span> Обновить данные
         </button>
       </div>
 
       <div class="card">
-        <div class="card-title">📊 Торговые настройки</div>
+        <div class="card-title"><span class="icon icon-chart"></span> Торговые настройки</div>
         <div class="form-group">
           <label class="form-label">Торговая пара</label>
           <select id="trading-pair" class="form-select" onchange="updateTradingPair()">
@@ -552,7 +554,7 @@
     <!-- Вкладка: Настройки -->
     <div id="tab-settings" class="tab-content">
       <div class="card">
-        <div class="card-title">🛡️ Риск-менеджмент</div>
+        <div class="card-title"><span class="icon icon-shield"></span> Риск-менеджмент</div>
         <div class="form-group">
           <label class="form-label">Take Profit (%)</label>
           <input type="number" id="take-profit" class="form-input" value="2.0" min="0.1" max="10" step="0.1">
@@ -570,12 +572,12 @@
           <input type="number" id="max-daily-loss" class="form-input" value="50" min="5" max="1000" step="5">
         </div>
         <button class="btn btn-primary" onclick="saveRiskSettings()">
-          <span>💾</span> Сохранить настройки риска
+          <span><span class="icon icon-save"></span></span> Сохранить настройки риска
         </button>
       </div>
 
       <div class="card">
-        <div class="card-title">📈 EMA Настройки</div>
+        <div class="card-title"><span class="icon icon-trend-up"></span> EMA Настройки</div>
         <div class="form-group">
           <label class="form-label">Быстрая EMA (период)</label>
           <input type="number" id="ema-fast" class="form-input" value="9" min="3" max="50" step="1">
@@ -589,12 +591,12 @@
           <input type="number" id="ema-threshold" class="form-input" value="0.25" min="0.01" max="2" step="0.01">
         </div>
         <button class="btn btn-primary" onclick="saveEmaSettings()">
-          <span>💾</span> Сохранить настройки EMA
+          <span><span class="icon icon-save"></span></span> Сохранить настройки EMA
         </button>
       </div>
 
       <div class="card">
-        <div class="card-title">🤖 ML Настройки</div>
+        <div class="card-title"><span class="icon icon-robot"></span> ML Настройки</div>
         <div class="form-switch">
           <span class="form-label">Использовать ML</span>
           <label class="switch">
@@ -611,15 +613,15 @@
           <input type="number" id="ml-sell-threshold" class="form-input" value="0.4" min="0" max="1" step="0.05">
         </div>
         <button class="btn btn-primary" onclick="saveMLSettings()">
-          <span>💾</span> Сохранить настройки ML
+          <span><span class="icon icon-save"></span></span> Сохранить настройки ML
         </button>
         <button class="btn btn-warning" onclick="retrainML()">
-          <span>🔄</span> Переобучить модель
+          <span><span class="icon icon-refresh"></span></span> Переобучить модель
         </button>
       </div>
 
       <div class="card">
-        <div class="card-title">🔧 Общие настройки</div>
+        <div class="card-title"><span class="icon icon-wrench"></span> Общие настройки</div>
         <div class="form-switch">
           <span class="form-label">Демо режим</span>
           <label class="switch">
@@ -647,7 +649,7 @@
     <!-- Вкладка: Позиции -->
     <div id="tab-positions" class="tab-content">
       <div class="card">
-        <div class="card-title">📍 Открытые позиции</div>
+        <div class="card-title"><span class="icon icon-pin"></span> Открытые позиции</div>
         <div id="positions-list">
           <div class="loading">Загрузка...</div>
         </div>
@@ -657,7 +659,7 @@
     <!-- Вкладка: История -->
     <div id="tab-history" class="tab-content">
       <div class="card">
-        <div class="card-title">📜 История сделок</div>
+        <div class="card-title"><span class="icon icon-document"></span> История сделок</div>
         <div id="history-list">
           <div class="loading">Загрузка...</div>
         </div>
@@ -686,7 +688,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">📊 Детальная статистика</div>
+        <div class="card-title"><span class="icon icon-chart"></span> Детальная статистика</div>
         <div class="info-row">
           <span class="info-label">Средняя прибыль</span>
           <span id="avg-profit" class="info-value">0.00 USDT</span>
@@ -707,7 +709,7 @@
 
       <div class="card">
         <button class="btn btn-danger" onclick="resetAnalytics()">
-          <span>🗑️</span> Сбросить статистику
+          <span><span class="icon icon-trash"></span></span> Сбросить статистику
         </button>
       </div>
     </div>
@@ -716,27 +718,27 @@
   <!-- Нижнее меню вкладок -->
   <div class="tabs">
     <button class="tab active" onclick="switchTab('home')">
-      <span class="tab-icon">🏠</span>
+      <span class="tab-icon"><span class="icon icon-home"></span></span>
       <span>Главная</span>
     </button>
     <button class="tab" onclick="switchTab('control')">
-      <span class="tab-icon">🎮</span>
+      <span class="tab-icon"><span class="icon icon-gamepad"></span></span>
       <span>Управление</span>
     </button>
     <button class="tab" onclick="switchTab('settings')">
-      <span class="tab-icon">⚙️</span>
+      <span class="tab-icon"><span class="icon icon-settings"></span></span>
       <span>Настройки</span>
     </button>
     <button class="tab" onclick="switchTab('positions')">
-      <span class="tab-icon">📍</span>
+      <span class="tab-icon"><span class="icon icon-pin"></span></span>
       <span>Позиции</span>
     </button>
     <button class="tab" onclick="switchTab('history')">
-      <span class="tab-icon">📜</span>
+      <span class="tab-icon"><span class="icon icon-document"></span></span>
       <span>История</span>
     </button>
     <button class="tab" onclick="switchTab('analytics')">
-      <span class="tab-icon">📊</span>
+      <span class="tab-icon"><span class="icon icon-chart"></span></span>
       <span>Аналитика</span>
     </button>
   </div>
@@ -823,13 +825,13 @@
           document.getElementById('position-count').textContent = data.positions.open_count || 0;
           document.getElementById('position-size').textContent = `${(data.positions.size_usdt || 0).toFixed(2)} USDT`;
           document.getElementById('position-entry-price').textContent = `${(data.positions.entry_price || 0).toFixed(2)} USDT`;
-          
+
           const currentProfit = data.positions.current_profit_percent || 0;
           const currentProfitUsdt = data.positions.current_profit_usdt || 0;
           const profitElement = document.getElementById('position-current-profit');
           profitElement.textContent = `${currentProfit >= 0 ? '+' : ''}${currentProfit.toFixed(2)}% (${currentProfit >= 0 ? '+' : ''}${currentProfitUsdt.toFixed(4)} USDT)`;
           profitElement.className = `info-value ${currentProfit >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
-          
+
           document.getElementById('position-to-tp').textContent = `±${(data.positions.to_take_profit || 0).toFixed(1)}%`;
           document.getElementById('position-tp-target').textContent = `${(data.positions.tp_target || 2).toFixed(0)}%`;
           document.getElementById('position-fees').textContent = `${(data.positions.fee_percent || 0.2).toFixed(1)}% (${(data.positions.fee_usdt || 0).toFixed(4)} USDT)`;
@@ -855,7 +857,7 @@
           'SOL/USDT': 'SOL'
         };
         document.getElementById('market-symbol').textContent = symbolMap[data.symbol] || data.symbol || 'B Bitcoin';
-        
+
         // Обновляем цену
         document.getElementById('market-price').textContent = `${data.current_price?.toFixed(2) || '0.00'} USDT`;
 
@@ -867,21 +869,21 @@
 
         // Обновляем EMA
         if (data.ema) {
-          const emaIcon = data.ema.signal === 'buy' ? '🟢' : data.ema.signal === 'sell' ? '🔴' : '⚪';
+          const emaIcon = data.ema.signal === 'buy' ? '<span class="icon icon-circle-green"></span>' : data.ema.signal === 'sell' ? '<span class="icon icon-circle-red"></span>' : '<span class="icon icon-circle-white"></span>';
           const emaPercent = data.ema.percent || 0;
           document.getElementById('market-ema').textContent = `${emaIcon} ${data.ema.text || 'BBEPX'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
         }
 
         // Обновляем сигнал
         if (data.signal) {
-          const signalIcon = data.signal === 'buy' ? '🟢' : data.signal === 'sell' ? '🔴' : '⚪';
+          const signalIcon = data.signal === 'buy' ? '<span class="icon icon-circle-green"></span>' : data.signal === 'sell' ? '<span class="icon icon-circle-red"></span>' : '<span class="icon icon-circle-white"></span>';
           const signalText = data.signal === 'buy' ? 'ПОКУПКА' : data.signal === 'sell' ? 'ПРОДАЖА' : 'ОЖИДАНИЕ';
           document.getElementById('market-signal').textContent = `${signalIcon} ${signalText}`;
         }
 
         // Обновляем ML
         if (data.ml) {
-          const mlIcon = data.ml.prediction > 0.6 ? '🟢' : data.ml.prediction < 0.4 ? '🔴' : '🟡';
+          const mlIcon = data.ml.prediction > 0.6 ? '<span class="icon icon-circle-green"></span>' : data.ml.prediction < 0.4 ? '<span class="icon icon-circle-red"></span>' : '<span class="icon icon-circle-yellow"></span>';
           const mlText = data.ml.prediction > 0.6 ? 'ПОКУПКА' : data.ml.prediction < 0.4 ? 'ПРОДАЖА' : 'НЕЙТРАЛЬНОЕ';
           document.getElementById('market-ml').textContent = `${mlIcon} ${mlText} (${(data.ml.prediction * 100).toFixed(1)}%)`;
         }
@@ -950,7 +952,7 @@
         const container = document.getElementById('positions-list');
 
         if (!data.positions || data.positions.length === 0) {
-          container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>Нет открытых позиций</div></div>';
+          container.innerHTML = '<div class="empty-state"><div class="empty-icon"><span class="icon icon-inbox"></span></div><div>Нет открытых позиций</div></div>';
           return;
         }
 
@@ -975,7 +977,7 @@
               <span class="info-value">${(pos.current_price || 0).toFixed(2)} USDT</span>
             </div>
             <button class="btn btn-danger" onclick="closePosition('${pos.id || ''}')">
-              <span>❌</span> Закрыть позицию
+              <span><span class="icon icon-close"></span></span> Закрыть позицию
             </button>
           </div>
         `).join('');
@@ -995,7 +997,7 @@
         const container = document.getElementById('history-list');
 
         if (!data || data.length === 0) {
-          container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>История сделок пуста</div></div>';
+          container.innerHTML = '<div class="empty-state"><div class="empty-icon"><span class="icon icon-inbox"></span></div><div>История сделок пуста</div></div>';
           return;
         }
 
@@ -1070,14 +1072,14 @@
 
         const result = await response.json();
         if (result.success) {
-          showNotification('✅ Торговля запущена');
+          showNotification('<span class="icon icon-check"></span> Торговля запущена');
           await loadStatus();
         } else {
-          showNotification('❌ ' + (result.message || 'Ошибка запуска'));
+          showNotification('<span class="icon icon-close"></span> ' + (result.message || 'Ошибка запуска'));
         }
       } catch (error) {
         console.error('Ошибка запуска:', error);
-        showNotification('❌ Ошибка запуска');
+        showNotification('<span class="icon icon-close"></span> Ошибка запуска');
       }
     }
 
@@ -1091,14 +1093,14 @@
 
         const result = await response.json();
         if (result.success) {
-          showNotification('⏸️ Торговля остановлена');
+          showNotification('<span class="icon icon-pause"></span>️ Торговля остановлена');
           await loadStatus();
         } else {
-          showNotification('❌ ' + (result.message || 'Ошибка остановки'));
+          showNotification('<span class="icon icon-close"></span> ' + (result.message || 'Ошибка остановки'));
         }
       } catch (error) {
         console.error('Ошибка остановки:', error);
-        showNotification('❌ Ошибка остановки');
+        showNotification('<span class="icon icon-close"></span> Ошибка остановки');
       }
     }
 
@@ -1128,13 +1130,13 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('✅ Настройки обновлены');
+          showNotification('<span class="icon icon-check"></span> Настройки обновлены');
         } else {
-          showNotification('❌ Ошибка обновления');
+          showNotification('<span class="icon icon-close"></span> Ошибка обновления');
         }
       } catch (error) {
         console.error('Ошибка обновления настроек:', error);
-        showNotification('❌ Ошибка обновления');
+        showNotification('<span class="icon icon-close"></span> Ошибка обновления');
       }
     }
 
@@ -1155,13 +1157,13 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('✅ Настройки риска сохранены');
+          showNotification('<span class="icon icon-check"></span> Настройки риска сохранены');
         } else {
-          showNotification('❌ Ошибка сохранения');
+          showNotification('<span class="icon icon-close"></span> Ошибка сохранения');
         }
       } catch (error) {
         console.error('Ошибка сохранения настроек риска:', error);
-        showNotification('❌ Ошибка сохранения');
+        showNotification('<span class="icon icon-close"></span> Ошибка сохранения');
       }
     }
 
@@ -1181,13 +1183,13 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('✅ Настройки EMA сохранены');
+          showNotification('<span class="icon icon-check"></span> Настройки EMA сохранены');
         } else {
-          showNotification('❌ Ошибка сохранения');
+          showNotification('<span class="icon icon-close"></span> Ошибка сохранения');
         }
       } catch (error) {
         console.error('Ошибка сохранения настроек EMA:', error);
-        showNotification('❌ Ошибка сохранения');
+        showNotification('<span class="icon icon-close"></span> Ошибка сохранения');
       }
     }
 
@@ -1207,19 +1209,19 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('✅ Настройки ML сохранены');
+          showNotification('<span class="icon icon-check"></span> Настройки ML сохранены');
         } else {
-          showNotification('❌ Ошибка сохранения');
+          showNotification('<span class="icon icon-close"></span> Ошибка сохранения');
         }
       } catch (error) {
         console.error('Ошибка сохранения настроек ML:', error);
-        showNotification('❌ Ошибка сохранения');
+        showNotification('<span class="icon icon-close"></span> Ошибка сохранения');
       }
     }
 
     async function retrainML() {
       try {
-        showNotification('🤖 Переобучение ML модели...');
+        showNotification('<span class="icon icon-robot"></span> Переобучение ML модели...');
         const response = await fetch('/api/ml/retrain', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1228,13 +1230,13 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('✅ ML модель переобучена');
+          showNotification('<span class="icon icon-check"></span> ML модель переобучена');
         } else {
           showNotification('ℹ️ ' + (result.message || 'ML недоступен'));
         }
       } catch (error) {
         console.error('Ошибка переобучения ML:', error);
-        showNotification('❌ Ошибка переобучения');
+        showNotification('<span class="icon icon-close"></span> Ошибка переобучения');
       }
     }
 
@@ -1268,13 +1270,13 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('✅ Настройки обновлены');
+          showNotification('<span class="icon icon-check"></span> Настройки обновлены');
         } else {
-          showNotification('❌ Ошибка обновления');
+          showNotification('<span class="icon icon-close"></span> Ошибка обновления');
         }
       } catch (error) {
         console.error('Ошибка обновления настроек:', error);
-        showNotification('❌ Ошибка обновления');
+        showNotification('<span class="icon icon-close"></span> Ошибка обновления');
       }
     }
 
@@ -1288,14 +1290,14 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('✅ Позиция закрыта');
+          showNotification('<span class="icon icon-check"></span> Позиция закрыта');
           await loadPositions();
         } else {
-          showNotification('❌ Ошибка закрытия');
+          showNotification('<span class="icon icon-close"></span> Ошибка закрытия');
         }
       } catch (error) {
         console.error('Ошибка закрытия позиции:', error);
-        showNotification('❌ Ошибка закрытия');
+        showNotification('<span class="icon icon-close"></span> Ошибка закрытия');
       }
     }
 
@@ -1311,14 +1313,14 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('✅ Все позиции закрыты');
+          showNotification('<span class="icon icon-check"></span> Все позиции закрыты');
           await loadPositions();
         } else {
-          showNotification('❌ Ошибка закрытия');
+          showNotification('<span class="icon icon-close"></span> Ошибка закрытия');
         }
       } catch (error) {
         console.error('Ошибка закрытия позиций:', error);
-        showNotification('❌ Ошибка закрытия');
+        showNotification('<span class="icon icon-close"></span> Ошибка закрытия');
       }
     }
 
@@ -1334,19 +1336,19 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('✅ Статистика сброшена');
+          showNotification('<span class="icon icon-check"></span> Статистика сброшена');
           await loadAnalytics();
         } else {
-          showNotification('❌ Ошибка сброса');
+          showNotification('<span class="icon icon-close"></span> Ошибка сброса');
         }
       } catch (error) {
         console.error('Ошибка сброса статистики:', error);
-        showNotification('❌ Ошибка сброса');
+        showNotification('<span class="icon icon-close"></span> Ошибка сброса');
       }
     }
 
     async function refreshData() {
-      showNotification('🔄 Обновление...');
+      showNotification('<span class="icon icon-refresh"></span> Обновление...');
       await loadTabData(currentTab);
     }
 

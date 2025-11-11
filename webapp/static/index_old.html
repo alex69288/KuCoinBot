@@ -223,7 +223,7 @@
 
 <body>
   <div class="header">
-    <h1>🤖 Trading Bot</h1>
+    <h1><span class="icon icon-robot"></span> Trading Bot</h1>
     <p class="subtitle">KuCoin Автоматическая торговля</p>
   </div>
 
@@ -235,7 +235,7 @@
   <div id="content" style="display: none;">
     <!-- Статус бота -->
     <div class="card">
-      <div class="card-title">📊 Статус бота</div>
+      <div class="card-title"><span class="icon icon-chart"></span> Статус бота</div>
       <div class="info-row">
         <span class="info-label">Торговля</span>
         <span class="status-badge" id="trading-status">-</span>
@@ -256,7 +256,7 @@
 
     <!-- Рыночные данные -->
     <div class="card">
-      <div class="card-title">💹 Рынок</div>
+      <div class="card-title"><span class="icon icon-chart"></span> Рынок</div>
       <div class="info-row">
         <span class="info-label">Пара</span>
         <span class="info-value" id="market-symbol">BTC/USDT</span>
@@ -277,18 +277,18 @@
 
     <!-- Управление -->
     <div class="card">
-      <div class="card-title">⚙️ Управление</div>
+      <div class="card-title"><span class="icon icon-settings"></span> Управление</div>
       <button class="btn btn-success" id="btn-start" onclick="startBot()">
-        ▶️ Запустить торговлю
+        <span class="icon icon-play"></span> Запустить торговлю
       </button>
       <button class="btn btn-danger" id="btn-stop" onclick="stopBot()" style="display: none;">
-        ⏸️ Остановить торговлю
+        <span class="icon icon-pause"></span>️ Остановить торговлю
       </button>
       <button class="btn btn-warning" onclick="openSettings()">
-        ⚙️ Настройки
+        <span class="icon icon-settings"></span> Настройки
       </button>
       <button class="btn btn-primary" onclick="refreshData()">
-        🔄 Обновить данные
+        <span class="icon icon-refresh"></span> Обновить данные
       </button>
     </div>
   </div>
@@ -302,9 +302,9 @@
 
     // Инициализация
     document.addEventListener('DOMContentLoaded', function () {
-      console.log('🚀 WebApp загружен');
-      console.log('📱 Telegram WebApp доступен:', typeof tg !== 'undefined');
-      console.log('🔑 Init data:', tg.initData ? 'Есть' : 'Отсутствует');
+      console.log('<span class="icon icon-play"></span> WebApp загружен');
+      console.log('<span class="icon icon-phone"></span> Telegram WebApp доступен:', typeof tg !== 'undefined');
+      console.log('<span class="icon icon-card"></span> Init data:', tg.initData ? 'Есть' : 'Отсутствует');
       loadData();
       startAutoUpdate();
     });
@@ -317,14 +317,14 @@
     // Загрузка данных
     async function loadData() {
       try {
-        console.log('📊 Начало загрузки данных...');
+        console.log('<span class="icon icon-chart"></span> Начало загрузки данных...');
         await Promise.all([loadStatus(), loadMarket()]);
-        console.log('✅ Данные загружены успешно');
+        console.log('<span class="icon icon-check"></span> Данные загружены успешно');
         document.getElementById('loading').style.display = 'none';
         document.getElementById('content').style.display = 'block';
       } catch (error) {
-        console.error('❌ Ошибка загрузки данных:', error);
-        console.error('❌ Детали ошибки:', error.message, error.stack);
+        console.error('<span class="icon icon-close"></span> Ошибка загрузки данных:', error);
+        console.error('<span class="icon icon-close"></span> Детали ошибки:', error.message, error.stack);
         showNotification(`Ошибка: ${error.message || 'Неизвестная ошибка'}`);
         document.getElementById('loading').style.display = 'none';
       }
@@ -340,8 +340,8 @@
       }
 
       const data = await response.json();
-      console.log('📊 Статус получен:', data);
-      console.log('📊 Тип данных:', {
+      console.log('<span class="icon icon-chart"></span> Статус получен:', data);
+      console.log('<span class="icon icon-chart"></span> Тип данных:', {
         trading_enabled: typeof data.trading_enabled,
         balance: typeof data.balance,
         position: typeof data.position,
@@ -376,7 +376,7 @@
     // Загрузка рыночных данных
     async function loadMarket() {
       try {
-        console.log('📈 Загрузка рынка...');
+        console.log('<span class="icon icon-trend-up"></span> Загрузка рынка...');
         const response = await fetch(`/api/market?init_data=${encodeURIComponent(getInitData())}`);
 
         if (!response.ok) {
@@ -384,8 +384,8 @@
         }
 
         const data = await response.json();
-        console.log('📊 Рынок получен:', data);
-        console.log('📊 Тип данных рынка:', {
+        console.log('<span class="icon icon-chart"></span> Рынок получен:', data);
+        console.log('<span class="icon icon-chart"></span> Тип данных рынка:', {
           symbol: typeof data.symbol,
           current_price: typeof data.current_price,
           change_24h: typeof data.change_24h
@@ -416,14 +416,14 @@
 
         const result = await response.json();
         if (result.success) {
-          showNotification('✅ Торговля запущена');
+          showNotification('<span class="icon icon-check"></span> Торговля запущена');
           await loadStatus();
         } else {
-          showNotification('❌ ' + (result.message || 'Ошибка запуска'));
+          showNotification('<span class="icon icon-close"></span> ' + (result.message || 'Ошибка запуска'));
         }
       } catch (error) {
         console.error('Ошибка запуска:', error);
-        showNotification('❌ Ошибка запуска');
+        showNotification('<span class="icon icon-close"></span> Ошибка запуска');
       }
     }
 
@@ -438,20 +438,20 @@
 
         const result = await response.json();
         if (result.success) {
-          showNotification('⏸️ Торговля остановлена');
+          showNotification('<span class="icon icon-pause"></span>️ Торговля остановлена');
           await loadStatus();
         } else {
-          showNotification('❌ ' + (result.message || 'Ошибка остановки'));
+          showNotification('<span class="icon icon-close"></span> ' + (result.message || 'Ошибка остановки'));
         }
       } catch (error) {
         console.error('Ошибка остановки:', error);
-        showNotification('❌ Ошибка остановки');
+        showNotification('<span class="icon icon-close"></span> Ошибка остановки');
       }
     }
 
     // Обновление данных
     async function refreshData() {
-      showNotification('🔄 Обновление...');
+      showNotification('<span class="icon icon-refresh"></span> Обновление...');
       await loadData();
     }
 

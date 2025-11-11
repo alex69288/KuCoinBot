@@ -186,7 +186,7 @@
 
 <body>
   <div class="header">
-    <h1>🤖 Trading Bot</h1>
+    <h1><span class="icon icon-robot"></span> Trading Bot</h1>
     <div id="statusBadge" class="status-badge">Загрузка...</div>
   </div>
 
@@ -194,9 +194,9 @@
   <div id="content" class="loader">Загрузка данных...</div>
 
   <div class="controls">
-    <button id="btnStart" class="btn btn-start" onclick="startBot()">▶️ Запустить</button>
-    <button id="btnStop" class="btn btn-stop" onclick="stopBot()">⏹️ Остановить</button>
-    <button id="btnRefresh" class="btn btn-refresh" onclick="loadData()">🔄</button>
+    <button id="btnStart" class="btn btn-start" onclick="startBot()"><span class="icon icon-play"></span> Запустить</button>
+    <button id="btnStop" class="btn btn-stop" onclick="stopBot()"><span class="icon icon-stop"></span>️ Остановить</button>
+    <button id="btnRefresh" class="btn btn-refresh" onclick="loadData()"><span class="icon icon-refresh"></span></button>
   </div>
 
   <script>
@@ -253,10 +253,10 @@
       // Обновляем статус
       const statusBadge = document.getElementById('statusBadge');
       if (status.is_running) {
-        statusBadge.textContent = '🟢 Работает';
+        statusBadge.textContent = '<span class="icon icon-circle-green"></span> Работает';
         statusBadge.className = 'status-badge status-running';
       } else {
-        statusBadge.textContent = '🔴 Остановлен';
+        statusBadge.textContent = '<span class="icon icon-circle-red"></span> Остановлен';
         statusBadge.className = 'status-badge status-stopped';
       }
 
@@ -267,7 +267,7 @@
       if (status.balance) {
         html += `
                     <div class="card">
-                        <h2>💰 Баланс</h2>
+                        <h2><span class="icon icon-money"></span> Баланс</h2>
                         <div class="info-row">
                             <span class="info-label">USDT</span>
                             <span class="info-value">${formatNumber(status.balance.usdt || 0)} USDT</span>
@@ -284,7 +284,7 @@
       if (status.position) {
         html += `
                     <div class="card">
-                        <h2>📊 Текущая позиция</h2>
+                        <h2><span class="icon icon-chart"></span> Текущая позиция</h2>
                         <div class="info-row">
                             <span class="info-label">Статус</span>
                             <span class="info-value">${status.position.position || 'Нет позиции'}</span>
@@ -312,7 +312,7 @@
 
         html += `
                     <div class="card">
-                        <h2>💹 Рынок (${market.symbol})</h2>
+                        <h2><span class="icon icon-chart"></span> Рынок (${market.symbol})</h2>
                         <div class="info-row">
                             <span class="info-label">Текущая цена</span>
                             <span class="info-value">${formatNumber(market.current_price)} USDT</span>
@@ -337,7 +337,7 @@
       if (status.settings) {
         html += `
                     <div class="card">
-                        <h2>⚙️ Настройки</h2>
+                        <h2><span class="icon icon-settings"></span> Настройки</h2>
                         <div class="info-row">
                             <span class="info-label">Торговая пара</span>
                             <span class="info-value">${status.settings.active_pair}</span>
@@ -362,7 +362,7 @@
 
         html += `
                     <div class="card">
-                        <h2>📈 Статистика</h2>
+                        <h2><span class="icon icon-trend-up"></span> Статистика</h2>
                         <div class="metrics-grid">
                             <div class="metric-card">
                                 <div class="metric-value">${status.metrics.total_trades}</div>

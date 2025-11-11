@@ -49,7 +49,7 @@ def set_trading_bot(bot):
     """Устанавливает экземпляр торгового бота"""
     global trading_bot
     trading_bot = bot
-    log_info("✅ Trading bot установлен в Web App сервере")
+    log_info("[OK] Trading bot установлен в Web App сервере")
 
 
 def _get_bot_token() -> Optional[str]:
@@ -126,17 +126,17 @@ WEBAPP_DIR = os.path.dirname(os.path.abspath(__file__))
 # Директория static находится рядом с server.py
 STATIC_DIR = os.path.join(WEBAPP_DIR, "static")
 
-log_info(f"🔍 Директория webapp: {WEBAPP_DIR}")
-log_info(f"🔍 Директория static: {STATIC_DIR}")
-log_info(f"📂 Рабочая директория: {os.getcwd()}")
+log_info(f"[INFO] Директория webapp: {WEBAPP_DIR}")
+log_info(f"[INFO] Директория static: {STATIC_DIR}")
+log_info(f"[DIR] Рабочая директория: {os.getcwd()}")
 
 # Монтируем статические файлы ПЕРЕД маршрутами
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    log_info(f"✅ Статические файлы смонтированы из {STATIC_DIR}")
+    log_info(f"[OK] Статические файлы смонтированы из {STATIC_DIR}")
 else:
-    log_error(f"❌ КРИТИЧЕСКАЯ ОШИБКА: Директория static не найдена по пути {STATIC_DIR}")
-    log_error(f"❌ Содержимое директории webapp: {os.listdir(WEBAPP_DIR) if os.path.exists(WEBAPP_DIR) else 'НЕ НАЙДЕНА'}")
+    log_error(f"[ERROR] КРИТИЧЕСКАЯ ОШИБКА: Директория static не найдена по пути {STATIC_DIR}")
+    log_error(f"[ERROR] Содержимое директории webapp: {os.listdir(WEBAPP_DIR) if os.path.exists(WEBAPP_DIR) else 'НЕ НАЙДЕНА'}")
 
 # ============= API ENDPOINTS =============
 
@@ -152,15 +152,15 @@ async def root():
     # index.html находится в директории static рядом с server.py
     index_path = os.path.join(STATIC_DIR, 'index.html')
     
-    log_info(f"🔍 GET / - Запрос главной страницы")
-    log_info(f"📂 Ищем index.html по пути: {index_path}")
+    log_info(f"[INFO] GET / - Запрос главной страницы")
+    log_info(f"[DIR] Ищем index.html по пути: {index_path}")
     
     if os.path.exists(index_path):
-        log_info(f"✅ Отдаём index.html из {index_path}")
+        log_info(f"[OK] Отдаём index.html из {index_path}")
         return FileResponse(index_path)
     else:
-        log_error(f"❌ index.html НЕ НАЙДЕН по пути: {index_path}")
-        log_error(f"📂 Содержимое STATIC_DIR: {os.listdir(STATIC_DIR) if os.path.exists(STATIC_DIR) else 'ДИРЕКТОРИЯ НЕ СУЩЕСТВУЕТ'}")
+        log_error(f"[ERROR] index.html НЕ НАЙДЕН по пути: {index_path}")
+        log_error(f"[DIR] Содержимое STATIC_DIR: {os.listdir(STATIC_DIR) if os.path.exists(STATIC_DIR) else 'ДИРЕКТОРИЯ НЕ СУЩЕСТВУЕТ'}")
         raise HTTPException(status_code=404, detail=f"index.html not found at {index_path}")
 
 
@@ -365,7 +365,7 @@ async def start_bot(init_data: str = Body(..., embed=True)):
     try:
         if not trading_bot.is_running:
             trading_bot.is_running = True
-            log_info("🚀 Бот запущен через Web App")
+            log_info("[START] Бот запущен через Web App")
             return {"status": "success", "message": "Бот запущен"}
         else:
             return {"status": "info", "message": "Бот уже работает"}
@@ -387,7 +387,7 @@ async def stop_bot(init_data: str = Body(..., embed=True)):
     try:
         if trading_bot.is_running:
             trading_bot.is_running = False
-            log_info("🛑 Бот остановлен через Web App")
+            log_info("[STOP] Бот остановлен через Web App")
             return {"status": "success", "message": "Бот остановлен"}
         else:
             return {"status": "info", "message": "Бот уже остановлен"}
@@ -457,7 +457,7 @@ async def update_settings(
         # Сохраняем настройки
         trading_bot.settings.save_settings()
         
-        log_info(f"⚙️ Настройки обновлены через Web App: {category}.{key} = {value}")
+        log_info(f"[CONFIG] Настройки обновлены через Web App: {category}.{key} = {value}")
         
         return {
             "status": "success",
@@ -555,7 +555,7 @@ async def close_position(
         if trading_bot.position and trading_bot.position != 'none':
             # Закрываем позицию
             result = trading_bot.close_position(reason="Закрыто вручную через WebApp")
-            log_info(f"📴 Позиция закрыта вручную через WebApp")
+            log_info(f"[CLOSE] Позиция закрыта вручную через WebApp")
             return {
                 "status": "success",
                 "message": "Позиция закрыта",
@@ -587,7 +587,7 @@ async def close_all_positions(init_data: str = Body(..., embed=True)):
             # Закрываем позицию
             result = trading_bot.close_position(reason="Все позиции закрыты вручную через WebApp")
             closed_count = 1
-            log_info(f"📴 Все позиции закрыты вручную через WebApp (закрыто: {closed_count})")
+            log_info(f"[CLOSE] Все позиции закрыты вручную через WebApp (закрыто: {closed_count})")
         
         return {
             "status": "success",
@@ -682,7 +682,7 @@ async def reset_analytics(init_data: str = Body(..., embed=True)):
             if hasattr(trading_bot.metrics, 'trades_history'):
                 trading_bot.metrics.trades_history = []
         
-        log_info("🗑️ Статистика сброшена через WebApp")
+        log_info("[DELETE] Статистика сброшена через WebApp")
         
         return {
             "status": "success",
@@ -730,7 +730,7 @@ async def update_trading_settings(
         # Сохраняем настройки
         trading_bot.settings.save_settings()
         
-        log_info(f"⚙️ Торговые настройки обновлены через WebApp: {', '.join(updated)}")
+        log_info(f"[CONFIG] Торговые настройки обновлены через WebApp: {', '.join(updated)}")
         
         return {
             "status": "success",
@@ -780,7 +780,7 @@ async def update_ema_settings(
         # Сохраняем настройки
         trading_bot.settings.save_settings()
         
-        log_info(f"📈 EMA настройки обновлены через WebApp: {', '.join(updated)}")
+        log_info(f"[ANALYSIS] EMA настройки обновлены через WebApp: {', '.join(updated)}")
         
         return {
             "status": "success",
@@ -835,7 +835,7 @@ async def update_risk_settings(
         # Сохраняем настройки
         trading_bot.settings.save_settings()
         
-        log_info(f"🛡️ Риск настройки обновлены через WebApp: {', '.join(updated)}")
+        log_info(f"[RISK] Риск настройки обновлены через WebApp: {', '.join(updated)}")
         
         return {
             "status": "success",
@@ -885,7 +885,7 @@ async def update_ml_settings(
         # Сохраняем настройки
         trading_bot.settings.save_settings()
         
-        log_info(f"🤖 ML настройки обновлены через WebApp: {', '.join(updated)}")
+        log_info(f"[ML] ML настройки обновлены через WebApp: {', '.join(updated)}")
         
         return {
             "status": "success",
@@ -913,7 +913,7 @@ async def retrain_ml_model(init_data: str = Body(..., embed=True)):
         # Проверяем, есть ли у стратегии ML модель
         if hasattr(strategy, 'ml_model') and hasattr(strategy.ml_model, 'train'):
             strategy.ml_model.train()
-            log_info("🤖 ML модель переобучена через WebApp")
+            log_info("[ML] ML модель переобучена через WebApp")
             return {
                 "status": "success",
                 "message": "ML модель успешно переобучена"
@@ -1010,7 +1010,7 @@ async def get_trade_history(
 
 if __name__ == "__main__":
     import uvicorn
-    log_info("🌐 Запуск Web App сервера...")
+    log_info("[WEB] Запуск Web App сервера...")
     uvicorn.run(
         app,
         host="0.0.0.0",
