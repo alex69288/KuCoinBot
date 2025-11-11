@@ -12,6 +12,44 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.logger import log_info, log_error
 
 
+def check_environment():
+    """Проверяет наличие критических переменных окружения"""
+    print("\n🔍 Проверка переменных окружения...", flush=True)
+    
+    required_vars = {
+        'KUCOIN_API_KEY': 'API ключ KuCoin',
+        'KUCOIN_SECRET_KEY': 'API секрет KuCoin',
+        'KUCOIN_PASSPHRASE': 'API парольная фраза KuCoin',
+        'TELEGRAM_BOT_TOKEN': 'Токен Telegram бота',
+        'TELEGRAM_CHAT_ID': 'ID чата Telegram'
+    }
+    
+    missing = []
+    for var, description in required_vars.items():
+        if not os.getenv(var):
+            missing.append(var)
+            print(f"❌ {var}: НЕ УСТАНОВЛЕНА", flush=True)
+        else:
+            value = os.getenv(var)
+            masked = value[:4] + '*' * (len(value) - 4) if len(value) > 4 else '***'
+            print(f"✅ {var}: {masked}", flush=True)
+    
+    # Проверяем опциональные переменные
+    webapp_url = os.getenv('WEBAPP_URL')
+    if webapp_url:
+        print(f"✅ WEBAPP_URL: {webapp_url}", flush=True)
+    else:
+        print(f"⚠️  WEBAPP_URL: не установлена (используется локальный адрес)", flush=True)
+    
+    if missing:
+        print(f"\n❌ ОШИБКА: Не установлены переменные: {', '.join(missing)}", flush=True)
+        print("Настройте их в панели Amvera или файле .env", flush=True)
+        return False
+    
+    print("✅ Все обязательные переменные установлены\n", flush=True)
+    return True
+
+
 def start_webapp_server(bot):
     """Запускает Web App сервер в отдельном потоке"""
     try:
@@ -48,6 +86,11 @@ def main():
     print("=" * 50, flush=True)
     print("🤖 ЗАПУСК TRADING BOT + WEB APP", flush=True)
     print("=" * 50, flush=True)
+    
+    # Проверяем переменные окружения
+    if not check_environment():
+        print("❌ Запуск невозможен без необходимых переменных окружения", flush=True)
+        sys.exit(1)
     
     try:
         print("📦 Импорт модуля торгового бота...", flush=True)
