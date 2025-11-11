@@ -27,6 +27,8 @@
 ### 🔧 Исправления и решения проблем
 - [README_FIX.md](README_FIX.md) - Краткая инструкция по исправлениям
 - [FIX_COMPLETE_REPORT.md](FIX_COMPLETE_REPORT.md) - Полный отчет по исправлениям
+- [WEBAPP_QUICKFIX.md](WEBAPP_QUICKFIX.md) - ⚡ Быстрое решение ошибки WebAppPopupParamInvalid
+- [FIX_WEBAPP_URL.md](FIX_WEBAPP_URL.md) - Полное описание исправления WebApp URL
 - [FIX_WEBAPP_BUTTONS.md](FIX_WEBAPP_BUTTONS.md) - Исправление кнопок веб-приложения
 - [FIX_WEBAPP_BUTTONS_SUMMARY.md](FIX_WEBAPP_BUTTONS_SUMMARY.md) - Краткое описание исправлений кнопок
 - [FIX_HTTP_500.md](FIX_HTTP_500.md) - Исправление ошибки HTTP 500
