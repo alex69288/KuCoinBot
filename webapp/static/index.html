@@ -419,6 +419,49 @@
       }
     }
 
+    /* Полноэкранный индикатор загрузки */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-overlay.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid var(--border-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-text {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
     .loading {
       text-align: center;
       padding: 40px;
@@ -507,7 +550,11 @@
 </head>
 
 <body>
-  <!-- Заголовок и подпись удалены по требованию -->
+  <!-- Полноэкранный индикатор загрузки -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Загрузка данных...</div>
+  </div>
 
   <div class="content">
     <!-- Вкладка: Главная -->
@@ -959,12 +1006,17 @@
       }
     }
 
-    // Загрузка всех данных
+    // Загрузка всех данных (оптимизированная версия)
     async function loadData() {
-      await Promise.all([
-        loadStatus(),
-        loadMarket()
-      ]);
+      // Загружаем только критичные данные при первой загрузке
+      // Остальные данные загрузятся по требованию при переключении вкладок
+      try {
+        await loadStatus();
+        await loadMarket();
+      } catch (error) {
+        console.error('Ошибка загрузки данных:', error);
+        throw error;
+      }
     }
 
     // Загрузка статуса бота
@@ -1543,13 +1595,15 @@
     // Автообновление
     let updateCounter = 0;
     let lastUpdateTime = Date.now();
+    let updateIntervalMs = 5000; // По умолчанию 5 секунд (было 1 секунда)
+    let slowConnectionMode = false;
 
     function startAutoUpdate() {
       if (updateInterval) {
         clearInterval(updateInterval);
       }
 
-      console.log('🔄 Автообновление запущено');
+      console.log(`🔄 Автообновление запущено (интервал: ${updateIntervalMs}мс)`);
 
       updateInterval = setInterval(() => {
         // Проверяем, активна ли страница
@@ -1563,7 +1617,7 @@
         lastUpdateTime = now;
         updateCounter++;
 
-        console.log(`🔄 Обновление #${updateCounter} (интервал: ${interval}мс, вкладка: ${currentTab})`);
+        console.log(`🔄 Обновление #${updateCounter} (интервал: ${interval}мс, вкладка: ${currentTab}${slowConnectionMode ? ', режим экономии' : ''})`);
 
         if (currentTab === 'home') {
           loadStatus();
@@ -1573,7 +1627,33 @@
         } else if (currentTab === 'analytics') {
           loadAnalytics();
         }
-      }, 1000); // каждую секунду для быстрого обновления
+      }, updateIntervalMs); // Настраиваемый интервал
+    }
+
+    // Автоматическая адаптация интервала обновления
+    async function checkConnectionSpeed() {
+      const startTime = Date.now();
+      try {
+        const response = await fetch('/api/status?init_data=' + encodeURIComponent(getInitData()));
+        const duration = Date.now() - startTime;
+
+        // Если запрос занял более 2 секунд - включаем режим экономии
+        if (duration > 2000 && !slowConnectionMode) {
+          slowConnectionMode = true;
+          updateIntervalMs = 10000; // Увеличиваем до 10 секунд
+          console.warn(`⚠️ Медленное соединение обнаружено (${duration}мс), переключение на режим экономии`);
+          showNotification('🐢 Медленное соединение, интервал обновления увеличен');
+          startAutoUpdate(); // Перезапускаем с новым интервалом
+        } else if (duration < 1000 && slowConnectionMode) {
+          slowConnectionMode = false;
+          updateIntervalMs = 5000; // Возвращаем нормальный интервал
+          console.log(`✅ Соединение улучшилось (${duration}мс), возврат к нормальному режиму`);
+          showNotification('✅ Соединение улучшилось');
+          startAutoUpdate(); // Перезапускаем с новым интервалом
+        }
+      } catch (error) {
+        console.error('❌ Ошибка проверки скорости соединения:', error);
+      }
     }
 
     // Обработчик изменения видимости страницы
@@ -1607,31 +1687,69 @@
       return num.toFixed(2);
     }
 
+    // Функция скрытия индикатора загрузки
+    function hideLoadingOverlay() {
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) {
+        overlay.classList.add('fade-out');
+        setTimeout(() => {
+          overlay.style.display = 'none';
+        }, 300);
+      }
+    }
+
     // Инициализация
     window.addEventListener('load', async () => {
       console.log('🚀 Приложение загружается...');
+      const startTime = Date.now();
 
       try {
-        // Загружаем иконки
-        await setupSvgIcons();
-        console.log('✅ Иконки загружены');
+        // Загружаем иконки (асинхронно, не блокируя)
+        setupSvgIcons().catch(err => console.error('Ошибка загрузки иконок:', err));
+        console.log('✅ Загрузка иконок запущена');
 
         // Загружаем данные с таймаутом
         const loadTimeout = setTimeout(() => {
           console.warn('⚠️ Загрузка данных занимает слишком много времени');
-          showNotification('⏳ Соединение медленное, загрузка...');
+          const loadingText = document.querySelector('.loading-text');
+          if (loadingText) {
+            loadingText.textContent = '⏳ Соединение медленное...';
+          }
         }, 3000);
 
-        await loadData();
+        // Загружаем только критичные данные для первой вкладки
+        await Promise.race([
+          loadData(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), 10000)
+          )
+        ]);
+
         clearTimeout(loadTimeout);
-        console.log('✅ Данные загружены');
+        const loadTime = Date.now() - startTime;
+        console.log(`✅ Данные загружены за ${loadTime}мс`);
+
+        // Скрываем индикатор загрузки
+        hideLoadingOverlay();
 
         // Запускаем автообновление
         startAutoUpdate();
         console.log('✅ Автообновление запущено');
+
+        // Проверяем скорость соединения через 5 секунд
+        setTimeout(checkConnectionSpeed, 5000);
       } catch (error) {
         console.error('❌ Ошибка инициализации:', error);
-        showNotification('❌ Ошибка загрузки данных');
+        hideLoadingOverlay();
+        showNotification('❌ Ошибка загрузки данных. Повторная попытка...');
+
+        // Повторная попытка через 2 секунды
+        setTimeout(() => {
+          loadData().catch(err => {
+            console.error('❌ Повторная ошибка загрузки:', err);
+            showNotification('❌ Не удалось загрузить данные');
+          });
+        }, 2000);
       }
     });
 
