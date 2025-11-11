@@ -324,7 +324,9 @@
         document.getElementById('content').style.display = 'block';
       } catch (error) {
         console.error('❌ Ошибка загрузки данных:', error);
-        showNotification('Ошибка загрузки данных');
+        console.error('❌ Детали ошибки:', error.message, error.stack);
+        showNotification(`Ошибка: ${error.message || 'Неизвестная ошибка'}`);
+        document.getElementById('loading').style.display = 'none';
       }
     }
 
@@ -332,8 +334,19 @@
     async function loadStatus() {
       console.log('📡 Загрузка статуса...');
       const response = await fetch(`/api/status?init_data=${encodeURIComponent(getInitData())}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       console.log('📊 Статус получен:', data);
+      console.log('📊 Тип данных:', {
+        trading_enabled: typeof data.trading_enabled,
+        balance: typeof data.balance,
+        position: typeof data.position,
+        pnl: typeof data.pnl
+      });
 
       // Обновляем статус торговли
       const statusBadge = document.getElementById('trading-status');
@@ -350,7 +363,8 @@
       }
 
       // Обновляем данные
-      document.getElementById('balance').textContent = `${data.balance?.toFixed(2) || '0.00'} USDT`;
+      const balance = typeof data.balance === 'number' ? data.balance : (data.balance?.total_usdt || 0);
+      document.getElementById('balance').textContent = `${balance.toFixed(2)} USDT`;
       document.getElementById('position').textContent = data.position || 'Нет позиции';
 
       const pnl = data.pnl || 0;
@@ -364,8 +378,18 @@
       try {
         console.log('📈 Загрузка рынка...');
         const response = await fetch(`/api/market?init_data=${encodeURIComponent(getInitData())}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         console.log('📊 Рынок получен:', data);
+        console.log('📊 Тип данных рынка:', {
+          symbol: typeof data.symbol,
+          current_price: typeof data.current_price,
+          change_24h: typeof data.change_24h
+        });
 
         document.getElementById('market-symbol').textContent = data.symbol || 'BTC/USDT';
         document.getElementById('market-price').textContent = `$${data.current_price?.toFixed(2) || '0.00'}`;

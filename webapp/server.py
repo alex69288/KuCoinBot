@@ -205,12 +205,25 @@ async def get_bot_status(init_data: str = Query(..., description="Telegram Web A
         # Получаем данные о балансе
         balance = trading_bot.exchange.get_balance()
         
-        # Получаем текущую позицию
-        position_info = {
-            "position": trading_bot.position,
-            "entry_price": trading_bot.entry_price,
-            "amount": trading_bot.current_position_size_usdt
-        }
+        # Получаем текущую позицию - возвращаем простую строку для frontend
+        position_text = "Нет позиции"
+        if trading_bot.position == 'long':
+            if trading_bot.entry_price:
+                position_text = f"Long @ {trading_bot.entry_price:.2f} USDT"
+            else:
+                position_text = "Long"
+        elif trading_bot.position == 'short':
+            position_text = "Short"
+        
+        # Рассчитываем PNL если есть позиция
+        pnl = 0.0
+        if trading_bot.position == 'long' and trading_bot.entry_price:
+            try:
+                current_price = trading_bot.exchange.get_ticker(trading_bot.settings.trading_pairs['active_pair']).get('last', 0)
+                if current_price and trading_bot.current_position_size_usdt:
+                    pnl = (current_price - trading_bot.entry_price) / trading_bot.entry_price * trading_bot.current_position_size_usdt
+            except:
+                pass
         
         # Получаем активные настройки
         settings_info = {
@@ -228,10 +241,12 @@ async def get_bot_status(init_data: str = Query(..., description="Telegram Web A
             "total_profit": getattr(trading_bot.metrics, 'total_profit', 0.0)
         }
         
+        # Формируем ответ в формате, ожидаемом frontend
         return {
-            "is_running": trading_bot.is_running,
-            "balance": balance,
-            "position": position_info,
+            "trading_enabled": getattr(trading_bot.settings.settings, 'trading_enabled', False),
+            "balance": balance.get('total_usdt', 0.0) if balance else 0.0,
+            "position": position_text,
+            "pnl": pnl,
             "settings": settings_info,
             "metrics": metrics,
             "last_update": datetime.now().isoformat()
@@ -267,13 +282,14 @@ async def get_market_data(
         if not ticker:
             raise HTTPException(status_code=500, detail="Failed to fetch ticker data")
         
+        # Формируем ответ в формате, ожидаемом frontend
         return {
             "symbol": symbol,
-            "current_price": ticker.get('last'),
-            "high_24h": ticker.get('high'),
-            "low_24h": ticker.get('low'),
-            "volume_24h": ticker.get('volume'),
-            "price_change_24h": ticker.get('change'),
+            "current_price": ticker.get('last', 0),
+            "high_24h": ticker.get('high', 0),
+            "low_24h": ticker.get('low', 0),
+            "volume_24h": ticker.get('volume', 0),
+            "change_24h": ticker.get('change', 0),  # ← Исправлено с price_change_24h
             "timestamp": datetime.now().isoformat()
         }
     except HTTPException:
