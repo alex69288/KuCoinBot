@@ -13,11 +13,13 @@ from datetime import datetime
 # Добавляем корневую директорию в путь
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException, Query, Body
+from fastapi import FastAPI, HTTPException, Query, Body, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import asyncio
+import json
 
 from utils.logger import log_info, log_error
 
@@ -1006,6 +1008,199 @@ async def get_trade_history(
     except Exception as e:
         log_error(f"Ошибка получения истории сделок: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting trade history: {str(e)}")
+
+
+# ============= WEBSOCKET ENDPOINTS =============
+
+class ConnectionManager:
+    """Менеджер WebSocket подключений для рассылки обновлений в реальном времени"""
+    
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+        self._broadcast_task = None
+        
+    async def connect(self, websocket: WebSocket):
+        """Добавляет новое WebSocket подключение"""
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        log_info(f"[WS] Новое подключение. Всего активных: {len(self.active_connections)}")
+        
+    def disconnect(self, websocket: WebSocket):
+        """Удаляет WebSocket подключение"""
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+            log_info(f"[WS] Подключение закрыто. Осталось активных: {len(self.active_connections)}")
+    
+    async def send_personal_message(self, message: dict, websocket: WebSocket):
+        """Отправляет сообщение конкретному клиенту"""
+        try:
+            await websocket.send_json(message)
+        except Exception as e:
+            log_error(f"[WS] Ошибка отправки персонального сообщения: {e}")
+            self.disconnect(websocket)
+    
+    async def broadcast(self, message: dict):
+        """Рассылает сообщение всем подключенным клиентам"""
+        disconnected = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                log_error(f"[WS] Ошибка отправки сообщения клиенту: {e}")
+                disconnected.append(connection)
+        
+        # Удаляем отключенные соединения
+        for conn in disconnected:
+            self.disconnect(conn)
+    
+    async def start_broadcasting(self):
+        """Запускает фоновую задачу для периодической рассылки данных"""
+        if self._broadcast_task:
+            return
+        
+        self._broadcast_task = asyncio.create_task(self._broadcast_loop())
+        log_info("[WS] Запущена фоновая рассылка данных")
+    
+    async def _broadcast_loop(self):
+        """Фоновый цикл рассылки данных каждую секунду"""
+        while True:
+            try:
+                if self.active_connections and trading_bot:
+                    # Получаем свежие данные
+                    data = await self._get_realtime_data()
+                    if data:
+                        await self.broadcast(data)
+                
+                # Ждем 1 секунду перед следующим обновлением
+                await asyncio.sleep(1)
+            except Exception as e:
+                log_error(f"[WS] Ошибка в цикле рассылки: {e}")
+                await asyncio.sleep(5)  # Пауза при ошибке
+    
+    async def _get_realtime_data(self) -> dict:
+        """Получает актуальные данные для рассылки клиентам"""
+        try:
+            if not trading_bot:
+                return None
+            
+            # Получаем активную пару
+            symbol = trading_bot.settings.trading_pairs.get('active_pair', 'BTC/USDT')
+            
+            # Получаем данные о рынке
+            ticker = trading_bot.exchange.get_ticker(symbol)
+            if not ticker:
+                return None
+            
+            # Формируем данные
+            data = {
+                "type": "market_update",
+                "timestamp": datetime.now().isoformat(),
+                "market": {
+                    "symbol": symbol,
+                    "current_price": ticker.get('last', 0),
+                    "change_24h": ticker.get('percentage', 0)
+                }
+            }
+            
+            # Добавляем EMA данные если доступны
+            try:
+                strategy = getattr(trading_bot, 'strategy', None)
+                if strategy and hasattr(strategy, 'ema_fast') and hasattr(strategy, 'ema_slow'):
+                    ema_fast = strategy.ema_fast
+                    ema_slow = strategy.ema_slow
+                    if ema_fast and ema_slow:
+                        ema_diff = ((ema_fast - ema_slow) / ema_slow) * 100
+                        threshold = trading_bot.settings.strategy_settings.get('ema_threshold', 0.25)
+                        
+                        signal = "wait"
+                        if ema_diff > threshold:
+                            signal = "buy"
+                        elif ema_diff < -threshold:
+                            signal = "sell"
+                        
+                        data["ema"] = {
+                            "signal": signal,
+                            "percent": ema_diff,
+                            "text": "ВВЕРХ" if signal == "buy" else "ВНИЗ" if signal == "sell" else "НЕЙТРАЛЬНО"
+                        }
+            except Exception as e:
+                log_error(f"[WS] Ошибка получения EMA: {e}")
+            
+            # Добавляем ML данные если доступны
+            try:
+                if hasattr(trading_bot, 'ml_model') and trading_bot.ml_model:
+                    # Получаем предсказание ML модели
+                    features = trading_bot.ml_model.get_features(symbol)
+                    if features is not None:
+                        prediction = trading_bot.ml_model.predict_signal(features)
+                        data["ml"] = {
+                            "prediction": float(prediction),
+                        }
+            except Exception as e:
+                log_error(f"[WS] Ошибка получения ML: {e}")
+            
+            # Добавляем данные о позициях
+            try:
+                positions = trading_bot.risk_manager.get_open_positions()
+                if positions:
+                    total_pnl = sum(p.get('pnl', 0) for p in positions)
+                    total_pnl_percent = sum(p.get('pnl_percent', 0) for p in positions) / len(positions)
+                    
+                    data["positions"] = {
+                        "open_count": len(positions),
+                        "current_profit_percent": total_pnl_percent,
+                        "current_profit_usdt": total_pnl
+                    }
+            except Exception as e:
+                log_error(f"[WS] Ошибка получения позиций: {e}")
+            
+            return data
+            
+        except Exception as e:
+            log_error(f"[WS] Ошибка получения данных в реальном времени: {e}")
+            return None
+
+
+# Создаем глобальный менеджер подключений
+manager = ConnectionManager()
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket endpoint для получения обновлений в реальном времени
+    Клиент подключается к ws://server/ws и получает обновления каждую секунду
+    """
+    await manager.connect(websocket)
+    
+    # Запускаем фоновую рассылку, если еще не запущена
+    if not manager._broadcast_task:
+        await manager.start_broadcasting()
+    
+    try:
+        # Отправляем начальное сообщение
+        await manager.send_personal_message({
+            "type": "connected",
+            "message": "WebSocket подключен успешно",
+            "timestamp": datetime.now().isoformat()
+        }, websocket)
+        
+        # Ожидаем сообщений от клиента (для keep-alive)
+        while True:
+            data = await websocket.receive_text()
+            # Можем обрабатывать команды от клиента, если нужно
+            if data == "ping":
+                await manager.send_personal_message({
+                    "type": "pong",
+                    "timestamp": datetime.now().isoformat()
+                }, websocket)
+                
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        log_info("[WS] Клиент отключился")
+    except Exception as e:
+        log_error(f"[WS] Ошибка WebSocket: {e}")
+        manager.disconnect(websocket)
 
 
 if __name__ == "__main__":

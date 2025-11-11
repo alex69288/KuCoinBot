@@ -7,6 +7,8 @@
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#181c24">
   <title>KuCoin Trading Bot</title>
+  <!-- Preload критичных ресурсов для быстрой загрузки -->
+  <link rel="preload" href="/static/icons.svg" as="image" type="image/svg+xml">
   <link rel="stylesheet" href="/static/icons.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
@@ -394,6 +396,68 @@
       color: white;
     }
 
+    /* Стили для SVG иконок с fallback */
+    .icon {
+      display: inline-block;
+      width: 1em;
+      height: 1em;
+      vertical-align: middle;
+    }
+
+    .icon-svg {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-svg svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+
+    /* Fallback для незагруженных иконок - показываем цветной круг */
+    .icon:not(.icon-svg)::before {
+      content: '●';
+      font-size: 0.8em;
+      opacity: 0.5;
+    }
+
+    /* WebSocket индикатор подключения */
+    .ws-status {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--danger-color);
+      z-index: 1000;
+      transition: background 0.3s ease;
+    }
+
+    .ws-status.connected {
+      background: var(--success-color);
+      box-shadow: 0 0 10px var(--success-color);
+    }
+
+    .ws-status.connecting {
+      background: var(--warning-color);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
     .notification {
       position: fixed;
       top: 20px;
@@ -550,6 +614,9 @@
 </head>
 
 <body>
+  <!-- WebSocket индикатор подключения -->
+  <div id="ws-status" class="ws-status" title="WebSocket статус"></div>
+
   <!-- Полноэкранный индикатор загрузки -->
   <div id="loading-overlay" class="loading-overlay">
     <div class="loading-spinner"></div>
@@ -867,18 +934,36 @@
 
   <script>
     // === ИКОНКИ: инициализация SVG-спрайта и автозамена .icon-* на inline SVG ===
+    let iconsLoaded = false;
     async function setupSvgIcons() {
       try {
+        console.log('🎨 Загрузка SVG иконок...');
+        const startTime = Date.now();
+
         // Загружаем и внедряем /static/icons.svg в DOM (скрыто)
-        const res = await fetch('/static/icons.svg');
-        if (!res.ok) throw new Error(`Не удалось загрузить icons.svg: HTTP ${res.status}`);
+        const res = await fetch('/static/icons.svg', {
+          cache: 'force-cache' // Кэшируем иконки
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
         const svgText = await res.text();
+
+        // Проверяем, что получили валидный SVG
+        if (!svgText.includes('<svg') || !svgText.includes('<symbol')) {
+          throw new Error('Невалидный SVG файл');
+        }
+
         const holder = document.createElement('div');
+        holder.id = 'svg-sprite-container';
         holder.style.position = 'absolute';
         holder.style.width = '0';
         holder.style.height = '0';
         holder.style.overflow = 'hidden';
         holder.style.visibility = 'hidden';
+        holder.setAttribute('aria-hidden', 'true');
         holder.innerHTML = svgText;
         document.body.prepend(holder);
 
@@ -886,16 +971,22 @@
           if (!el || el.dataset.iconProcessed === '1') return;
           let iconId = null;
           for (const cls of el.classList) {
-            if (cls.startsWith('icon-') && cls !== 'icon-svg') { iconId = cls; break; }
+            if (cls.startsWith('icon-') && cls !== 'icon-svg') {
+              iconId = cls;
+              break;
+            }
           }
           if (!iconId) return;
+
           el.classList.add('icon-svg');
           el.dataset.iconProcessed = '1';
           el.innerHTML = `<svg class="icon" aria-hidden="true" focusable="false"><use href="#${iconId}"></use></svg>`;
         };
 
+        // Обрабатываем все существующие иконки
         document.querySelectorAll('.icon').forEach(processIconEl);
 
+        // Наблюдаем за новыми иконками
         const obs = new MutationObserver((mutations) => {
           mutations.forEach((m) => {
             m.addedNodes && m.addedNodes.forEach((node) => {
@@ -906,8 +997,15 @@
           });
         });
         obs.observe(document.documentElement, { childList: true, subtree: true });
+
+        iconsLoaded = true;
+        const loadTime = Date.now() - startTime;
+        console.log(`✅ SVG иконки загружены за ${loadTime}мс`);
+
       } catch (e) {
-        console.error('Ошибка инициализации SVG-спрайта:', e);
+        console.error('❌ Ошибка загрузки SVG иконок:', e);
+        // Показываем fallback иконки (CSS ::before будет отображать цветные круги)
+        console.warn('⚠️ Используются fallback иконки');
       }
     }
 
@@ -1592,77 +1690,224 @@
       await loadTabData(currentTab);
     }
 
-    // Автообновление
-    let updateCounter = 0;
-    let lastUpdateTime = Date.now();
-    let updateIntervalMs = 5000; // По умолчанию 5 секунд (было 1 секунда)
-    let slowConnectionMode = false;
+    // ============= WEBSOCKET ДЛЯ РЕАЛ-ТАЙМ ОБНОВЛЕНИЙ =============
+    let ws = null;
+    let wsReconnectTimeout = null;
+    let wsReconnectAttempts = 0;
+    const WS_MAX_RECONNECT_ATTEMPTS = 5;
+    const WS_RECONNECT_DELAY = 3000;
 
-    function startAutoUpdate() {
-      if (updateInterval) {
-        clearInterval(updateInterval);
+    function getWebSocketUrl() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      return `${protocol}//${host}/ws`;
+    }
+
+    function updateWsStatus(status) {
+      const wsStatus = document.getElementById('ws-status');
+      if (!wsStatus) return;
+
+      wsStatus.className = 'ws-status';
+      if (status === 'connected') {
+        wsStatus.classList.add('connected');
+        wsStatus.title = 'WebSocket подключен - обновления в реальном времени';
+      } else if (status === 'connecting') {
+        wsStatus.classList.add('connecting');
+        wsStatus.title = 'Подключение к WebSocket...';
+      } else {
+        wsStatus.title = 'WebSocket отключен';
+      }
+    }
+
+    function connectWebSocket() {
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        console.log('🔌 WebSocket уже подключен или подключается');
+        return;
       }
 
-      console.log(`🔄 Автообновление запущено (интервал: ${updateIntervalMs}мс)`);
+      try {
+        const wsUrl = getWebSocketUrl();
+        console.log('🔌 Подключение к WebSocket:', wsUrl);
+        updateWsStatus('connecting');
 
-      updateInterval = setInterval(() => {
-        // Проверяем, активна ли страница
-        if (document.hidden) {
-          console.log('⏸️ Страница скрыта, пропускаем обновление');
-          return;
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('✅ WebSocket подключен');
+          updateWsStatus('connected');
+          wsReconnectAttempts = 0;
+
+          // Отправляем ping для поддержания соединения
+          const pingInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send('ping');
+            } else {
+              clearInterval(pingInterval);
+            }
+          }, 30000); // Ping каждые 30 секунд
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleWebSocketMessage(data);
+          } catch (error) {
+            console.error('❌ Ошибка обработки WebSocket сообщения:', error);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('❌ Ошибка WebSocket:', error);
+          updateWsStatus('disconnected');
+        };
+
+        ws.onclose = () => {
+          console.log('🔌 WebSocket отключен');
+          updateWsStatus('disconnected');
+
+          // Попытка переподключения
+          if (wsReconnectAttempts < WS_MAX_RECONNECT_ATTEMPTS) {
+            wsReconnectAttempts++;
+            console.log(`🔄 Попытка переподключения ${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS}...`);
+            wsReconnectTimeout = setTimeout(connectWebSocket, WS_RECONNECT_DELAY);
+          } else {
+            console.error('❌ Превышено максимальное количество попыток переподключения');
+            showNotification('⚠️ Потеряно соединение. Обновите страницу.');
+          }
+        };
+
+      } catch (error) {
+        console.error('❌ Ошибка создания WebSocket:', error);
+        updateWsStatus('disconnected');
+      }
+    }
+
+    function handleWebSocketMessage(data) {
+      // Обрабатываем разные типы сообщений
+      if (data.type === 'connected') {
+        console.log('✅ WebSocket подтвержден:', data.message);
+        return;
+      }
+
+      if (data.type === 'pong') {
+        // Ответ на ping
+        return;
+      }
+
+      if (data.type === 'market_update') {
+        // Обновляем данные рынка в реальном времени
+        updateMarketData(data);
+        return;
+      }
+
+      console.log('📨 Получено сообщение WebSocket:', data);
+    }
+
+    function updateMarketData(data) {
+      // Обновляем только если мы на вкладке home
+      if (currentTab !== 'home') return;
+
+      try {
+        // Обновляем цену
+        if (data.market) {
+          const priceEl = document.getElementById('market-price');
+          const newPrice = data.market.current_price || 0;
+
+          if (typeof prevValues.marketPrice === 'number' && newPrice !== prevValues.marketPrice) {
+            if (newPrice > prevValues.marketPrice) applyFlash(priceEl, 'up');
+            else if (newPrice < prevValues.marketPrice) applyFlash(priceEl, 'down');
+          }
+
+          priceEl.textContent = `${newPrice.toFixed(2)} USDT`;
+          prevValues.marketPrice = newPrice;
+
+          // Обновляем изменение 24ч
+          const change24h = data.market.change_24h || 0;
+          const changeEl = document.getElementById('market-change-24h');
+
+          if (typeof prevValues.change24h === 'number' && change24h !== prevValues.change24h) {
+            if (change24h > prevValues.change24h) applyFlash(changeEl, 'up');
+            else if (change24h < prevValues.change24h) applyFlash(changeEl, 'down');
+          }
+
+          changeEl.textContent = `${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%`;
+          changeEl.className = `info-value ${change24h >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
+          prevValues.change24h = change24h;
         }
 
-        const now = Date.now();
-        const interval = now - lastUpdateTime;
-        lastUpdateTime = now;
-        updateCounter++;
+        // Обновляем EMA
+        if (data.ema) {
+          const emaIconId = data.ema.signal === 'buy' ? 'icon-circle-green' : data.ema.signal === 'sell' ? 'icon-circle-red' : 'icon-circle-white';
+          const emaPercent = data.ema.percent || 0;
+          const emaEl = document.getElementById('market-ema');
 
-        console.log(`🔄 Обновление #${updateCounter} (интервал: ${interval}мс, вкладка: ${currentTab}${slowConnectionMode ? ', режим экономии' : ''})`);
+          if (typeof prevValues.emaPercent === 'number' && emaPercent !== prevValues.emaPercent) {
+            if (emaPercent > prevValues.emaPercent) applyFlash(emaEl, 'up');
+            else if (emaPercent < prevValues.emaPercent) applyFlash(emaEl, 'down');
+          }
 
-        if (currentTab === 'home') {
-          loadStatus();
-          loadMarket();
-        } else if (currentTab === 'positions') {
+          emaEl.innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${emaIconId}"></use></svg> ${data.ema.text || 'EMA'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
+          prevValues.emaPercent = emaPercent;
+        }
+
+        // Обновляем ML
+        if (data.ml) {
+          const mlPrediction = data.ml.prediction || 0;
+          const mlIconId = mlPrediction > 0.6 ? 'icon-circle-green' : mlPrediction < 0.4 ? 'icon-circle-red' : 'icon-circle-yellow';
+          const mlText = mlPrediction > 0.6 ? 'ПОКУПКА' : mlPrediction < 0.4 ? 'ПРОДАЖА' : 'НЕЙТРАЛЬНОЕ';
+          const mlEl = document.getElementById('market-ml');
+          const mlPercent = mlPrediction * 100;
+
+          if (typeof prevValues.mlPercent === 'number' && mlPercent !== prevValues.mlPercent) {
+            if (mlPercent > prevValues.mlPercent) applyFlash(mlEl, 'up');
+            else if (mlPercent < prevValues.mlPercent) applyFlash(mlEl, 'down');
+          }
+
+          mlEl.innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${mlIconId}"></use></svg> ${mlText} (${mlPercent.toFixed(1)}%)`;
+          prevValues.mlPercent = mlPercent;
+        }
+
+        // Обновляем позиции
+        if (data.positions) {
+          const currentProfit = data.positions.current_profit_percent || 0;
+          const currentProfitUsdt = data.positions.current_profit_usdt || 0;
+          const profitElement = document.getElementById('position-current-profit');
+
+          if (typeof prevValues.positionProfitPercent === 'number' && currentProfit !== prevValues.positionProfitPercent) {
+            if (currentProfit > prevValues.positionProfitPercent) applyFlash(profitElement, 'up');
+            else if (currentProfit < prevValues.positionProfitPercent) applyFlash(profitElement, 'down');
+          }
+
+          profitElement.textContent = `${currentProfit >= 0 ? '+' : ''}${currentProfit.toFixed(2)}% (${currentProfit >= 0 ? '+' : ''}${currentProfitUsdt.toFixed(4)} USDT)`;
+          profitElement.className = `info-value ${currentProfit >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
+          prevValues.positionProfitPercent = currentProfit;
+        }
+
+      } catch (error) {
+        console.error('❌ Ошибка обновления данных рынка:', error);
+      }
+    }
+
+    // Fallback: обновление других вкладок по таймеру (только не home)
+    let fallbackInterval = null;
+    function startFallbackUpdates() {
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+      }
+
+      fallbackInterval = setInterval(() => {
+        if (document.hidden) return;
+
+        // Обновляем данные для других вкладок (не home)
+        if (currentTab === 'positions') {
           loadPositions();
         } else if (currentTab === 'analytics') {
           loadAnalytics();
+        } else if (currentTab === 'control') {
+          loadStatus();
         }
-      }, updateIntervalMs); // Настраиваемый интервал
+      }, 10000); // Раз в 10 секунд для других вкладок
     }
-
-    // Автоматическая адаптация интервала обновления
-    async function checkConnectionSpeed() {
-      const startTime = Date.now();
-      try {
-        const response = await fetch('/api/status?init_data=' + encodeURIComponent(getInitData()));
-        const duration = Date.now() - startTime;
-
-        // Если запрос занял более 2 секунд - включаем режим экономии
-        if (duration > 2000 && !slowConnectionMode) {
-          slowConnectionMode = true;
-          updateIntervalMs = 10000; // Увеличиваем до 10 секунд
-          console.warn(`⚠️ Медленное соединение обнаружено (${duration}мс), переключение на режим экономии`);
-          showNotification('🐢 Медленное соединение, интервал обновления увеличен');
-          startAutoUpdate(); // Перезапускаем с новым интервалом
-        } else if (duration < 1000 && slowConnectionMode) {
-          slowConnectionMode = false;
-          updateIntervalMs = 5000; // Возвращаем нормальный интервал
-          console.log(`✅ Соединение улучшилось (${duration}мс), возврат к нормальному режиму`);
-          showNotification('✅ Соединение улучшилось');
-          startAutoUpdate(); // Перезапускаем с новым интервалом
-        }
-      } catch (error) {
-        console.error('❌ Ошибка проверки скорости соединения:', error);
-      }
-    }
-
-    // Обработчик изменения видимости страницы
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        console.log('👁️ Страница снова видна, принудительное обновление');
-        loadTabData(currentTab);
-      }
-    });
 
     // Показать уведомление
     function showNotification(message) {
@@ -1732,12 +1977,13 @@
         // Скрываем индикатор загрузки
         hideLoadingOverlay();
 
-        // Запускаем автообновление
-        startAutoUpdate();
-        console.log('✅ Автообновление запущено');
+        // Подключаемся к WebSocket для реал-тайм обновлений
+        connectWebSocket();
+        console.log('✅ WebSocket подключение запущено');
 
-        // Проверяем скорость соединения через 5 секунд
-        setTimeout(checkConnectionSpeed, 5000);
+        // Запускаем fallback обновления для других вкладок
+        startFallbackUpdates();
+        console.log('✅ Fallback обновления запущены');
       } catch (error) {
         console.error('❌ Ошибка инициализации:', error);
         hideLoadingOverlay();
@@ -1753,10 +1999,21 @@
       }
     });
 
+    // Обработчик изменения видимости страницы
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && ws && ws.readyState !== WebSocket.OPEN) {
+        console.log('👁️ Страница снова видна, переподключение WebSocket');
+        connectWebSocket();
+      }
+    });
+
     // Очистка при закрытии
     window.addEventListener('beforeunload', () => {
-      if (updateInterval) {
-        clearInterval(updateInterval);
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+      }
+      if (ws) {
+        ws.close();
       }
     });
   </script>

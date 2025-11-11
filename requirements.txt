@@ -13,3 +13,4 @@ watchdog
 fastapi
 uvicorn[standard]
 pydantic
+websockets
