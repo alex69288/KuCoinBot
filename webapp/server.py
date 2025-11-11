@@ -209,7 +209,7 @@ async def get_bot_status(init_data: str = Query(..., description="Telegram Web A
         position_info = {
             "position": trading_bot.position,
             "entry_price": trading_bot.entry_price,
-            "amount": trading_bot.amount
+            "amount": trading_bot.current_position_size_usdt
         }
         
         # Получаем активные настройки
