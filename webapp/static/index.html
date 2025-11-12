@@ -1296,7 +1296,11 @@
       change24h: null,
       emaPercent: null,
       mlPercent: null,
-      positionProfitPercent: null
+      positionProfitPercent: null,
+      openCount: null,
+      positionSize: null,
+      positionEntryPrice: null,
+      toTakeProfit: null
     };
 
     function applyFlash(el, dir) {
@@ -2321,8 +2325,36 @@
           prevValues.mlPercent = mlPercent;
         }
 
-        // Обновляем позиции
+        // Обновляем позиции - обновляем ВСЕ данные одновременно с ценой
         if (data.positions) {
+          // Обновляем количество открытых позиций
+          const openCount = data.positions.open_count || 0;
+          const countEl = document.getElementById('position-count');
+          if (openCount !== prevValues.openCount) {
+            applyFlash(countEl, openCount > (prevValues.openCount || 0) ? 'up' : 'down');
+            prevValues.openCount = openCount;
+          }
+          countEl.textContent = openCount;
+
+          // Обновляем размер ставки
+          const sizeUsdt = data.positions.size_usdt || 0;
+          const sizeEl = document.getElementById('position-size');
+          if (sizeUsdt !== prevValues.positionSize) {
+            applyFlash(sizeEl, sizeUsdt > (prevValues.positionSize || 0) ? 'up' : 'down');
+            prevValues.positionSize = sizeUsdt;
+          }
+          sizeEl.textContent = `${sizeUsdt.toFixed(2)} USDT`;
+
+          // Обновляем цену входа
+          const entryPrice = data.positions.entry_price || 0;
+          const entryEl = document.getElementById('position-entry-price');
+          if (entryPrice !== prevValues.positionEntryPrice) {
+            applyFlash(entryEl, entryPrice > (prevValues.positionEntryPrice || 0) ? 'up' : 'down');
+            prevValues.positionEntryPrice = entryPrice;
+          }
+          entryEl.textContent = `${entryPrice.toFixed(2)} USDT`;
+
+          // Обновляем текущий профит (%)
           const currentProfit = data.positions.current_profit_percent || 0;
           const currentProfitUsdt = data.positions.current_profit_usdt || 0;
           const profitElement = document.getElementById('position-current-profit');
@@ -2335,6 +2367,26 @@
           profitElement.textContent = `${currentProfit >= 0 ? '+' : ''}${currentProfit.toFixed(2)}% (${currentProfit >= 0 ? '+' : ''}${currentProfitUsdt.toFixed(4)} USDT)`;
           profitElement.className = `info-value ${currentProfit >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
           prevValues.positionProfitPercent = currentProfit;
+
+          // Обновляем данные take profit
+          const toTp = data.positions.to_take_profit || 0;
+          const toTpEl = document.getElementById('position-to-tp');
+          if (toTp !== prevValues.toTakeProfit) {
+            applyFlash(toTpEl, toTp > (prevValues.toTakeProfit || 0) ? 'up' : 'down');
+            prevValues.toTakeProfit = toTp;
+          }
+          toTpEl.textContent = `${toTp >= 0 ? '+' : ''}${toTp.toFixed(1)}%`;
+
+          // Обновляем целевой процент TP
+          const tpTarget = data.positions.tp_target || 2;
+          const tpTargetEl = document.getElementById('position-tp-target');
+          tpTargetEl.textContent = `${tpTarget.toFixed(0)}%`;
+
+          // Обновляем комиссии
+          const feePercent = data.positions.fee_percent || 0.2;
+          const feeUsdt = data.positions.fee_usdt || 0;
+          const feesEl = document.getElementById('position-fees');
+          feesEl.textContent = `${feePercent.toFixed(1)}% (${feeUsdt.toFixed(4)} USDT)`;
         }
 
       } catch (error) {
