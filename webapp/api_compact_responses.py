@@ -21,6 +21,10 @@ def compact_status_response(full_response: dict) -> dict:
     """
     positions = full_response.get('positions', {})
     
+    # Защита от случая, когда positions это список (обратная совместимость)
+    if isinstance(positions, list):
+        positions = {'open_count': len(positions), 'size_usdt': 0, 'entry_price': 0, 'current_profit_percent': 0, 'current_profit_usdt': 0, 'to_take_profit': 0}
+    
     # Компактный формат
     return {
         'p': {  # positions
@@ -106,7 +110,11 @@ def compact_history_response(full_response: dict) -> dict:
     Было: 3-5 KB
     Стало: 1-1.5 KB (экономия 50-70%)
     """
-    trades = full_response.get('trades', [])
+    # Защита от случая, когда full_response это список (обратная совместимость)
+    if isinstance(full_response, list):
+        trades = full_response
+    else:
+        trades = full_response.get('trades', [])
     
     # Компактный формат
     return {

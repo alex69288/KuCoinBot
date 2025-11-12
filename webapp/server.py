@@ -746,10 +746,14 @@ async def get_positions(
                 log_error(f"Ошибка получения текущей позиции: {e}")
         
         # 🚀 ОПТИМИЗАЦИЯ: Если запрос компактный - возвращаем сокращенный формат (-60-70% трафика)
-        # ⚠️ ПОКА ОТКЛЮЧЕН КОМПАКТНЫЙ ФОРМАТ ДЛЯ ПОЗИЦИЙ - ФРОНТЕНД ИСПОЛЬЗУЕТ ПОЛНЫЕ ИМЕНА ПОЛЕЙ
-        # full_response = positions
-        # if compact and compact_positions_response:
-        #     return compact_positions_response(full_response)
+        if compact:
+            # Возвращаем просто список позиций в компактном формате
+            # (фронтенд обрабатывает это)
+            return {
+                'positions': positions,
+                'count': len(positions),
+                'timestamp': datetime.now().isoformat()
+            }
         
         # Возвращаем полный формат (фронтенд ожидает это)
         return positions
@@ -1460,11 +1464,11 @@ async def get_trade_history(
             history = trading_bot.metrics.trades_history[-limit:]
         
         # 🚀 ОПТИМИЗАЦИЯ: Если запрос компактный - возвращаем сокращенный формат (-60-70% трафика)
-        full_response = history
         if compact and compact_history_response:
-            return compact_history_response(full_response)
+            # Передаём список напрямую, функция уже проверяет его тип
+            return compact_history_response(history)
         
-        return full_response
+        return history
     except Exception as e:
         log_error(f"Ошибка получения истории сделок: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting trade history: {str(e)}")
