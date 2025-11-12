@@ -10,8 +10,18 @@ def load_position_state(file_path='position_state.json'):
     if not os.path.exists(file_path):
         return {}
     
-    with open(file_path, 'r') as f:
-        data = json.load(f)
+    # Пробуем разные кодировки
+    for encoding in ['latin-1', 'utf-8', 'utf-16']:
+        try:
+            with open(file_path, 'r', encoding=encoding) as f:
+                data = json.load(f)
+            break
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            continue
+    else:
+        # Если ничего не сработало, используем стандартную
+        with open(file_path, 'r') as f:
+            data = json.load(f)
     
     # Проверяем и конвертируем старый формат
     converted = {}

@@ -228,6 +228,9 @@ async def get_bot_status(init_data: str = Query(..., description="Telegram Web A
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
+        import os
+        from utils.position_manager import load_position_state
+        
         # Получаем текущую цену
         current_price = 0
         try:
@@ -249,10 +252,49 @@ async def get_bot_status(init_data: str = Query(..., description="Telegram Web A
             "fee_usdt": 0
         }
         
-        # Если есть открытая позиция
-        if trading_bot.position and trading_bot.position == 'long' and trading_bot.entry_price:
-            # Подсчет количества открытых позиций
-            # TODO: Добавить поддержку множественных позиций в будущем
+        # 🔧 ПОДСЧЕТ ИЗ ФАЙЛА СОСТОЯНИЯ
+        total_open_positions = 0
+        total_position_size_usdt = 0
+        total_pnl_usdt = 0
+        total_pnl_percent = 0
+        
+        if os.path.exists('position_state.json'):
+            state = load_position_state('position_state.json')
+            
+            # Считаем общее количество открытых позиций по всем парам
+            for pair_symbol, pair_data in state.items():
+                if isinstance(pair_data, dict) and 'positions' in pair_data:
+                    positions_list = pair_data.get('positions', [])
+                    total_open_positions += len(positions_list)
+                    total_position_size_usdt += pair_data.get('total_position_size_usdt', 0)
+                    
+                    # Рассчитываем общий PnL
+                    for pos in positions_list:
+                        try:
+                            ticker = trading_bot.exchange.get_ticker(pair_symbol)
+                            current_price_pair = ticker.get('last', 0) if ticker else 0
+                            
+                            entry_price = pos.get('entry_price', 0)
+                            position_size_usdt = pos.get('position_size_usdt', 0)
+                            
+                            if entry_price > 0 and current_price_pair > 0:
+                                pnl = (current_price_pair - entry_price) * position_size_usdt / entry_price
+                                total_pnl_usdt += pnl
+                        except:
+                            pass
+        
+        positions_info["open_count"] = total_open_positions
+        positions_info["size_usdt"] = total_position_size_usdt
+        
+        # Рассчитываем среднюю прибыль
+        if total_position_size_usdt > 0 and total_pnl_usdt != 0:
+            positions_info["current_profit_percent"] = (total_pnl_usdt / total_position_size_usdt) * 100
+            positions_info["current_profit_usdt"] = total_pnl_usdt
+            positions_info["to_take_profit"] = positions_info["tp_target"] - positions_info["current_profit_percent"]
+            positions_info["fee_usdt"] = total_position_size_usdt * 0.004
+        
+        # Для совместимости - если нет файла состояния, используем старый способ
+        if total_open_positions == 0 and trading_bot.position and trading_bot.position == 'long' and trading_bot.entry_price:
             positions_info["open_count"] = 1
             positions_info["size_usdt"] = trading_bot.current_position_size_usdt or 0
             positions_info["entry_price"] = trading_bot.entry_price
@@ -564,7 +606,7 @@ async def get_trades(
 
 @app.get("/api/positions")
 async def get_positions(init_data: str = Query(...)):
-    """Получить открытые позиции"""
+    """Получить все открытые позиции из файла состояния"""
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
     
@@ -573,29 +615,76 @@ async def get_positions(init_data: str = Query(...)):
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
+        import os
+        import json
+        from utils.position_manager import load_position_state
+        
         positions = []
         
-        # Получаем текущую позицию
-        if trading_bot.position and trading_bot.position != 'none':
-            ticker = trading_bot.exchange.get_ticker(
-                trading_bot.settings.trading_pairs['active_pair']
-            )
-            current_price = ticker['last'] if ticker else 0
+        # Загружаем ВСЕ позиции из файла состояния
+        if os.path.exists('position_state.json'):
+            state = load_position_state('position_state.json')
             
-            pnl = 0
-            if trading_bot.position == 'long':
-                pnl = (current_price - trading_bot.entry_price) * trading_bot.current_position_size_usdt / trading_bot.entry_price
-            
-            positions.append({
-                "id": "current_position",
-                "pair": trading_bot.settings.trading_pairs['active_pair'],
-                "status": trading_bot.position,
-                "entry_price": trading_bot.entry_price,
-                "current_price": current_price,
-                "amount": trading_bot.current_position_size_usdt / trading_bot.entry_price if trading_bot.entry_price else 0,
-                "pnl": pnl,
-                "timestamp": datetime.now().isoformat()
-            })
+            # Проходим по всем парам
+            for pair_symbol, pair_data in state.items():
+                if isinstance(pair_data, dict) and 'positions' in pair_data:
+                    # Проходим по всем открытым позициям в паре
+                    for pos_data in pair_data.get('positions', []):
+                        try:
+                            ticker = trading_bot.exchange.get_ticker(pair_symbol)
+                            current_price = ticker['last'] if ticker else 0
+                            
+                            entry_price = pos_data.get('entry_price', 0)
+                            position_size_usdt = pos_data.get('position_size_usdt', 0)
+                            
+                            # Вычисляем PnL
+                            pnl = 0
+                            if entry_price > 0 and current_price > 0:
+                                pnl = (current_price - entry_price) * position_size_usdt / entry_price
+                            
+                            positions.append({
+                                "id": f"{pair_symbol}_{pos_data.get('id', 0)}",
+                                "pair": pair_symbol,
+                                "status": "long",
+                                "entry_price": entry_price,
+                                "current_price": current_price,
+                                "amount": pos_data.get('amount_crypto', 0),
+                                "position_size_usdt": position_size_usdt,
+                                "pnl": pnl,
+                                "pnl_percent": ((current_price - entry_price) / entry_price * 100) if entry_price > 0 else 0,
+                                "opened_at": pos_data.get('opened_at', 0),
+                                "timestamp": datetime.now().isoformat()
+                            })
+                        except Exception as e:
+                            log_error(f"Ошибка обработки позиции {pos_data.get('id')}: {e}")
+                            continue
+        
+        # Если файл позиций не найден, возвращаем текущую позицию для обратной совместимости
+        if not positions and trading_bot.position and trading_bot.position != 'none':
+            try:
+                ticker = trading_bot.exchange.get_ticker(
+                    trading_bot.settings.trading_pairs['active_pair']
+                )
+                current_price = ticker['last'] if ticker else 0
+                
+                pnl = 0
+                if trading_bot.position == 'long' and trading_bot.entry_price > 0:
+                    pnl = (current_price - trading_bot.entry_price) * trading_bot.current_position_size_usdt / trading_bot.entry_price
+                
+                positions.append({
+                    "id": "current_position",
+                    "pair": trading_bot.settings.trading_pairs['active_pair'],
+                    "status": trading_bot.position,
+                    "entry_price": trading_bot.entry_price,
+                    "current_price": current_price,
+                    "amount": trading_bot.current_position_size_usdt / trading_bot.entry_price if trading_bot.entry_price else 0,
+                    "position_size_usdt": trading_bot.current_position_size_usdt,
+                    "pnl": pnl,
+                    "pnl_percent": ((current_price - trading_bot.entry_price) / trading_bot.entry_price * 100) if trading_bot.entry_price > 0 else 0,
+                    "timestamp": datetime.now().isoformat()
+                })
+            except Exception as e:
+                log_error(f"Ошибка получения текущей позиции: {e}")
         
         return positions
     except Exception as e:
@@ -608,7 +697,7 @@ async def close_position(
     position_id: str,
     init_data: str = Body(..., embed=True)
 ):
-    """Закрыть позицию вручную"""
+    """Закрыть конкретную позицию вручную"""
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
     
@@ -617,10 +706,86 @@ async def close_position(
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
+        import os
+        import json
+        from utils.position_manager import load_position_state
+        
+        # Парсим ID позиции (формат: "PAIR_ID")
+        parts = position_id.split('_')
+        if len(parts) < 2:
+            return {
+                "status": "error",
+                "message": "Неверный формат ID позиции"
+            }
+        
+        pair_symbol = '_'.join(parts[:-1])  # Все кроме последней части
+        pos_id = parts[-1]  # Последняя часть - ID позиции
+        
+        # Загружаем состояние
+        if os.path.exists('position_state.json'):
+            state = load_position_state('position_state.json')
+            
+            if pair_symbol in state and 'positions' in state[pair_symbol]:
+                pair_data = state[pair_symbol]
+                
+                # Находим позицию по ID
+                pos_index = None
+                for idx, pos in enumerate(pair_data['positions']):
+                    if str(pos.get('id')) == pos_id:
+                        pos_index = idx
+                        break
+                
+                if pos_index is not None:
+                    position = pair_data['positions'][pos_index]
+                    amount = position.get('amount_crypto', 0)
+                    
+                    # Пытаемся продать
+                    try:
+                        result = trading_bot.exchange.sell(pair_symbol, amount)
+                        log_info(f"[CLOSE] Позиция {pair_symbol}#{pos_id} закрыта вручную через WebApp. Результат: {result}")
+                        
+                        # Удаляем позицию из списка
+                        pair_data['positions'].pop(pos_index)
+                        pair_data['next_position_id'] = max(p['id'] for p in pair_data['positions']) + 1 if pair_data['positions'] else 1
+                        
+                        # Пересчитываем итоги
+                        pair_data['total_position_size_usdt'] = sum(p['position_size_usdt'] for p in pair_data['positions'])
+                        pair_data['total_amount_crypto'] = sum(p['amount_crypto'] for p in pair_data['positions'])
+                        
+                        if pair_data['positions']:
+                            total_cost = pair_data['total_position_size_usdt']
+                            total_amount = pair_data['total_amount_crypto']
+                            pair_data['average_entry_price'] = total_cost / total_amount if total_amount > 0 else 0
+                            pair_data['max_entry_price'] = max(p['entry_price'] for p in pair_data['positions'])
+                        else:
+                            pair_data['average_entry_price'] = 0
+                            pair_data['max_entry_price'] = 0
+                        
+                        # Сохраняем обновленное состояние
+                        with open('position_state.json', 'w') as f:
+                            json.dump(state, f, indent=2)
+                        
+                        return {
+                            "status": "success",
+                            "message": f"Позиция {pair_symbol}#{pos_id} закрыта",
+                            "result": result
+                        }
+                    except Exception as e:
+                        log_error(f"Ошибка при продаже позиции: {e}")
+                        return {
+                            "status": "error",
+                            "message": f"Ошибка при закрытии позиции: {str(e)}"
+                        }
+                else:
+                    return {
+                        "status": "error",
+                        "message": f"Позиция {position_id} не найдена"
+                    }
+        
+        # Fallback - закрываем текущую позицию если она есть
         if trading_bot.position and trading_bot.position != 'none':
-            # Закрываем позицию
             result = trading_bot.close_position(reason="Закрыто вручную через WebApp")
-            log_info(f"[CLOSE] Позиция закрыта вручную через WebApp")
+            log_info(f"[CLOSE] Текущая позиция закрыта вручную через WebApp")
             return {
                 "status": "success",
                 "message": "Позиция закрыта",
@@ -629,7 +794,7 @@ async def close_position(
         else:
             return {
                 "status": "info",
-                "message": "Нет открытой позиции"
+                "message": "Позиция не найдена"
             }
     except Exception as e:
         log_error(f"Ошибка закрытия позиции: {e}")
@@ -647,17 +812,61 @@ async def close_all_positions(init_data: str = Body(..., embed=True)):
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
+        import os
+        import json
+        from utils.position_manager import load_position_state
+        
         closed_count = 0
-        if trading_bot.position and trading_bot.position != 'none':
-            # Закрываем позицию
-            result = trading_bot.close_position(reason="Все позиции закрыты вручную через WebApp")
-            closed_count = 1
-            log_info(f"[CLOSE] Все позиции закрыты вручную через WebApp (закрыто: {closed_count})")
+        errors = []
+        
+        # Загружаем состояние
+        if os.path.exists('position_state.json'):
+            state = load_position_state('position_state.json')
+            
+            # Проходим по всем парам
+            for pair_symbol, pair_data in list(state.items()):
+                if isinstance(pair_data, dict) and 'positions' in pair_data:
+                    # Проходим по всем позициям (в обратном порядке, чтобы удаление не сбивало индексы)
+                    for pos in pair_data['positions'][::-1]:
+                        try:
+                            amount = pos.get('amount_crypto', 0)
+                            if amount > 0:
+                                # Пытаемся продать
+                                result = trading_bot.exchange.sell(pair_symbol, amount)
+                                closed_count += 1
+                                log_info(f"[CLOSE-ALL] Позиция {pair_symbol}#{pos.get('id')} закрыта. Результат: {result}")
+                                
+                                # Удаляем позицию
+                                pair_data['positions'].remove(pos)
+                        except Exception as e:
+                            log_error(f"Ошибка закрытия позиции {pair_symbol}#{pos.get('id')}: {e}")
+                            errors.append(f"{pair_symbol}#{pos.get('id')}: {str(e)}")
+                    
+                    # Пересчитываем итоги для пары
+                    pair_data['next_position_id'] = max(p['id'] for p in pair_data['positions']) + 1 if pair_data['positions'] else 1
+                    pair_data['total_position_size_usdt'] = sum(p['position_size_usdt'] for p in pair_data['positions'])
+                    pair_data['total_amount_crypto'] = sum(p['amount_crypto'] for p in pair_data['positions'])
+                    
+                    if pair_data['positions']:
+                        total_cost = pair_data['total_position_size_usdt']
+                        total_amount = pair_data['total_amount_crypto']
+                        pair_data['average_entry_price'] = total_cost / total_amount if total_amount > 0 else 0
+                        pair_data['max_entry_price'] = max(p['entry_price'] for p in pair_data['positions'])
+                    else:
+                        pair_data['average_entry_price'] = 0
+                        pair_data['max_entry_price'] = 0
+            
+            # Сохраняем обновленное состояние
+            with open('position_state.json', 'w') as f:
+                json.dump(state, f, indent=2)
+        
+        log_info(f"[CLOSE-ALL] Все позиции закрыты вручную через WebApp (закрыто: {closed_count})")
         
         return {
-            "status": "success",
+            "status": "success" if not errors else "partial",
             "message": f"Закрыто позиций: {closed_count}",
-            "closed_count": closed_count
+            "closed_count": closed_count,
+            "errors": errors if errors else None
         }
     except Exception as e:
         log_error(f"Ошибка закрытия всех позиций: {e}")

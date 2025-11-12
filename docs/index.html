@@ -194,9 +194,12 @@
   <div id="content" class="loader">Загрузка данных...</div>
 
   <div class="controls">
-    <button id="btnStart" class="btn btn-start" onclick="startBot()"><span class="icon icon-play"></span> Запустить</button>
-    <button id="btnStop" class="btn btn-stop" onclick="stopBot()"><span class="icon icon-stop"></span>️ Остановить</button>
-    <button id="btnRefresh" class="btn btn-refresh" onclick="loadData()"><span class="icon icon-refresh"></span></button>
+    <button id="btnStart" class="btn btn-start" onclick="startBot()"><span class="icon icon-play"></span>
+      Запустить</button>
+    <button id="btnStop" class="btn btn-stop" onclick="stopBot()"><span class="icon icon-stop"></span>️
+      Остановить</button>
+    <button id="btnRefresh" class="btn btn-refresh" onclick="loadData()"><span
+        class="icon icon-refresh"></span></button>
   </div>
 
   <script>
@@ -462,18 +465,18 @@
     // Форматирование символа пары с эмодзи и названием
     function formatSymbol(symbol) {
       if (!symbol) return symbol;
-      
+
       // Разделяем пару на части (например: BTC/USDT -> ['BTC', 'USDT'])
       const parts = symbol.split('/');
       if (parts.length !== 2) return symbol;
-      
+
       const [baseCrypto, quoteCrypto] = parts;
       const baseData = cryptoData[baseCrypto];
-      
+
       if (baseData) {
         return `${baseData.emoji} ${symbol} (${baseData.name})`;
       }
-      
+
       return symbol;
     }
 

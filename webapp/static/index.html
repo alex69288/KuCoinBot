@@ -1544,25 +1544,29 @@
         const response = await fetch(`/api/positions?init_data=${encodeURIComponent(getInitData())}`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-        const data = await response.json();
+        const positions = await response.json();
         const container = document.getElementById('positions-list');
 
-        if (!data.positions || data.positions.length === 0) {
+        if (!positions || positions.length === 0) {
           container.innerHTML = '<div class="empty-state"><div class="empty-icon"><span class="icon icon-inbox"></span></div><div>Нет открытых позиций</div></div>';
           return;
         }
 
-        container.innerHTML = data.positions.map(pos => `
+        container.innerHTML = positions.map(pos => `
           <div class="position-card">
             <div class="position-header">
-              <span class="position-symbol">${pos.symbol || 'N/A'}</span>
+              <span class="position-symbol">${pos.pair || 'N/A'}</span>
               <span class="position-pnl ${pos.pnl >= 0 ? 'price-change-positive' : 'price-change-negative'}">
-                ${pos.pnl >= 0 ? '+' : ''}${(pos.pnl || 0).toFixed(2)} USDT
+                ${pos.pnl >= 0 ? '+' : ''}${(pos.pnl || 0).toFixed(2)} USDT (${(pos.pnl_percent || 0).toFixed(2)}%)
               </span>
             </div>
             <div class="info-row">
-              <span class="info-label">Размер</span>
-              <span class="info-value">${(pos.amount || 0).toFixed(6)}</span>
+              <span class="info-label">Размер позиции</span>
+              <span class="info-value">${(pos.position_size_usdt || 0).toFixed(2)} USDT</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Объем крипто</span>
+              <span class="info-value">${(pos.amount || 0).toFixed(8)}</span>
             </div>
             <div class="info-row">
               <span class="info-label">Цена входа</span>

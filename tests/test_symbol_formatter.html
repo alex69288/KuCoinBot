@@ -1,112 +1,121 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-    <meta charset="UTF-8">
-    <title>Тест форматирования символов</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .test-case {
-            background: white;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .test-case h3 {
-            margin: 0 0 10px 0;
-            color: #333;
-        }
-        .input {
-            color: #666;
-            font-weight: bold;
-        }
-        .output {
-            color: #0066cc;
-            font-weight: bold;
-            font-size: 16px;
-            margin-top: 5px;
-        }
-        .pass {
-            color: #4CAF50;
-        }
-        .fail {
-            color: #f44336;
-        }
-        h1 {
-            color: #333;
-            border-bottom: 2px solid #0066cc;
-            padding-bottom: 10px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Тест форматирования символов</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .test-case {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .test-case h3 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+
+    .input {
+      color: #666;
+      font-weight: bold;
+    }
+
+    .output {
+      color: #0066cc;
+      font-weight: bold;
+      font-size: 16px;
+      margin-top: 5px;
+    }
+
+    .pass {
+      color: #4CAF50;
+    }
+
+    .fail {
+      color: #f44336;
+    }
+
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #0066cc;
+      padding-bottom: 10px;
+    }
+  </style>
 </head>
+
 <body>
-    <h1>🧪 Тест форматирования символов криптовалют</h1>
-    
-    <div id="results"></div>
+  <h1>🧪 Тест форматирования символов криптовалют</h1>
 
-    <script>
-        // Копируем функцию из index.html
-        const cryptoData = {
-            'BTC': { emoji: '₿', name: 'Bitcoin' },
-            'ETH': { emoji: 'Ξ', name: 'Ethereum' },
-            'XRP': { emoji: '✕', name: 'Ripple' },
-            'ADA': { emoji: '₳', name: 'Cardano' },
-            'SOL': { emoji: '◎', name: 'Solana' },
-            'DOT': { emoji: '●', name: 'Polkadot' },
-            'USDT': { emoji: '₮', name: 'Tether' },
-            'USDC': { emoji: 'Ⓒ', name: 'USD Coin' },
-            'BNB': { emoji: '⧉', name: 'Binance Coin' },
-            'LINK': { emoji: '⛓', name: 'Chainlink' }
-        };
+  <div id="results"></div>
 
-        function formatSymbol(symbol) {
-            if (!symbol) return symbol;
-            
-            const parts = symbol.split('/');
-            if (parts.length !== 2) return symbol;
-            
-            const [baseCrypto, quoteCrypto] = parts;
-            const baseData = cryptoData[baseCrypto];
-            
-            if (baseData) {
-                return `${baseData.emoji} ${symbol} (${baseData.name})`;
-            }
-            
-            return symbol;
-        }
+  <script>
+    // Копируем функцию из index.html
+    const cryptoData = {
+      'BTC': { emoji: '₿', name: 'Bitcoin' },
+      'ETH': { emoji: 'Ξ', name: 'Ethereum' },
+      'XRP': { emoji: '✕', name: 'Ripple' },
+      'ADA': { emoji: '₳', name: 'Cardano' },
+      'SOL': { emoji: '◎', name: 'Solana' },
+      'DOT': { emoji: '●', name: 'Polkadot' },
+      'USDT': { emoji: '₮', name: 'Tether' },
+      'USDC': { emoji: 'Ⓒ', name: 'USD Coin' },
+      'BNB': { emoji: '⧉', name: 'Binance Coin' },
+      'LINK': { emoji: '⛓', name: 'Chainlink' }
+    };
 
-        // Тестовые случаи
-        const testCases = [
-            { input: 'BTC/USDT', expected: '₿ BTC/USDT (Bitcoin)' },
-            { input: 'ETH/USDT', expected: 'Ξ ETH/USDT (Ethereum)' },
-            { input: 'XRP/USDT', expected: '✕ XRP/USDT (Ripple)' },
-            { input: 'ADA/USDT', expected: '₳ ADA/USDT (Cardano)' },
-            { input: 'SOL/USDT', expected: '◎ SOL/USDT (Solana)' },
-            { input: 'UNKNOWN/USDT', expected: 'UNKNOWN/USDT' },
-            { input: '', expected: '' },
-            { input: null, expected: null }
-        ];
+    function formatSymbol(symbol) {
+      if (!symbol) return symbol;
 
-        // Запуск тестов
-        const resultsDiv = document.getElementById('results');
-        let passCount = 0;
-        let failCount = 0;
+      const parts = symbol.split('/');
+      if (parts.length !== 2) return symbol;
 
-        testCases.forEach(testCase => {
-            const result = formatSymbol(testCase.input);
-            const passed = result === testCase.expected;
-            
-            if (passed) {
-                passCount++;
-            } else {
-                failCount++;
-            }
+      const [baseCrypto, quoteCrypto] = parts;
+      const baseData = cryptoData[baseCrypto];
 
-            const html = `
+      if (baseData) {
+        return `${baseData.emoji} ${symbol} (${baseData.name})`;
+      }
+
+      return symbol;
+    }
+
+    // Тестовые случаи
+    const testCases = [
+      { input: 'BTC/USDT', expected: '₿ BTC/USDT (Bitcoin)' },
+      { input: 'ETH/USDT', expected: 'Ξ ETH/USDT (Ethereum)' },
+      { input: 'XRP/USDT', expected: '✕ XRP/USDT (Ripple)' },
+      { input: 'ADA/USDT', expected: '₳ ADA/USDT (Cardano)' },
+      { input: 'SOL/USDT', expected: '◎ SOL/USDT (Solana)' },
+      { input: 'UNKNOWN/USDT', expected: 'UNKNOWN/USDT' },
+      { input: '', expected: '' },
+      { input: null, expected: null }
+    ];
+
+    // Запуск тестов
+    const resultsDiv = document.getElementById('results');
+    let passCount = 0;
+    let failCount = 0;
+
+    testCases.forEach(testCase => {
+      const result = formatSymbol(testCase.input);
+      const passed = result === testCase.expected;
+
+      if (passed) {
+        passCount++;
+      } else {
+        failCount++;
+      }
+
+      const html = `
                 <div class="test-case">
                     <h3>Тест ${passCount + failCount}: ${passed ? '✅ PASSED' : '❌ FAILED'}</h3>
                     <div class="input">Вход: ${JSON.stringify(testCase.input)}</div>
@@ -114,11 +123,11 @@
                     <div class="output ${passed ? 'pass' : 'fail'}">Получено: ${JSON.stringify(result)}</div>
                 </div>
             `;
-            resultsDiv.innerHTML += html;
-        });
+      resultsDiv.innerHTML += html;
+    });
 
-        // Итоговая статистика
-        const summary = `
+    // Итоговая статистика
+    const summary = `
             <div class="test-case" style="background: ${failCount === 0 ? '#e8f5e9' : '#ffebee'}; border-left: 4px solid ${failCount === 0 ? '#4CAF50' : '#f44336'};">
                 <h3 style="color: ${failCount === 0 ? '#4CAF50' : '#f44336'};">
                     ${failCount === 0 ? '✅ Все тесты пройдены!' : '❌ Некоторые тесты не пройдены'}
@@ -126,7 +135,8 @@
                 <p><strong>Результат:</strong> ${passCount} пройдено, ${failCount} не пройдено из ${passCount + failCount}</p>
             </div>
         `;
-        resultsDiv.innerHTML += summary;
-    </script>
+    resultsDiv.innerHTML += summary;
+  </script>
 </body>
+
 </html>
