@@ -24,6 +24,21 @@ import json
 
 from utils.logger import log_info, log_error
 
+# Импортируем компактные форматы для оптимизации трафика
+try:
+    from webapp.api_compact_responses import (
+        compact_status_response,
+        compact_market_response,
+        compact_positions_response,
+        compact_history_response,
+        compact_settings_response,
+        compact_analytics_response
+    )
+    log_info("[OK] Компактные форматы API загружены для оптимизации трафика v0.1.9")
+except ImportError:
+    log_info("[WARN] Компактные форматы API не доступны, используются полные ответы")
+    compact_status_response = None
+
 # Создаем приложение FastAPI
 app = FastAPI(
     title="KuCoin Trading Bot Web App",
@@ -214,10 +229,17 @@ async def debug_paths():
 
 
 @app.get("/api/status")
-async def get_bot_status(init_data: str = Query(..., description="Telegram Web App init data")):
+async def get_bot_status(
+    init_data: str = Query(..., description="Telegram Web App init data"),
+    compact: int = Query(0, description="Компактный формат ответа (0=полный, 1=компактный)")
+):
     """
     Получить текущий статус бота
     Требует валидные данные Telegram Web App
+    
+    Параметры:
+    - init_data: Данные из Telegram Web App
+    - compact: 1 для компактного формата (-60-70% трафика)
     """
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
@@ -314,10 +336,16 @@ async def get_bot_status(init_data: str = Query(..., description="Telegram Web A
                 positions_info["fee_usdt"] = positions_info["size_usdt"] * 0.004
         
         # Формируем ответ в формате, ожидаемом frontend
-        return {
+        full_response = {
             "positions": positions_info,
             "last_update": datetime.now().isoformat()
         }
+        
+        # 🚀 ОПТИМИЗАЦИЯ: Если запрос компактный - возвращаем сокращенный формат (-60-70% трафика)
+        if compact and compact_status_response:
+            return compact_status_response(full_response)
+        
+        return full_response
     except Exception as e:
         log_error(f"Ошибка получения статуса: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting status: {str(e)}")
@@ -326,10 +354,16 @@ async def get_bot_status(init_data: str = Query(..., description="Telegram Web A
 @app.get("/api/market")
 async def get_market_data(
     init_data: str = Query(..., description="Telegram Web App init data"),
-    symbol: Optional[str] = None
+    symbol: Optional[str] = None,
+    compact: int = Query(0, description="Компактный формат ответа (0=полный, 1=компактный)")
 ):
     """
     Получить данные о рынке для выбранной пары
+    
+    Параметры:
+    - init_data: Данные из Telegram Web App
+    - symbol: Символ торговой пары (если не указан, используется активная пара)
+    - compact: 1 для компактного формата (-60-70% трафика)
     """
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
@@ -440,7 +474,7 @@ async def get_market_data(
             log_info(f"✅ change_24h = {change_24h}% для {symbol} (из /api/market)")
         
         # Формируем ответ в формате, ожидаемом frontend
-        return {
+        full_response = {
             "symbol": symbol,
             "current_price": ticker.get('last', 0),
             "high_24h": ticker.get('high', 0),
@@ -452,6 +486,12 @@ async def get_market_data(
             "ml": ml_info,
             "timestamp": datetime.now().isoformat()
         }
+        
+        # 🚀 ОПТИМИЗАЦИЯ: Если запрос компактный - возвращаем сокращенный формат (-60-70% трафика)
+        if compact and compact_market_response:
+            return compact_market_response(full_response)
+        
+        return full_response
     except HTTPException:
         raise
     except Exception as e:
@@ -504,7 +544,10 @@ async def stop_bot(init_data: str = Body(..., embed=True)):
 
 
 @app.get("/api/settings")
-async def get_settings(init_data: str = Query(...)):
+async def get_settings(
+    init_data: str = Query(...),
+    compact: int = Query(0, description="Компактный формат ответа (0=полный, 1=компактный)")
+):
     """Получить все настройки бота"""
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
@@ -514,12 +557,18 @@ async def get_settings(init_data: str = Query(...)):
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
-        return {
+        full_response = {
             "trading_pairs": trading_bot.settings.trading_pairs,
             "strategy_settings": trading_bot.settings.strategy_settings,
             "risk_settings": trading_bot.settings.risk_settings,
             "ml_settings": trading_bot.settings.ml_settings
         }
+        
+        # 🚀 ОПТИМИЗАЦИЯ: Если запрос компактный - возвращаем сокращенный формат (-60-70% трафика)
+        if compact and compact_settings_response:
+            return compact_settings_response(full_response)
+        
+        return full_response
     except Exception as e:
         log_error(f"Ошибка получения настроек: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting settings: {str(e)}")
@@ -605,7 +654,10 @@ async def get_trades(
 
 
 @app.get("/api/positions")
-async def get_positions(init_data: str = Query(...)):
+async def get_positions(
+    init_data: str = Query(...),
+    compact: int = Query(0, description="Компактный формат ответа (0=полный, 1=компактный)")
+):
     """Получить все открытые позиции из файла состояния"""
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
@@ -686,7 +738,12 @@ async def get_positions(init_data: str = Query(...)):
             except Exception as e:
                 log_error(f"Ошибка получения текущей позиции: {e}")
         
-        return positions
+        # 🚀 ОПТИМИЗАЦИЯ: Если запрос компактный - возвращаем сокращенный формат (-60-70% трафика)
+        full_response = positions
+        if compact and compact_positions_response:
+            return compact_positions_response(full_response)
+        
+        return full_response
     except Exception as e:
         log_error(f"Ошибка получения позиций: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting positions: {str(e)}")
@@ -874,7 +931,10 @@ async def close_all_positions(init_data: str = Body(..., embed=True)):
 
 
 @app.get("/api/analytics")
-async def get_analytics(init_data: str = Query(...)):
+async def get_analytics(
+    init_data: str = Query(...),
+    compact: int = Query(0, description="Компактный формат ответа (0=полный, 1=компактный)")
+):
     """Получить аналитику и статистику"""
     if not trading_bot:
         raise HTTPException(status_code=503, detail="Bot not initialized")
@@ -933,7 +993,7 @@ async def get_analytics(init_data: str = Query(...)):
                 today_pnls = [t.get('pnl', 0) for t in today_trades]
                 today_stats["best_trade"] = max(today_pnls) if today_pnls else 0
         
-        return {
+        full_response = {
             "total_trades": total_trades,
             "profitable_trades": winning_trades,
             "losing_trades": losing_trades,
@@ -951,6 +1011,12 @@ async def get_analytics(init_data: str = Query(...)):
             },
             "timestamp": datetime.now().isoformat()
         }
+        
+        # 🚀 ОПТИМИЗАЦИЯ: Если запрос компактный - возвращаем сокращенный формат (-60-70% трафика)
+        if compact and compact_analytics_response:
+            return compact_analytics_response(full_response)
+        
+        return full_response
     except Exception as e:
         log_error(f"Ошибка получения аналитики: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting analytics: {str(e)}")
@@ -1359,7 +1425,8 @@ async def update_notification_settings(
 @app.get("/api/trade-history")
 async def get_trade_history(
     init_data: str = Query(...),
-    limit: int = Query(10, ge=1, le=50)
+    limit: int = Query(10, ge=1, le=50),
+    compact: int = Query(0, description="Компактный формат ответа (0=полный, 1=компактный)")
 ):
     """Получить историю сделок (упрощенная версия)"""
     if not trading_bot:
@@ -1375,7 +1442,12 @@ async def get_trade_history(
         if hasattr(trading_bot.metrics, 'trades_history'):
             history = trading_bot.metrics.trades_history[-limit:]
         
-        return history
+        # 🚀 ОПТИМИЗАЦИЯ: Если запрос компактный - возвращаем сокращенный формат (-60-70% трафика)
+        full_response = history
+        if compact and compact_history_response:
+            return compact_history_response(full_response)
+        
+        return full_response
     except Exception as e:
         log_error(f"Ошибка получения истории сделок: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting trade history: {str(e)}")

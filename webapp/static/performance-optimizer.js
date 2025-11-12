@@ -31,7 +31,7 @@ class PerformanceOptimizer {
    */
   async init() {
     console.log('[Perf] 🚀 Инициализация оптимизированной загрузки');
-    
+
     // 1️⃣ Параллельно запускаем WebSocket и критичные данные
     await Promise.race([
       this.startWebSocketEarly(),
@@ -106,8 +106,8 @@ class PerformanceOptimizer {
     console.log('[Perf] 💓 Запускаю проверку здоровья WebSocket');
 
     this.webSocketHealthCheckInterval = setInterval(() => {
-      const isHealthy = window.wsConnection && 
-                        window.wsConnection.readyState === WebSocket.OPEN;
+      const isHealthy = window.wsConnection &&
+        window.wsConnection.readyState === WebSocket.OPEN;
 
       if (isHealthy && !this.webSocketHealthy) {
         // WebSocket восстановился - отключаем polling
@@ -251,7 +251,7 @@ class PerformanceOptimizer {
       const db = await this.openDB();
       const tx = db.transaction('cache', 'readonly');
       const store = tx.objectStore('cache');
-      
+
       return new Promise((resolve) => {
         const req = store.get(key);
         req.onsuccess = () => {
@@ -354,42 +354,42 @@ class PerformanceOptimizer {
 
   async fetchStatus() {
     const initData = window.Telegram?.WebApp?.initData || '';
-    const res = await fetch(`/api/status?init_data=${encodeURIComponent(initData)}`);
+    const res = await fetch(`/api/status?init_data=${encodeURIComponent(initData)}&compact=1`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
 
   async fetchMarket() {
     const initData = window.Telegram?.WebApp?.initData || '';
-    const res = await fetch(`/api/market?init_data=${encodeURIComponent(initData)}`);
+    const res = await fetch(`/api/market?init_data=${encodeURIComponent(initData)}&compact=1`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
 
   async fetchPositions() {
     const initData = window.Telegram?.WebApp?.initData || '';
-    const res = await fetch(`/api/positions?init_data=${encodeURIComponent(initData)}`);
+    const res = await fetch(`/api/positions?init_data=${encodeURIComponent(initData)}&compact=1`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
 
   async fetchTradeHistory() {
     const initData = window.Telegram?.WebApp?.initData || '';
-    const res = await fetch(`/api/trade-history?init_data=${encodeURIComponent(initData)}&limit=20`);
+    const res = await fetch(`/api/trade-history?init_data=${encodeURIComponent(initData)}&limit=20&compact=1`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
 
   async fetchSettings() {
     const initData = window.Telegram?.WebApp?.initData || '';
-    const res = await fetch(`/api/settings?init_data=${encodeURIComponent(initData)}`);
+    const res = await fetch(`/api/settings?init_data=${encodeURIComponent(initData)}&compact=1`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
 
   async fetchAnalytics() {
     const initData = window.Telegram?.WebApp?.initData || '';
-    const res = await fetch(`/api/analytics?init_data=${encodeURIComponent(initData)}`);
+    const res = await fetch(`/api/analytics?init_data=${encodeURIComponent(initData)}&compact=1`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
