@@ -10,6 +10,8 @@
   <!-- Preload критичных ресурсов для быстрой загрузки -->
   <link rel="preload" href="/static/icons.svg" as="image" type="image/svg+xml">
   <link rel="stylesheet" href="/static/icons.css">
+  <!-- Загружаем оптимизатор ОЧЕНЬ РАНО, до telegram.org/js -->
+  <script src="/static/performance-optimizer.js" defer></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * {
@@ -712,6 +714,7 @@
       from {
         opacity: 0;
       }
+
       to {
         opacity: 1;
       }
@@ -722,6 +725,7 @@
         transform: translateY(50px);
         opacity: 0;
       }
+
       to {
         transform: translateY(0);
         opacity: 1;
@@ -737,6 +741,7 @@
 
     /* Автопрокрутка при фокусе (для мобильных устройств) */
     @media (max-width: 768px) {
+
       .form-input:focus,
       .form-select:focus {
         scroll-margin-top: 100px;
@@ -1015,7 +1020,8 @@
         </div>
         <div class="form-group" style="margin-left: 16px; margin-top: -8px;">
           <label class="form-label" style="font-size: 12px;">Порог уведомления (%)</label>
-          <input type="number" id="tp-approach-threshold" class="form-input" value="0.01" min="0.01" max="1" step="0.01" style="padding: 8px;">
+          <input type="number" id="tp-approach-threshold" class="form-input" value="0.01" min="0.01" max="1" step="0.01"
+            style="padding: 8px;">
         </div>
         <div class="form-switch">
           <span class="form-label">О достижении Stop Loss</span>
@@ -1033,7 +1039,8 @@
         </div>
         <div class="form-group" style="margin-left: 16px; margin-top: -8px;">
           <label class="form-label" style="font-size: 12px;">Порог изменения (%)</label>
-          <input type="number" id="price-change-threshold" class="form-input" value="5" min="1" max="20" step="1" style="padding: 8px;">
+          <input type="number" id="price-change-threshold" class="form-input" value="5" min="1" max="20" step="1"
+            style="padding: 8px;">
         </div>
         <div class="form-switch">
           <span class="form-label">О сигналах стратегии</span>
@@ -1646,14 +1653,14 @@
         // Данные за сегодня
         if (data.today) {
           document.getElementById('today-trades').textContent = data.today.trades || 0;
-          
+
           const todayPnl = data.today.pnl || 0;
           const todayPnlElement = document.getElementById('today-pnl');
           todayPnlElement.textContent = `${todayPnl >= 0 ? '+' : ''}${todayPnl.toFixed(2)} USDT`;
           todayPnlElement.className = `stat-value ${todayPnl >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
-          
+
           document.getElementById('today-win-rate').textContent = `${(data.today.win_rate || 0).toFixed(1)}%`;
-          
+
           const todayBest = data.today.best_trade || 0;
           const todayBestElement = document.getElementById('today-best');
           todayBestElement.textContent = `${todayBest >= 0 ? '+' : ''}${todayBest.toFixed(2)} USDT`;
@@ -1688,13 +1695,13 @@
       document.getElementById('modal-title').textContent = title;
       document.getElementById('modal-message').textContent = message;
       confirmModalCallback = onConfirm;
-      
+
       const confirmBtn = document.getElementById('modal-confirm-btn');
       confirmBtn.onclick = () => {
         if (confirmModalCallback) confirmModalCallback();
         closeConfirmModal();
       };
-      
+
       modal.classList.add('show');
     }
 
@@ -1708,7 +1715,7 @@
     async function toggleTrading() {
       const checkbox = document.getElementById('trading-enabled');
       const statusText = document.getElementById('trading-status-text');
-      
+
       try {
         if (checkbox.checked) {
           // Запускаем торговлю
@@ -1759,7 +1766,7 @@
       const savedStatus = localStorage.getItem('trading_enabled');
       const checkbox = document.getElementById('trading-enabled');
       const statusText = document.getElementById('trading-status-text');
-      
+
       if (savedStatus === 'true') {
         checkbox.checked = true;
         statusText.textContent = 'Запущена';
@@ -2076,8 +2083,8 @@
         await fetch('/api/settings/trading', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            init_data: getInitData(), 
+          body: JSON.stringify({
+            init_data: getInitData(),
             settings: { active_pair: pair }
           })
         });
@@ -2086,8 +2093,8 @@
         await fetch('/api/settings/trading', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            init_data: getInitData(), 
+          body: JSON.stringify({
+            init_data: getInitData(),
             settings: { active_strategy: strategy }
           })
         });
@@ -2096,8 +2103,8 @@
         await fetch('/api/settings/trading', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            init_data: getInitData(), 
+          body: JSON.stringify({
+            init_data: getInitData(),
             settings: { trade_amount_percent: positionSize / 100 }
           })
         });
@@ -2501,16 +2508,16 @@
     document.addEventListener('DOMContentLoaded', () => {
       // Находим все input и select элементы
       const inputs = document.querySelectorAll('.form-input, .form-select');
-      
+
       inputs.forEach(input => {
         input.addEventListener('focus', (e) => {
           // Небольшая задержка для корректной работы на Android
           setTimeout(() => {
             // Прокручиваем элемент в видимую область
-            e.target.scrollIntoView({ 
-              behavior: 'smooth', 
+            e.target.scrollIntoView({
+              behavior: 'smooth',
               block: 'center',
-              inline: 'nearest' 
+              inline: 'nearest'
             });
           }, 300);
         });
