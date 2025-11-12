@@ -430,16 +430,16 @@ async def get_market_data(
         except Exception as e:
             log_error(f"Ошибка получения ML прогноза: {e}")
         
-            # Получаем изменение за 24 часа (биржа возвращает его в процентах)
-            change_24h = ticker.get('change', 0)
-            
-            # 🔍 DEBUG: Логируем значение для отладки
-            if change_24h == 0:
-                log_info(f"⚠️ change_24h = 0 для {symbol}. Ticker data: {ticker}")
-            else:
-                log_info(f"✅ change_24h = {change_24h}% для {symbol} (из /api/market)")
-            
-            # Формируем ответ в формате, ожидаемом frontend
+        # Получаем изменение за 24 часа (биржа возвращает его в процентах)
+        change_24h = ticker.get('change', 0)
+        
+        # 🔍 DEBUG: Логируем значение для отладки
+        if change_24h == 0:
+            log_info(f"⚠️ change_24h = 0 для {symbol}. Ticker data: {ticker}")
+        else:
+            log_info(f"✅ change_24h = {change_24h}% для {symbol} (из /api/market)")
+        
+        # Формируем ответ в формате, ожидаемом frontend
         return {
             "symbol": symbol,
             "current_price": ticker.get('last', 0),
@@ -1532,10 +1532,9 @@ class ConnectionManager:
             # Добавляем ML данные если доступны
             try:
                 if hasattr(trading_bot, 'ml_model') and trading_bot.ml_model:
-                    # Получаем предсказание ML модели
-                    features = trading_bot.ml_model.get_features(symbol)
-                    if features is not None:
-                        prediction = trading_bot.ml_model.predict_signal(features)
+                    # Используем последний прогноз если доступен
+                    if hasattr(trading_bot, 'last_ml_prediction'):
+                        prediction = trading_bot.last_ml_prediction or 0.5
                         data["ml"] = {
                             "prediction": float(prediction),
                         }
@@ -1544,16 +1543,20 @@ class ConnectionManager:
             
             # Добавляем данные о позициях
             try:
-                positions = trading_bot.risk_manager.get_open_positions()
-                if positions:
-                    total_pnl = sum(p.get('pnl', 0) for p in positions)
-                    total_pnl_percent = sum(p.get('pnl_percent', 0) for p in positions) / len(positions)
+                import os
+                from utils.position_manager import load_position_state
+                
+                state = load_position_state('position_state.json')
+                if state:
+                    total_positions = 0
+                    for pair_symbol, pair_data in state.items():
+                        if isinstance(pair_data, dict) and 'positions' in pair_data:
+                            total_positions += len(pair_data.get('positions', []))
                     
-                    data["positions"] = {
-                        "open_count": len(positions),
-                        "current_profit_percent": total_pnl_percent,
-                        "current_profit_usdt": total_pnl
-                    }
+                    if total_positions > 0:
+                        data["positions"] = {
+                            "open_count": total_positions
+                        }
             except Exception as e:
                 log_error(f"[WS] Ошибка получения позиций: {e}")
             
