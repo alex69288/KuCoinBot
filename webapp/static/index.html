@@ -972,26 +972,79 @@
       <div class="card">
         <div class="card-title"><span class="icon icon-wrench"></span> Общие настройки</div>
         <div class="form-switch">
-          <span class="form-label">Демо режим</span>
+          <div>
+            <span class="form-label">Демо режим</span>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+              Симуляция торговли без реальных сделок
+            </div>
+          </div>
           <label class="switch">
             <input type="checkbox" id="demo-mode" onchange="toggleDemoMode()">
             <span class="slider"></span>
           </label>
         </div>
         <div class="form-switch">
-          <span class="form-label">Trailing Stop</span>
+          <div>
+            <span class="form-label">Trailing Stop</span>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+              Автоматическое следование за ценой при прибыли
+            </div>
+          </div>
           <label class="switch">
             <input type="checkbox" id="trailing-stop" onchange="toggleTrailingStop()">
             <span class="slider"></span>
           </label>
         </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon icon-bell"></span> Уведомления</div>
         <div class="form-switch">
-          <span class="form-label">Уведомления о цене</span>
+          <span class="form-label">О совершенных операциях</span>
           <label class="switch">
-            <input type="checkbox" id="price-updates" onchange="togglePriceUpdates()">
+            <input type="checkbox" id="notify-trades" checked onchange="toggleNotifyTrades()">
             <span class="slider"></span>
           </label>
         </div>
+        <div class="form-switch">
+          <span class="form-label">О приближении к Take Profit</span>
+          <label class="switch">
+            <input type="checkbox" id="notify-tp-approach" onchange="toggleNotifyTPApproach()">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="form-group" style="margin-left: 16px; margin-top: -8px;">
+          <label class="form-label" style="font-size: 12px;">Порог уведомления (%)</label>
+          <input type="number" id="tp-approach-threshold" class="form-input" value="0.01" min="0.01" max="1" step="0.01" style="padding: 8px;">
+        </div>
+        <div class="form-switch">
+          <span class="form-label">О достижении Stop Loss</span>
+          <label class="switch">
+            <input type="checkbox" id="notify-stop-loss" checked onchange="toggleNotifyStopLoss()">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="form-switch">
+          <span class="form-label">О крупных изменениях цены</span>
+          <label class="switch">
+            <input type="checkbox" id="notify-price-changes" onchange="toggleNotifyPriceChanges()">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="form-group" style="margin-left: 16px; margin-top: -8px;">
+          <label class="form-label" style="font-size: 12px;">Порог изменения (%)</label>
+          <input type="number" id="price-change-threshold" class="form-input" value="5" min="1" max="20" step="1" style="padding: 8px;">
+        </div>
+        <div class="form-switch">
+          <span class="form-label">О сигналах стратегии</span>
+          <label class="switch">
+            <input type="checkbox" id="notify-signals" onchange="toggleNotifySignals()">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <button class="btn btn-success" onclick="saveNotificationSettings()">
+          <span><span class="icon icon-save"></span></span> Сохранить настройки уведомлений
+        </button>
       </div>
     </div>
 
@@ -1017,22 +1070,47 @@
 
     <!-- Вкладка: Аналитика -->
     <div id="tab-analytics" class="tab-content">
-      <div class="stat-grid">
-        <div class="stat-item">
-          <div class="stat-label">Всего сделок</div>
-          <div id="total-trades" class="stat-value">0</div>
+      <div class="card">
+        <div class="card-title"><span class="icon icon-chart"></span> Сегодня</div>
+        <div class="stat-grid" style="margin-bottom: 0;">
+          <div class="stat-item">
+            <div class="stat-label">Сделок</div>
+            <div id="today-trades" class="stat-value">0</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">P&L</div>
+            <div id="today-pnl" class="stat-value">0 USDT</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Win Rate</div>
+            <div id="today-win-rate" class="stat-value">0%</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Лучшая</div>
+            <div id="today-best" class="stat-value">0 USDT</div>
+          </div>
         </div>
-        <div class="stat-item">
-          <div class="stat-label">Прибыльных</div>
-          <div id="profitable-trades" class="stat-value">0</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Win Rate</div>
-          <div id="win-rate" class="stat-value">0%</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Общий P&L</div>
-          <div id="total-pnl" class="stat-value">0 USDT</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon icon-chart"></span> Общая статистика</div>
+        <div class="stat-grid" style="margin-bottom: 0;">
+          <div class="stat-item">
+            <div class="stat-label">Всего сделок</div>
+            <div id="total-trades" class="stat-value">0</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Прибыльных</div>
+            <div id="profitable-trades" class="stat-value">0</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Win Rate</div>
+            <div id="win-rate" class="stat-value">0%</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Общий P&L</div>
+            <div id="total-pnl" class="stat-value">0 USDT</div>
+          </div>
         </div>
       </div>
 
@@ -1561,6 +1639,24 @@
 
         const data = await response.json();
 
+        // Данные за сегодня
+        if (data.today) {
+          document.getElementById('today-trades').textContent = data.today.trades || 0;
+          
+          const todayPnl = data.today.pnl || 0;
+          const todayPnlElement = document.getElementById('today-pnl');
+          todayPnlElement.textContent = `${todayPnl >= 0 ? '+' : ''}${todayPnl.toFixed(2)} USDT`;
+          todayPnlElement.className = `stat-value ${todayPnl >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
+          
+          document.getElementById('today-win-rate').textContent = `${(data.today.win_rate || 0).toFixed(1)}%`;
+          
+          const todayBest = data.today.best_trade || 0;
+          const todayBestElement = document.getElementById('today-best');
+          todayBestElement.textContent = `${todayBest >= 0 ? '+' : ''}${todayBest.toFixed(2)} USDT`;
+          todayBestElement.className = `stat-value ${todayBest >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
+        }
+
+        // Общая статистика
         document.getElementById('total-trades').textContent = data.total_trades || 0;
         document.getElementById('profitable-trades').textContent = data.profitable_trades || 0;
         document.getElementById('win-rate').textContent = `${(data.win_rate || 0).toFixed(1)}%`;
@@ -1570,6 +1666,7 @@
         totalPnlElement.textContent = `${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)} USDT`;
         totalPnlElement.className = `stat-value ${totalPnl >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
 
+        // Детальная статистика
         document.getElementById('avg-profit').textContent = `${(data.avg_profit || 0).toFixed(2)} USDT`;
         document.getElementById('avg-loss').textContent = `${(data.avg_loss || 0).toFixed(2)} USDT`;
         document.getElementById('max-profit').textContent = `${(data.max_profit || 0).toFixed(2)} USDT`;
@@ -1814,16 +1911,82 @@
     async function toggleDemoMode() {
       const enabled = document.getElementById('demo-mode').checked;
       await updateGeneralSettings({ demo_mode: enabled });
+      if (enabled) {
+        showNotification('⚠️ Демо режим включен - сделки не будут реальными');
+      }
     }
 
     async function toggleTrailingStop() {
       const enabled = document.getElementById('trailing-stop').checked;
       await updateGeneralSettings({ trailing_stop: enabled });
+      if (enabled) {
+        showNotification('📈 Trailing Stop включен - Stop Loss будет следовать за ценой');
+      }
     }
 
-    async function togglePriceUpdates() {
-      const enabled = document.getElementById('price-updates').checked;
-      await updateGeneralSettings({ enable_price_updates: enabled });
+    // ============= УВЕДОМЛЕНИЯ =============
+    async function toggleNotifyTrades() {
+      const enabled = document.getElementById('notify-trades').checked;
+      await updateNotificationSettings({ notify_trades: enabled });
+    }
+
+    async function toggleNotifyTPApproach() {
+      const enabled = document.getElementById('notify-tp-approach').checked;
+      await updateNotificationSettings({ notify_tp_approach: enabled });
+    }
+
+    async function toggleNotifyStopLoss() {
+      const enabled = document.getElementById('notify-stop-loss').checked;
+      await updateNotificationSettings({ notify_stop_loss: enabled });
+    }
+
+    async function toggleNotifyPriceChanges() {
+      const enabled = document.getElementById('notify-price-changes').checked;
+      await updateNotificationSettings({ notify_price_changes: enabled });
+    }
+
+    async function toggleNotifySignals() {
+      const enabled = document.getElementById('notify-signals').checked;
+      await updateNotificationSettings({ notify_signals: enabled });
+    }
+
+    async function saveNotificationSettings() {
+      try {
+        const settings = {
+          notify_trades: document.getElementById('notify-trades').checked,
+          notify_tp_approach: document.getElementById('notify-tp-approach').checked,
+          tp_approach_threshold: parseFloat(document.getElementById('tp-approach-threshold').value),
+          notify_stop_loss: document.getElementById('notify-stop-loss').checked,
+          notify_price_changes: document.getElementById('notify-price-changes').checked,
+          price_change_threshold: parseFloat(document.getElementById('price-change-threshold').value),
+          notify_signals: document.getElementById('notify-signals').checked
+        };
+
+        await updateNotificationSettings(settings);
+        showNotification('✅ Настройки уведомлений сохранены');
+      } catch (error) {
+        console.error('Ошибка сохранения настроек уведомлений:', error);
+        showNotification('❌ Ошибка сохранения');
+      }
+    }
+
+    async function updateNotificationSettings(settings) {
+      try {
+        const response = await fetch('/api/settings/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: getInitData(), settings })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          console.log('✅ Настройки уведомлений обновлены');
+        } else {
+          console.warn('⚠️ Ошибка обновления настроек уведомлений');
+        }
+      } catch (error) {
+        console.error('Ошибка обновления настроек уведомлений:', error);
+      }
     }
 
     async function updateGeneralSettings(settings) {

@@ -671,17 +671,41 @@ async def get_analytics(init_data: str = Query(...)):
             if losing_trades_list:
                 avg_loss = sum(t['pnl'] for t in losing_trades_list) / len(losing_trades_list)
         
+        # Статистика за сегодня
+        today_stats = {"trades": 0, "pnl": 0, "win_rate": 0, "best_trade": 0}
+        
+        if hasattr(metrics, 'trades_history') and metrics.trades_history:
+            from datetime import date
+            today = date.today()
+            today_trades = [
+                t for t in metrics.trades_history 
+                if 'timestamp' in t and t['timestamp'].startswith(today.isoformat())
+            ]
+            
+            if today_trades:
+                today_stats["trades"] = len(today_trades)
+                today_stats["pnl"] = sum(t.get('pnl', 0) for t in today_trades)
+                today_winning = len([t for t in today_trades if t.get('pnl', 0) > 0])
+                today_stats["win_rate"] = (today_winning / len(today_trades) * 100) if today_trades else 0
+                today_pnls = [t.get('pnl', 0) for t in today_trades]
+                today_stats["best_trade"] = max(today_pnls) if today_pnls else 0
+        
         return {
             "total_trades": total_trades,
-            "winning_trades": winning_trades,
+            "profitable_trades": winning_trades,
             "losing_trades": losing_trades,
             "win_rate": round(win_rate, 2),
-            "total_profit": round(total_profit, 2),
-            "avg_profit": round(avg_profit, 2),
-            "avg_win": round(avg_win, 2),
+            "total_pnl": round(total_profit, 2),
+            "avg_profit": round(avg_win, 2),
             "avg_loss": round(avg_loss, 2),
-            "max_win": round(max_win, 2),
+            "max_profit": round(max_win, 2),
             "max_loss": round(max_loss, 2),
+            "today": {
+                "trades": today_stats["trades"],
+                "pnl": round(today_stats["pnl"], 2),
+                "win_rate": round(today_stats["win_rate"], 2),
+                "best_trade": round(today_stats["best_trade"], 2)
+            },
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
@@ -1012,6 +1036,81 @@ async def update_general_settings(
     except Exception as e:
         log_error(f"Ошибка обновления общих настроек: {e}")
         raise HTTPException(status_code=500, detail=f"Error updating general settings: {str(e)}")
+
+
+class NotificationSettingsUpdate(BaseModel):
+    """Модель для обновления настроек уведомлений"""
+    notify_trades: Optional[bool] = None
+    notify_tp_approach: Optional[bool] = None
+    tp_approach_threshold: Optional[float] = None
+    notify_stop_loss: Optional[bool] = None
+    notify_price_changes: Optional[bool] = None
+    price_change_threshold: Optional[float] = None
+    notify_signals: Optional[bool] = None
+
+
+@app.post("/api/settings/notifications")
+async def update_notification_settings(
+    init_data: str = Body(...),
+    settings: NotificationSettingsUpdate = Body(...)
+):
+    """Обновить настройки уведомлений"""
+    if not trading_bot:
+        raise HTTPException(status_code=503, detail="Bot not initialized")
+    
+    bot_token = _get_bot_token()
+    if not bot_token or not verify_telegram_webapp_data(init_data, bot_token):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
+    
+    try:
+        # Создаем раздел для настроек уведомлений, если его нет
+        if 'notification_settings' not in trading_bot.settings.settings:
+            trading_bot.settings.settings['notification_settings'] = {}
+        
+        notifications = trading_bot.settings.settings['notification_settings']
+        updated = []
+        
+        if settings.notify_trades is not None:
+            notifications['notify_trades'] = settings.notify_trades
+            updated.append(f"Уведомления о сделках: {'включены' if settings.notify_trades else 'выключены'}")
+        
+        if settings.notify_tp_approach is not None:
+            notifications['notify_tp_approach'] = settings.notify_tp_approach
+            updated.append(f"Уведомления о TP: {'включены' if settings.notify_tp_approach else 'выключены'}")
+        
+        if settings.tp_approach_threshold is not None:
+            notifications['tp_approach_threshold'] = settings.tp_approach_threshold
+            updated.append(f"Порог TP: {settings.tp_approach_threshold}%")
+        
+        if settings.notify_stop_loss is not None:
+            notifications['notify_stop_loss'] = settings.notify_stop_loss
+            updated.append(f"Уведомления о SL: {'включены' if settings.notify_stop_loss else 'выключены'}")
+        
+        if settings.notify_price_changes is not None:
+            notifications['notify_price_changes'] = settings.notify_price_changes
+            updated.append(f"Уведомления о цене: {'включены' if settings.notify_price_changes else 'выключены'}")
+        
+        if settings.price_change_threshold is not None:
+            notifications['price_change_threshold'] = settings.price_change_threshold
+            updated.append(f"Порог цены: {settings.price_change_threshold}%")
+        
+        if settings.notify_signals is not None:
+            notifications['notify_signals'] = settings.notify_signals
+            updated.append(f"Уведомления о сигналах: {'включены' if settings.notify_signals else 'выключены'}")
+        
+        # Сохраняем настройки
+        trading_bot.settings.save_settings()
+        
+        log_info(f"🔔 Настройки уведомлений обновлены через WebApp: {', '.join(updated)}")
+        
+        return {
+            "status": "success",
+            "message": "Настройки уведомлений обновлены",
+            "updated": updated
+        }
+    except Exception as e:
+        log_error(f"Ошибка обновления настроек уведомлений: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating notification settings: {str(e)}")
 
 
 @app.get("/api/trade-history")
