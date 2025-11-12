@@ -313,27 +313,55 @@ async def get_market_data(
             "text": "BBEPX",
             "percent": 0
         }
-        
+
         try:
-            # Получаем активную стратегию
+            latest_market = getattr(trading_bot, 'latest_market_data', None)
             strategy = getattr(trading_bot, 'strategy', None)
-            if strategy and hasattr(strategy, 'ema_fast') and hasattr(strategy, 'ema_slow'):
-                ema_fast = strategy.ema_fast
-                ema_slow = strategy.ema_slow
-                if ema_fast and ema_slow:
-                    ema_diff = ((ema_fast - ema_slow) / ema_slow) * 100
-                    ema_info["percent"] = ema_diff
-                    
-                    threshold = trading_bot.settings.strategy_settings.get('ema_threshold', 0.25)
-                    if ema_diff > threshold:
-                        ema_info["signal"] = "buy"
-                        ema_info["text"] = "BBEPX"
-                    elif ema_diff < -threshold:
-                        ema_info["signal"] = "sell"
-                        ema_info["text"] = "НИЖЕ"
-                    else:
-                        ema_info["signal"] = "wait"
-                        ema_info["text"] = "НЕЙТРАЛЬНО"
+
+            ema_fast = None
+            ema_slow = None
+            ema_diff = None
+
+            if latest_market:
+                ema_fast = latest_market.get('fast_ema')
+                ema_slow = latest_market.get('slow_ema')
+                ema_diff = latest_market.get('ema_diff_percent')
+                if ema_diff is not None:
+                    ema_diff *= 100
+
+            # Если данных из последнего цикла нет, пробуем взять из стратегии
+            if ema_fast is None and strategy and hasattr(strategy, 'ema_fast'):
+                ema_fast = getattr(strategy, 'ema_fast', None)
+            if ema_slow is None and strategy and hasattr(strategy, 'ema_slow'):
+                ema_slow = getattr(strategy, 'ema_slow', None)
+            if ema_diff is None and strategy and hasattr(strategy, 'ema_diff_percent'):
+                ema_diff = getattr(strategy, 'ema_diff_percent', None)
+                if ema_diff is not None:
+                    ema_diff *= 100
+
+            if ema_fast and ema_slow and ema_diff is not None:
+                ema_info["percent"] = ema_diff
+
+                threshold = None
+                if strategy and hasattr(strategy, 'settings'):
+                    threshold = strategy.settings.get('ema_threshold')
+                if threshold is None:
+                    threshold = trading_bot.settings.strategy_settings.get('ema_threshold')
+                if threshold is None:
+                    threshold = trading_bot.settings.settings.get('ema_cross_threshold', 0.005)
+                if threshold > 1:
+                    threshold = threshold / 100
+                threshold_percent = threshold * 100
+
+                if ema_diff > threshold_percent:
+                    ema_info["signal"] = "buy"
+                    ema_info["text"] = "BBEPX"
+                elif ema_diff < -threshold_percent:
+                    ema_info["signal"] = "sell"
+                    ema_info["text"] = "НИЖЕ"
+                else:
+                    ema_info["signal"] = "wait"
+                    ema_info["text"] = "НЕЙТРАЛЬНО"
         except Exception as e:
             log_error(f"Ошибка получения EMA: {e}")
         
@@ -360,14 +388,16 @@ async def get_market_data(
         except Exception as e:
             log_error(f"Ошибка получения ML прогноза: {e}")
         
-        # Получаем изменение за 24 часа (биржа возвращает его в процентах)
-        change_24h = ticker.get('change', 0)
-        
-        # 🔍 DEBUG: Логируем значение для отладки
-        if change_24h == 0:
-            log_info(f"⚠️ change_24h = 0 для {symbol}. Ticker data: {ticker}")
-        
-        # Формируем ответ в формате, ожидаемом frontend
+            # Получаем изменение за 24 часа (биржа возвращает его в процентах)
+            change_24h = ticker.get('change', 0)
+            
+            # 🔍 DEBUG: Логируем значение для отладки
+            if change_24h == 0:
+                log_info(f"⚠️ change_24h = 0 для {symbol}. Ticker data: {ticker}")
+            else:
+                log_info(f"✅ change_24h = {change_24h}% для {symbol} (из /api/market)")
+            
+            # Формируем ответ в формате, ожидаемом frontend
         return {
             "symbol": symbol,
             "current_price": ticker.get('last', 0),
@@ -1221,7 +1251,12 @@ class ConnectionManager:
             # Получаем данные о рынке
             ticker = trading_bot.exchange.get_ticker(symbol)
             if not ticker:
+                log_error(f"[WS] Не удалось получить ticker для {symbol}")
                 return None
+            
+            # 🔍 DEBUG: Логируем значение change для отладки
+            change_24h = ticker.get('change', 0)
+            log_info(f"[WS] Получены данные: symbol={symbol}, change_24h={change_24h}, ticker_keys={list(ticker.keys())}")
             
             # Формируем данные
             data = {
@@ -1230,31 +1265,58 @@ class ConnectionManager:
                 "market": {
                     "symbol": symbol,
                     "current_price": ticker.get('last', 0),
-                    "change_24h": ticker.get('percentage', 0)
+                    "change_24h": ticker.get('change', 0)  # Используем 'change', как возвращает get_ticker()
                 }
             }
             
             # Добавляем EMA данные если доступны
             try:
+                latest_market = getattr(trading_bot, 'latest_market_data', None)
                 strategy = getattr(trading_bot, 'strategy', None)
-                if strategy and hasattr(strategy, 'ema_fast') and hasattr(strategy, 'ema_slow'):
-                    ema_fast = strategy.ema_fast
-                    ema_slow = strategy.ema_slow
-                    if ema_fast and ema_slow:
-                        ema_diff = ((ema_fast - ema_slow) / ema_slow) * 100
-                        threshold = trading_bot.settings.strategy_settings.get('ema_threshold', 0.25)
-                        
-                        signal = "wait"
-                        if ema_diff > threshold:
-                            signal = "buy"
-                        elif ema_diff < -threshold:
-                            signal = "sell"
-                        
-                        data["ema"] = {
-                            "signal": signal,
-                            "percent": ema_diff,
-                            "text": "ВВЕРХ" if signal == "buy" else "ВНИЗ" if signal == "sell" else "НЕЙТРАЛЬНО"
-                        }
+
+                ema_fast = None
+                ema_slow = None
+                ema_diff = None
+
+                if latest_market:
+                    ema_fast = latest_market.get('fast_ema')
+                    ema_slow = latest_market.get('slow_ema')
+                    ema_diff = latest_market.get('ema_diff_percent')
+                    if ema_diff is not None:
+                        ema_diff *= 100
+
+                if ema_fast is None and strategy and hasattr(strategy, 'ema_fast'):
+                    ema_fast = getattr(strategy, 'ema_fast', None)
+                if ema_slow is None and strategy and hasattr(strategy, 'ema_slow'):
+                    ema_slow = getattr(strategy, 'ema_slow', None)
+                if ema_diff is None and strategy and hasattr(strategy, 'ema_diff_percent'):
+                    ema_diff = getattr(strategy, 'ema_diff_percent', None)
+                    if ema_diff is not None:
+                        ema_diff *= 100
+
+                if ema_fast and ema_slow and ema_diff is not None:
+                    threshold = None
+                    if strategy and hasattr(strategy, 'settings'):
+                        threshold = strategy.settings.get('ema_threshold')
+                    if threshold is None:
+                        threshold = trading_bot.settings.strategy_settings.get('ema_threshold')
+                    if threshold is None:
+                        threshold = trading_bot.settings.settings.get('ema_cross_threshold', 0.005)
+                    if threshold > 1:
+                        threshold = threshold / 100
+                    threshold_percent = threshold * 100
+
+                    signal = "wait"
+                    if ema_diff > threshold_percent:
+                        signal = "buy"
+                    elif ema_diff < -threshold_percent:
+                        signal = "sell"
+
+                    data["ema"] = {
+                        "signal": signal,
+                        "percent": ema_diff,
+                        "text": "ВВЕРХ" if signal == "buy" else "ВНИЗ" if signal == "sell" else "НЕЙТРАЛЬНО"
+                    }
             except Exception as e:
                 log_error(f"[WS] Ошибка получения EMA: {e}")
             
