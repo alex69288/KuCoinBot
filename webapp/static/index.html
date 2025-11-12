@@ -529,7 +529,7 @@
       font-weight: 500;
       letter-spacing: 0.3px;
     }
-    
+
     .loading-progress {
       width: 200px;
       height: 3px;
@@ -538,7 +538,7 @@
       overflow: hidden;
       margin-top: 16px;
     }
-    
+
     .loading-progress-bar {
       height: 100%;
       background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
@@ -546,11 +546,22 @@
       animation: progress 2s ease-in-out infinite;
       box-shadow: 0 0 10px var(--primary-color);
     }
-    
+
     @keyframes progress {
-      0% { width: 0%; margin-left: 0; }
-      50% { width: 60%; margin-left: 20%; }
-      100% { width: 0%; margin-left: 100%; }
+      0% {
+        width: 0%;
+        margin-left: 0;
+      }
+
+      50% {
+        width: 60%;
+        margin-left: 20%;
+      }
+
+      100% {
+        width: 0%;
+        margin-left: 100%;
+      }
     }
 
     .loading {
@@ -661,7 +672,7 @@
         <div class="card-title"><span class="icon icon-chart"></span> ОБНОВЛЕНИЕ РЫНКА</div>
         <div class="info-row">
           <span class="info-label"><span class="icon icon-money"></span> Пара:</span>
-          <span id="market-symbol" class="info-value">BTC/USDT (Bitcoin)</span>
+          <span id="market-symbol" class="info-value"><span class="icon icon-money"></span> BTC/USDT (Bitcoin)</span>
         </div>
         <div class="info-row">
           <span class="info-label"><span class="icon icon-money"></span> Цена:</span>
@@ -707,7 +718,7 @@
         </div>
         <div class="info-row">
           <span class="info-label"><span class="icon icon-target"></span> До Take Profit:</span>
-          <span id="position-to-tp" class="info-value">±8.2%</span>
+          <span id="position-to-tp" class="info-value">+0.0%</span>
         </div>
         <div class="info-row">
           <span class="info-label"><span class="icon icon-target"></span> Цель TP:</span>
@@ -969,7 +980,7 @@
         navigator.serviceWorker.register('/static/sw.js')
           .then(registration => {
             console.log('✅ Service Worker зарегистрирован:', registration.scope);
-            
+
             // Проверяем обновления каждые 60 секунд
             setInterval(() => {
               registration.update();
@@ -1192,7 +1203,8 @@
           profitElement.className = `info-value ${currentProfit >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
           prevValues.positionProfitPercent = currentProfit;
 
-          document.getElementById('position-to-tp').textContent = `±${(data.positions.to_take_profit || 0).toFixed(1)}%`;
+          const toTp = data.positions.to_take_profit || 0;
+          document.getElementById('position-to-tp').textContent = `${toTp >= 0 ? '+' : ''}${toTp.toFixed(1)}%`;
           document.getElementById('position-tp-target').textContent = `${(data.positions.tp_target || 2).toFixed(0)}%`;
           document.getElementById('position-fees').textContent = `${(data.positions.fee_percent || 0.2).toFixed(1)}% (${(data.positions.fee_usdt || 0).toFixed(4)} USDT)`;
         }
@@ -1211,13 +1223,14 @@
         const data = await response.json();
         console.log('✅ Рынок загружен:', data);
 
-        // Пара в формате: BTC/USDT (ПолноеНазвание)
+        // Пара в формате: 🪙 BTC/USDT (ПолноеНазвание)
         const symbol = data.symbol || 'BTC/USDT';
         const parts = symbol.split('/');
         const base = parts[0] || 'BTC';
         const fullNames = { BTC: 'Bitcoin', ETH: 'Ethereum', BNB: 'BNB', SOL: 'Solana', ADA: 'Cardano', XRP: 'XRP', DOGE: 'Dogecoin', TON: 'Toncoin', LTC: 'Litecoin' };
         const fullName = fullNames[base] || base;
-        document.getElementById('market-symbol').textContent = `${symbol} (${fullName})`;
+        const symbolEl = document.getElementById('market-symbol');
+        symbolEl.innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#icon-money"></use></svg> ${symbol} (${fullName})`;
 
         // Цена + анимация изменение
         const priceEl = document.getElementById('market-price');
@@ -1249,7 +1262,7 @@
             if (emaPercent > prevValues.emaPercent) applyFlash(emaEl, 'up');
             else if (emaPercent < prevValues.emaPercent) applyFlash(emaEl, 'down');
           }
-          emaEl.innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${emaIconId}"></use></svg> ${data.ema.text || 'BBEPX'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
+          emaEl.innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${emaIconId}"></use></svg> ${data.ema.text || 'ВЫШЕ'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
           prevValues.emaPercent = emaPercent;
         }
 
@@ -2025,7 +2038,7 @@
 
         // Загружаем данные с оптимизированным таймаутом
         updateLoadingText('Загрузка данных...');
-        
+
         await Promise.race([
           loadData(),
           new Promise((_, reject) =>
@@ -2035,7 +2048,7 @@
 
         clearTimeout(slowTimer);
         clearTimeout(verySlowTimer);
-        
+
         const loadTime = Date.now() - startTime;
         console.log(`✅ Данные загружены за ${loadTime}мс`);
 
@@ -2053,12 +2066,12 @@
         setTimeout(() => {
           hideLoadingOverlay();
         }, 300);
-        
+
       } catch (error) {
         console.error('❌ Ошибка инициализации:', error);
-        
+
         updateLoadingText('Ошибка загрузки, повтор...');
-        
+
         // Повторная попытка через 2 секунды
         setTimeout(async () => {
           try {

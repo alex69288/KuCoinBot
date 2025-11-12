@@ -98,7 +98,7 @@ self.addEventListener('fetch', event => {
                   });
                 }
               })
-              .catch(() => {});
+              .catch(() => { });
             return cachedResponse;
           }
 

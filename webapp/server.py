@@ -250,7 +250,9 @@ async def get_bot_status(init_data: str = Query(..., description="Telegram Web A
         }
         
         # Если есть открытая позиция
-        if trading_bot.position and trading_bot.position != 'none' and trading_bot.entry_price:
+        if trading_bot.position and trading_bot.position == 'long' and trading_bot.entry_price:
+            # Подсчет количества открытых позиций
+            # TODO: Добавить поддержку множественных позиций в будущем
             positions_info["open_count"] = 1
             positions_info["size_usdt"] = trading_bot.current_position_size_usdt or 0
             positions_info["entry_price"] = trading_bot.entry_price
@@ -358,6 +360,9 @@ async def get_market_data(
         except Exception as e:
             log_error(f"Ошибка получения ML прогноза: {e}")
         
+        # Получаем изменение за 24 часа (биржа возвращает его в процентах)
+        change_24h = ticker.get('change', 0)
+        
         # Формируем ответ в формате, ожидаемом frontend
         return {
             "symbol": symbol,
@@ -365,7 +370,7 @@ async def get_market_data(
             "high_24h": ticker.get('high', 0),
             "low_24h": ticker.get('low', 0),
             "volume_24h": ticker.get('volume', 0),
-            "change_24h": ticker.get('change', 0),
+            "change_24h": change_24h,  # Реальное изменение за 24 часа с биржи
             "ema": ema_info,
             "signal": signal,
             "ml": ml_info,

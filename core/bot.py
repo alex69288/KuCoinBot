@@ -547,7 +547,7 @@ class AdvancedTradingBot:
                     log_empty_line()
                     log_separator("-", 80)
                     log_info("💰 Проверка баланса...")
-                    self.telegram.send_balance_update()
+                    # self.telegram.send_balance_update()  # Отключено: не выводить обновления баланса в чат
                     last_balance_check = current_time
                     log_separator("-", 80)
                 log_info(f"💤 Пауза 30 секунд перед следующим циклом...")
