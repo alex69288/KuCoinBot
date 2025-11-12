@@ -65,33 +65,38 @@ def compact_market_response(full_response: dict) -> dict:
     }
 
 
-def compact_positions_response(full_response: dict) -> dict:
+def compact_positions_response(full_response: dict) -> list:
     """
     Компактный формат для списка позиций
     
     Было: 2-4 KB
     Стало: 0.5-1 KB (экономия 50-75%)
-    """
-    positions = full_response.get('positions', [])
     
-    # Компактный формат
-    return {
-        'pos': [
-            {
-                'id': p.get('id'),
-                'sym': p.get('symbol', ''),
-                'sz': round(p.get('size_usdt', 0), 2),  # size
-                'ep': round(p.get('entry_price', 0), 2),  # entry_price
-                'cp': round(p.get('current_price', 0), 2),  # current_price
-                'pnl': round(p.get('pnl', 0), 2),  # pnl
-                'pnl%': round(p.get('pnl_percent', 0), 2),  # pnl_percent
-                'sl': round(p.get('stop_loss', 0), 2) if p.get('stop_loss') else None,
-                'tp': round(p.get('take_profit', 0), 2) if p.get('take_profit') else None,
-            }
-            for p in positions
-        ],
-        'ts': int(time.time())
-    }
+    Важно: API возвращает массив позиций, а не объект с ключом 'positions'
+    """
+    # Если это полный ответ с ключом 'positions', используем его
+    # Иначе считаем, что full_response уже список позиций
+    if isinstance(full_response, dict) and 'positions' in full_response:
+        positions = full_response.get('positions', [])
+    else:
+        # Если это прямой список позиций
+        positions = full_response if isinstance(full_response, list) else []
+    
+    # Компактный формат - возвращаем список, как и полный ответ
+    return [
+        {
+            'id': p.get('id'),
+            'sym': p.get('pair', p.get('symbol', '')),  # Поддерживаем оба имени
+            'sz': round(p.get('position_size_usdt', 0), 2),  # size
+            'ep': round(p.get('entry_price', 0), 2),  # entry_price
+            'cp': round(p.get('current_price', 0), 2),  # current_price
+            'amt': round(p.get('amount', 0), 8),  # amount
+            'pnl': round(p.get('pnl', 0), 2),  # pnl
+            'pnl%': round(p.get('pnl_percent', 0), 2),  # pnl_percent
+            'sts': p.get('status', 'long'),  # status
+        }
+        for p in positions
+    ]
 
 
 def compact_history_response(full_response: dict) -> dict:

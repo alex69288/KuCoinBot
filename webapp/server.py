@@ -746,11 +746,13 @@ async def get_positions(
                 log_error(f"Ошибка получения текущей позиции: {e}")
         
         # 🚀 ОПТИМИЗАЦИЯ: Если запрос компактный - возвращаем сокращенный формат (-60-70% трафика)
-        full_response = positions
-        if compact and compact_positions_response:
-            return compact_positions_response(full_response)
+        # ⚠️ ПОКА ОТКЛЮЧЕН КОМПАКТНЫЙ ФОРМАТ ДЛЯ ПОЗИЦИЙ - ФРОНТЕНД ИСПОЛЬЗУЕТ ПОЛНЫЕ ИМЕНА ПОЛЕЙ
+        # full_response = positions
+        # if compact and compact_positions_response:
+        #     return compact_positions_response(full_response)
         
-        return full_response
+        # Возвращаем полный формат (фронтенд ожидает это)
+        return positions
     except Exception as e:
         log_error(f"Ошибка получения позиций: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting positions: {str(e)}")
