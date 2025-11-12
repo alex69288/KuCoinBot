@@ -648,6 +648,100 @@
     .icon-circle-white svg {
       fill: var(--text-primary) !important;
     }
+
+    /* Модальное окно */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background-color: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 0;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      animation: slideUp 0.3s ease;
+    }
+
+    .modal-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .modal-body {
+      padding: 20px 16px;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn-secondary {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    /* Улучшенный фокус для input */
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.2);
+    }
+
+    /* Автопрокрутка при фокусе (для мобильных устройств) */
+    @media (max-width: 768px) {
+      .form-input:focus,
+      .form-select:focus {
+        scroll-margin-top: 100px;
+      }
+    }
   </style>
 </head>
 
@@ -661,6 +755,23 @@
     <div class="loading-text">Загрузка данных...</div>
     <div class="loading-progress">
       <div class="loading-progress-bar"></div>
+    </div>
+  </div>
+
+  <!-- Модальное окно подтверждения -->
+  <div id="confirm-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="icon icon-target"></span>
+        <span id="modal-title">Подтверждение</span>
+      </div>
+      <div class="modal-body">
+        <p id="modal-message">Вы уверены?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeConfirmModal()">Отмена</button>
+        <button id="modal-confirm-btn" class="btn btn-danger">Подтвердить</button>
+      </div>
     </div>
   </div>
 
@@ -735,17 +846,23 @@
     <div id="tab-control" class="tab-content">
       <div class="card">
         <div class="card-title"><span class="icon icon-settings"></span> Управление торговлей</div>
-        <button id="btn-start" class="btn btn-success" onclick="startBot()">
-          <span><span class="icon icon-play"></span></span> Запустить торговлю
-        </button>
-        <button id="btn-stop" class="btn btn-danger" onclick="stopBot()" style="display: none;">
-          <span><span class="icon icon-pause"></span>️</span> Остановить торговлю
-        </button>
+        <div class="form-switch">
+          <div>
+            <span class="form-label">Торговля</span>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+              Статус: <span id="trading-status-text" style="font-weight: 600;">Остановлена</span>
+            </div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="trading-enabled" onchange="toggleTrading()">
+            <span class="slider"></span>
+          </label>
+        </div>
       </div>
 
       <div class="card">
         <div class="card-title"><span class="icon icon-target"></span> Быстрые действия</div>
-        <button class="btn btn-warning" onclick="closeAllPositions()">
+        <button class="btn btn-warning" onclick="confirmCloseAllPositions()">
           <span><span class="icon icon-close"></span></span> Закрыть все позиции
         </button>
         <button class="btn btn-primary" onclick="refreshData()">
@@ -775,9 +892,11 @@
         </div>
         <div class="form-group">
           <label class="form-label">Размер позиции (%)</label>
-          <input type="number" id="position-size" class="form-input" value="10" min="1" max="100" step="1"
-            onchange="updatePositionSize()">
+          <input type="number" id="position-size-input" class="form-input" value="10" min="1" max="100" step="1">
         </div>
+        <button class="btn btn-success" onclick="saveControlSettings()">
+          <span><span class="icon icon-save"></span></span> Сохранить настройки
+        </button>
       </div>
     </div>
 
@@ -1460,46 +1579,94 @@
       }
     }
 
-    // Управление ботом
-    async function startBot() {
-      try {
-        const response = await fetch('/api/bot/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ init_data: getInitData() })
-        });
+    // ============= МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ =============
+    let confirmModalCallback = null;
 
-        const result = await response.json();
-        if (result.success) {
-          showNotification('<span class="icon icon-check"></span> Торговля запущена');
-          await loadStatus();
+    function showConfirmModal(title, message, onConfirm) {
+      const modal = document.getElementById('confirm-modal');
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-message').textContent = message;
+      confirmModalCallback = onConfirm;
+      
+      const confirmBtn = document.getElementById('modal-confirm-btn');
+      confirmBtn.onclick = () => {
+        if (confirmModalCallback) confirmModalCallback();
+        closeConfirmModal();
+      };
+      
+      modal.classList.add('show');
+    }
+
+    function closeConfirmModal() {
+      const modal = document.getElementById('confirm-modal');
+      modal.classList.remove('show');
+      confirmModalCallback = null;
+    }
+
+    // ============= УПРАВЛЕНИЕ ТОРГОВЛЕЙ =============
+    async function toggleTrading() {
+      const checkbox = document.getElementById('trading-enabled');
+      const statusText = document.getElementById('trading-status-text');
+      
+      try {
+        if (checkbox.checked) {
+          // Запускаем торговлю
+          const response = await fetch('/api/bot/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: getInitData() })
+          });
+
+          const result = await response.json();
+          if (result.success || result.status === 'success') {
+            statusText.textContent = 'Запущена';
+            statusText.style.color = 'var(--success-color)';
+            showNotification('✅ Торговля запущена');
+            localStorage.setItem('trading_enabled', 'true');
+          } else {
+            checkbox.checked = false;
+            showNotification('❌ ' + (result.message || 'Ошибка запуска'));
+          }
         } else {
-          showNotification('<span class="icon icon-close"></span> ' + (result.message || 'Ошибка запуска'));
+          // Останавливаем торговлю
+          const response = await fetch('/api/bot/stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: getInitData() })
+          });
+
+          const result = await response.json();
+          if (result.success || result.status === 'success') {
+            statusText.textContent = 'Остановлена';
+            statusText.style.color = 'var(--danger-color)';
+            showNotification('⏸️ Торговля остановлена');
+            localStorage.setItem('trading_enabled', 'false');
+          } else {
+            checkbox.checked = true;
+            showNotification('❌ ' + (result.message || 'Ошибка остановки'));
+          }
         }
       } catch (error) {
-        console.error('Ошибка запуска:', error);
-        showNotification('<span class="icon icon-close"></span> Ошибка запуска');
+        console.error('Ошибка переключения торговли:', error);
+        checkbox.checked = !checkbox.checked;
+        showNotification('❌ Ошибка подключения к серверу');
       }
     }
 
-    async function stopBot() {
-      try {
-        const response = await fetch('/api/bot/stop', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ init_data: getInitData() })
-        });
-
-        const result = await response.json();
-        if (result.success) {
-          showNotification('<span class="icon icon-pause"></span>️ Торговля остановлена');
-          await loadStatus();
-        } else {
-          showNotification('<span class="icon icon-close"></span> ' + (result.message || 'Ошибка остановки'));
-        }
-      } catch (error) {
-        console.error('Ошибка остановки:', error);
-        showNotification('<span class="icon icon-close"></span> Ошибка остановки');
+    // Загрузка состояния торговли при старте
+    function loadTradingStatus() {
+      const savedStatus = localStorage.getItem('trading_enabled');
+      const checkbox = document.getElementById('trading-enabled');
+      const statusText = document.getElementById('trading-status-text');
+      
+      if (savedStatus === 'true') {
+        checkbox.checked = true;
+        statusText.textContent = 'Запущена';
+        statusText.style.color = 'var(--success-color)';
+      } else {
+        checkbox.checked = false;
+        statusText.textContent = 'Остановлена';
+        statusText.style.color = 'var(--danger-color)';
       }
     }
 
@@ -1700,9 +1867,16 @@
       }
     }
 
-    async function closeAllPositions() {
-      if (!confirm('Закрыть все открытые позиции?')) return;
+    // Подтверждение закрытия всех позиций
+    function confirmCloseAllPositions() {
+      showConfirmModal(
+        'Закрыть все позиции',
+        'Вы уверены, что хотите закрыть все открытые позиции? Это действие нельзя отменить.',
+        closeAllPositions
+      );
+    }
 
+    async function closeAllPositions() {
       try {
         const response = await fetch('/api/positions/close-all', {
           method: 'POST',
@@ -1712,14 +1886,59 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('<span class="icon icon-check"></span> Все позиции закрыты');
+          showNotification('✅ Все позиции закрыты');
           await loadPositions();
+          await loadStatus();
         } else {
-          showNotification('<span class="icon icon-close"></span> Ошибка закрытия');
+          showNotification('❌ ' + (result.message || 'Ошибка закрытия'));
         }
       } catch (error) {
         console.error('Ошибка закрытия позиций:', error);
-        showNotification('<span class="icon icon-close"></span> Ошибка закрытия');
+        showNotification('❌ Ошибка подключения к серверу');
+      }
+    }
+
+    // Сохранение настроек управления
+    async function saveControlSettings() {
+      try {
+        const pair = document.getElementById('trading-pair').value;
+        const strategy = document.getElementById('strategy').value;
+        const positionSize = parseFloat(document.getElementById('position-size-input').value);
+
+        // Сохраняем торговую пару
+        await fetch('/api/settings/trading', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            init_data: getInitData(), 
+            settings: { active_pair: pair }
+          })
+        });
+
+        // Сохраняем стратегию
+        await fetch('/api/settings/trading', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            init_data: getInitData(), 
+            settings: { active_strategy: strategy }
+          })
+        });
+
+        // Сохраняем размер позиции
+        await fetch('/api/settings/trading', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            init_data: getInitData(), 
+            settings: { trade_amount_percent: positionSize / 100 }
+          })
+        });
+
+        showNotification('✅ Настройки сохранены');
+      } catch (error) {
+        console.error('Ошибка сохранения настроек:', error);
+        showNotification('❌ Ошибка сохранения');
       }
     }
 
@@ -2062,6 +2281,10 @@
         startFallbackUpdates();
         console.log('✅ Fallback обновления запущены');
 
+        // Загружаем статус торговли
+        loadTradingStatus();
+        console.log('✅ Статус торговли загружен');
+
         // Скрываем индикатор загрузки с небольшой задержкой для плавности
         setTimeout(() => {
           hideLoadingOverlay();
@@ -2105,6 +2328,34 @@
       if (ws) {
         ws.close();
       }
+    });
+
+    // ============= АВТОПРОКРУТКА ПРИ ФОКУСЕ НА INPUT (ДЛЯ МОБИЛЬНЫХ) =============
+    document.addEventListener('DOMContentLoaded', () => {
+      // Находим все input и select элементы
+      const inputs = document.querySelectorAll('.form-input, .form-select');
+      
+      inputs.forEach(input => {
+        input.addEventListener('focus', (e) => {
+          // Небольшая задержка для корректной работы на Android
+          setTimeout(() => {
+            // Прокручиваем элемент в видимую область
+            e.target.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest' 
+            });
+          }, 300);
+        });
+      });
+
+      // Закрываем модальное окно при клике вне его
+      const modal = document.getElementById('confirm-modal');
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeConfirmModal();
+        }
+      });
     });
   </script>
 </body>

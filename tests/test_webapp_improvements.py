@@ -115,6 +115,56 @@ def test_documentation_exists():
     print("✅ Тест пройден: Документация создана и содержит нужные разделы")
 
 
+def test_modal_window_exists():
+    """Тест: Проверка что добавлено модальное окно подтверждения"""
+    html_file = os.path.join(os.path.dirname(__file__), '..', 'webapp', 'static', 'index.html')
+    with open(html_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    assert 'id="confirm-modal"' in content, "Должно быть модальное окно с id=confirm-modal"
+    assert 'class="modal"' in content, "Должен быть класс modal"
+    assert 'showConfirmModal' in content, "Должна быть функция showConfirmModal"
+    
+    print("✅ Тест пройден: Модальное окно добавлено")
+
+
+def test_trading_toggle_switch():
+    """Тест: Проверка что добавлен переключатель торговли"""
+    html_file = os.path.join(os.path.dirname(__file__), '..', 'webapp', 'static', 'index.html')
+    with open(html_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    assert 'id="trading-enabled"' in content, "Должен быть переключатель торговли"
+    assert 'toggleTrading()' in content, "Должна быть функция toggleTrading"
+    assert 'loadTradingStatus' in content, "Должна быть функция loadTradingStatus"
+    
+    print("✅ Тест пройден: Переключатель торговли добавлен")
+
+
+def test_save_control_settings():
+    """Тест: Проверка что добавлена кнопка сохранения настроек"""
+    html_file = os.path.join(os.path.dirname(__file__), '..', 'webapp', 'static', 'index.html')
+    with open(html_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    assert 'saveControlSettings' in content, "Должна быть функция saveControlSettings"
+    assert 'Сохранить настройки' in content, "Должна быть кнопка сохранения настроек"
+    
+    print("✅ Тест пройден: Кнопка сохранения настроек добавлена")
+
+
+def test_auto_scroll_on_focus():
+    """Тест: Проверка что добавлена автопрокрутка при фокусе"""
+    html_file = os.path.join(os.path.dirname(__file__), '..', 'webapp', 'static', 'index.html')
+    with open(html_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    assert 'scrollIntoView' in content, "Должна быть логика автопрокрутки"
+    assert "addEventListener('focus'" in content, "Должен быть обработчик фокуса"
+    
+    print("✅ Тест пройден: Автопрокрутка при фокусе добавлена")
+
+
 if __name__ == '__main__':
     print("=" * 80)
     print("ЗАПУСК ТЕСТОВ УЛУЧШЕНИЙ ВЕБ-ПРИЛОЖЕНИЯ")
@@ -129,6 +179,10 @@ if __name__ == '__main__':
         test_ema_percent_display()
         test_market_symbol_with_icon()
         test_documentation_exists()
+        test_modal_window_exists()
+        test_trading_toggle_switch()
+        test_save_control_settings()
+        test_auto_scroll_on_focus()
         
         print()
         print("=" * 80)
