@@ -144,9 +144,12 @@ def get_user_from_init_data(init_data: str) -> Optional[Dict[str, Any]]:
 
 # Определяем директорию webapp (где находится этот файл server.py)
 WEBAPP_DIR = os.path.dirname(os.path.abspath(__file__))
+# Корневая директория проекта (один уровень выше webapp)
+PROJECT_ROOT = os.path.dirname(WEBAPP_DIR)
 # Директория static находится рядом с server.py
 STATIC_DIR = os.path.join(WEBAPP_DIR, "static")
 
+log_info(f"[INFO] Корневая директория проекта: {PROJECT_ROOT}")
 log_info(f"[INFO] Директория webapp: {WEBAPP_DIR}")
 log_info(f"[INFO] Директория static: {STATIC_DIR}")
 log_info(f"[DIR] Рабочая директория: {os.getcwd()}")
@@ -280,8 +283,10 @@ async def get_bot_status(
         total_pnl_usdt = 0
         total_pnl_percent = 0
         
-        if os.path.exists('position_state.json'):
-            state = load_position_state('position_state.json')
+        # 🔧 ИСПОЛЬЗУЕМ АБСОЛЮТНЫЙ ПУТЬ К ФАЙЛУ СОСТОЯНИЯ
+        position_state_path = os.path.join(PROJECT_ROOT, 'position_state.json')
+        if os.path.exists(position_state_path):
+            state = load_position_state(position_state_path)
             
             # Считаем общее количество открытых позиций по всем парам
             for pair_symbol, pair_data in state.items():
@@ -674,8 +679,10 @@ async def get_positions(
         positions = []
         
         # Загружаем ВСЕ позиции из файла состояния
-        if os.path.exists('position_state.json'):
-            state = load_position_state('position_state.json')
+        # 🔧 ИСПОЛЬЗУЕМ АБСОЛЮТНЫЙ ПУТЬ К ФАЙЛУ СОСТОЯНИЯ
+        position_state_path = os.path.join(PROJECT_ROOT, 'position_state.json')
+        if os.path.exists(position_state_path):
+            state = load_position_state(position_state_path)
             
             # Проходим по всем парам
             for pair_symbol, pair_data in state.items():
@@ -779,8 +786,10 @@ async def close_position(
         pos_id = parts[-1]  # Последняя часть - ID позиции
         
         # Загружаем состояние
-        if os.path.exists('position_state.json'):
-            state = load_position_state('position_state.json')
+        # 🔧 ИСПОЛЬЗУЕМ АБСОЛЮТНЫЙ ПУТЬ К ФАЙЛУ СОСТОЯНИЯ
+        position_state_path = os.path.join(PROJECT_ROOT, 'position_state.json')
+        if os.path.exists(position_state_path):
+            state = load_position_state(position_state_path)
             
             if pair_symbol in state and 'positions' in state[pair_symbol]:
                 pair_data = state[pair_symbol]
@@ -819,7 +828,9 @@ async def close_position(
                             pair_data['max_entry_price'] = 0
                         
                         # Сохраняем обновленное состояние
-                        with open('position_state.json', 'w') as f:
+                        # 🔧 ИСПОЛЬЗУЕМ АБСОЛЮТНЫЙ ПУТЬ К ФАЙЛУ СОСТОЯНИЯ
+                        position_state_path = os.path.join(PROJECT_ROOT, 'position_state.json')
+                        with open(position_state_path, 'w') as f:
                             json.dump(state, f, indent=2)
                         
                         return {
@@ -877,8 +888,10 @@ async def close_all_positions(init_data: str = Body(..., embed=True)):
         errors = []
         
         # Загружаем состояние
-        if os.path.exists('position_state.json'):
-            state = load_position_state('position_state.json')
+        # 🔧 ИСПОЛЬЗУЕМ АБСОЛЮТНЫЙ ПУТЬ К ФАЙЛУ СОСТОЯНИЯ
+        position_state_path = os.path.join(PROJECT_ROOT, 'position_state.json')
+        if os.path.exists(position_state_path):
+            state = load_position_state(position_state_path)
             
             # Проходим по всем парам
             for pair_symbol, pair_data in list(state.items()):
@@ -914,7 +927,9 @@ async def close_all_positions(init_data: str = Body(..., embed=True)):
                         pair_data['max_entry_price'] = 0
             
             # Сохраняем обновленное состояние
-            with open('position_state.json', 'w') as f:
+            # 🔧 ИСПОЛЬЗУЕМ АБСОЛЮТНЫЙ ПУТЬ К ФАЙЛУ СОСТОЯНИЯ
+            position_state_path = os.path.join(PROJECT_ROOT, 'position_state.json')
+            with open(position_state_path, 'w') as f:
                 json.dump(state, f, indent=2)
         
         log_info(f"[CLOSE-ALL] Все позиции закрыты вручную через WebApp (закрыто: {closed_count})")
@@ -1618,7 +1633,9 @@ class ConnectionManager:
                 import os
                 from utils.position_manager import load_position_state
                 
-                state = load_position_state('position_state.json')
+                # 🔧 ИСПОЛЬЗУЕМ АБСОЛЮТНЫЙ ПУТЬ К ФАЙЛУ СОСТОЯНИЯ
+                position_state_path = os.path.join(PROJECT_ROOT, 'position_state.json')
+                state = load_position_state(position_state_path)
                 if state:
                     total_positions = 0
                     for pair_symbol, pair_data in state.items():
