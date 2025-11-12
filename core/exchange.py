@@ -185,14 +185,21 @@ class ExchangeManager:
             
         try:
             ticker = self.exchange.fetch_ticker(symbol)
+            
+            # Защита от None значений
+            change = ticker.get('percentage', 0)
+            if change is None:
+                log_error(f"⚠️ ticker['percentage'] is None для {symbol}, используем 0")
+                change = 0
+            
             return {
                 'symbol': symbol,
-                'last': ticker['last'],
-                'high': ticker['high'],
-                'low': ticker['low'],
-                'volume': ticker['baseVolume'],
-                'change': ticker['percentage'],
-                'timestamp': ticker['timestamp']
+                'last': ticker.get('last', 0) or 0,
+                'high': ticker.get('high', 0) or 0,
+                'low': ticker.get('low', 0) or 0,
+                'volume': ticker.get('baseVolume', 0) or 0,
+                'change': change,
+                'timestamp': ticker.get('timestamp', 0) or 0
             }
         except Exception as e:
             log_error(f"❌ Ошибка получения тикера {symbol}: {e}")
