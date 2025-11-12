@@ -312,7 +312,7 @@
 
         html += `
                     <div class="card">
-                        <h2><span class="icon icon-chart"></span> Рынок (${market.symbol})</h2>
+                        <h2><span class="icon icon-chart"></span> Рынок (${formatSymbol(market.symbol)})</h2>
                         <div class="info-row">
                             <span class="info-label">Текущая цена</span>
                             <span class="info-value">${formatNumber(market.current_price)} USDT</span>
@@ -340,7 +340,7 @@
                         <h2><span class="icon icon-settings"></span> Настройки</h2>
                         <div class="info-row">
                             <span class="info-label">Торговая пара</span>
-                            <span class="info-value">${status.settings.active_pair}</span>
+                            <span class="info-value">${formatSymbol(status.settings.active_pair)}</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Стратегия</span>
@@ -443,6 +443,38 @@
       } else {
         container.innerHTML = '';
       }
+    }
+
+    // Словарь эмодзи и названий криптовалют
+    const cryptoData = {
+      'BTC': { emoji: '₿', name: 'Bitcoin' },
+      'ETH': { emoji: 'Ξ', name: 'Ethereum' },
+      'XRP': { emoji: '✕', name: 'Ripple' },
+      'ADA': { emoji: '₳', name: 'Cardano' },
+      'SOL': { emoji: '◎', name: 'Solana' },
+      'DOT': { emoji: '●', name: 'Polkadot' },
+      'USDT': { emoji: '₮', name: 'Tether' },
+      'USDC': { emoji: 'Ⓒ', name: 'USD Coin' },
+      'BNB': { emoji: '⧉', name: 'Binance Coin' },
+      'LINK': { emoji: '⛓', name: 'Chainlink' }
+    };
+
+    // Форматирование символа пары с эмодзи и названием
+    function formatSymbol(symbol) {
+      if (!symbol) return symbol;
+      
+      // Разделяем пару на части (например: BTC/USDT -> ['BTC', 'USDT'])
+      const parts = symbol.split('/');
+      if (parts.length !== 2) return symbol;
+      
+      const [baseCrypto, quoteCrypto] = parts;
+      const baseData = cryptoData[baseCrypto];
+      
+      if (baseData) {
+        return `${baseData.emoji} ${symbol} (${baseData.name})`;
+      }
+      
+      return symbol;
     }
 
     // Форматирование чисел
