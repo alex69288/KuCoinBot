@@ -8,6 +8,7 @@ import traceback
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 from utils.logger import log_info, log_error
+import threading
 
 load_dotenv()
 
@@ -15,8 +16,20 @@ class ExchangeManager:
     def __init__(self):
         self.exchange = None
         self.connected = False
+        self.markets_loaded = threading.Event() # Событие для синхронизации
         self.connect()
-    
+
+    def _load_markets_background(self):
+        """Загружает рынки в фоновом потоке."""
+        try:
+            print("🔄 Фоновая загрузка рынков...", flush=True)
+            self.exchange.load_markets(reload=True)
+            self.markets_loaded.set() # Устанавливаем флаг, что рынки загружены
+            print(f"✅ Рынки загружены в фоне ({len(self.exchange.markets)} пар)", flush=True)
+        except Exception as e:
+            log_error(f"❌ Ошибка фоновой загрузки рынков: {e}")
+            self.markets_loaded.set() # Устанавливаем флаг даже при ошибке, чтобы не блокировать вечно
+
     def connect(self):
         """Подключение к бирже KuCoin с диагностикой переменных окружения и повторными попытками."""
         api_key = os.getenv('KUCOIN_API_KEY')
@@ -46,10 +59,12 @@ class ExchangeManager:
             try:
                 print(f"🔌 Попытка {attempt}/{attempts}: Создание клиента KuCoin...", flush=True)
                 self.exchange = ccxt.kucoin(base_config)
-                print(f"✅ Клиент создан, загрузка рынков...", flush=True)
-                # Тестовый лёгкий запрос: markets (публичный) для проверки сети
-                self.exchange.load_markets(reload=True)
-                print(f"✅ Рынки загружены ({len(self.exchange.markets)} пар)", flush=True)
+                
+                # ⚡ ОПТИМИЗАЦИЯ: Запускаем загрузку рынков в фоне
+                threading.Thread(target=self._load_markets_background, daemon=True).start()
+                
+                print(f"✅ Клиент создан, рынки загружаются в фоне...", flush=True)
+                
                 # Баланс пробуем только если есть ключи (легкий запрос)
                 if api_key and secret_key and passphrase:
                     self.exchange.fetch_balance()
@@ -71,7 +86,15 @@ class ExchangeManager:
 
         self.connected = False
         log_error("❌ Подключение к KuCoin не удалось после всех попыток")
-    
+
+    def wait_for_markets(self, timeout=60):
+        """Ожидает завершения загрузки рынков."""
+        loaded = self.markets_loaded.wait(timeout)
+        if not loaded:
+            log_error(f"⌛️ Превышен таймаут ({timeout}s) ожидания загрузки рынков.")
+            return False
+        return True
+
     def get_balance(self):
         """Получение баланса"""
         if not self.connected:
@@ -98,34 +121,15 @@ class ExchangeManager:
         ema_fast_period: int = 9,
         ema_slow_period: int = 21,
         retries: int = 3,
-        retry_delay: float = 1.5
-    ) -> Optional[Dict[str, Any]]:
-        """Получение рыночных данных с повторными попытками и подробным логированием.
-
-        Args:
-            symbol: Торговая пара (например 'BTC/USDT')
-            timeframe: Таймфрейм ccxt (e.g. '1m','5m','15m','1h','4h','1d')
-            limit: Количество свечей для выборки
-            ema_fast_period: Период быстрой EMA
-            ema_slow_period: Период медленной EMA
-            retries: Количество повторных попыток при сетевых/временных ошибках
-            retry_delay: Базовая задержка между попытками (экспоненциально)
-        Returns:
-            dict с рассчитанными индикаторами или None при неудаче.
-        """
-        if not self.connected:
-            log_error("❌ get_market_data: нет подключения к бирже")
+    ):
+        """Получение и кэширование рыночных данных (OHLCV, EMA, и т.д.)"""
+        if not self.wait_for_markets():
+            return None # Возвращаем None, если рынки не загрузились
+            
+        # Проверяем, есть ли символ в загруженных рынках
+        if symbol not in self.exchange.markets:
+            log_error(f"❌ Символ {symbol} не найден в markets KuCoin")
             return None
-
-        # Валидация символа
-        try:
-            if not self.exchange.markets:
-                self.exchange.load_markets()
-            if symbol not in self.exchange.markets:
-                log_error(f"❌ Символ {symbol} не найден в markets KuCoin")
-                return None
-        except Exception as e:
-            log_error(f"❌ Не удалось загрузить markets для проверки символа: {e}")
 
         last_exception = None
         for attempt in range(1, retries + 1):
@@ -171,7 +175,7 @@ class ExchangeManager:
                 log_error(f"❌ Непредвиденная ошибка OHLCV {symbol} (попытка {attempt}): {e}\n{traceback.format_exc()}")
             # Задержка перед повтором (экспоненциальная)
             if attempt < retries:
-                delay = retry_delay * attempt
+                delay = 2 ** attempt
                 time.sleep(delay)
                 log_info(f"⏳ Повторная попытка через {delay:.1f} сек...")
 
@@ -180,7 +184,7 @@ class ExchangeManager:
     
     def get_ticker(self, symbol):
         """Получение тикера"""
-        if not self.connected:
+        if not self.wait_for_markets():
             return None
             
         try:
@@ -207,8 +211,8 @@ class ExchangeManager:
     
     def create_order(self, symbol, order_type, side, amount, price=None):
         """Создание ордера с проверкой минимального объема"""
-        if not self.connected:
-            return None, "Не подключено к бирже"
+        if not self.wait_for_markets():
+            return None, "Рынки не загружены"
             
         try:
             # 🔧 ПОЛУЧАЕМ ИНФОРМАЦИЮ О РЫНКЕ ДЛЯ ПРОВЕРКИ МИНИМАЛЬНОГО ОБЪЕМА
@@ -257,7 +261,7 @@ class ExchangeManager:
     
     def get_order_status(self, order_id, symbol):
         """Получение статуса ордера"""
-        if not self.connected:
+        if not self.wait_for_markets():
             return None
             
         try:
@@ -268,7 +272,7 @@ class ExchangeManager:
     
     def cancel_order(self, order_id, symbol):
         """Отмена ордера"""
-        if not self.connected:
+        if not self.wait_for_markets():
             return False
             
         try:
@@ -281,7 +285,7 @@ class ExchangeManager:
     
     def get_open_orders(self, symbol=None):
         """Получение открытых ордеров"""
-        if not self.connected:
+        if not self.wait_for_markets():
             return []
             
         try:
@@ -292,7 +296,7 @@ class ExchangeManager:
     
     def get_market_info(self, symbol):
         """Получение информации о рынке"""
-        if not self.connected:
+        if not self.wait_for_markets():
             return None
             
         try:
@@ -317,6 +321,11 @@ class ExchangeManager:
         - min_amount: минимальное количество базовой валюты (BTC/SOL/...)
         - min_cost: минимальная сумма ордера в котируемой валюте (обычно USDT)
         """
+        if not self.wait_for_markets():
+            # Безопасные значения по умолчанию, если рынки не загружены
+            from config.constants import MIN_TRADE_USDT
+            return 0.001, MIN_TRADE_USDT
+            
         try:
             if self.connected:
                 market = self.exchange.market(symbol)
@@ -339,7 +348,7 @@ class ExchangeManager:
         - limit: желаемое максимальное количество сделок (до 500 за страницу)
         - days_back: сколько дней назад начинать выборку (по умолчанию 60)
         """
-        if not self.connected:
+        if not self.wait_for_markets():
             return []
             
         try:
@@ -408,7 +417,7 @@ class ExchangeManager:
         Получает все открытые покупки (покупки после последней продажи)
         Возвращает список покупок и максимальную цену среди них
         """
-        if not self.connected:
+        if not self.wait_for_markets():
             return [], 0.0
         
         try:
@@ -496,7 +505,7 @@ class ExchangeManager:
             'position_size_usdt': float или None  # Размер позиции в USDT
         }
         """
-        if not self.connected:
+        if not self.wait_for_markets():
             return {
                 'has_position': False,
                 'position_type': None,
