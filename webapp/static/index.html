@@ -143,6 +143,7 @@
       color: var(--text-primary);
       display: flex;
       align-items: center;
+      position: relative;
     }
 
     .status-badge {
@@ -404,13 +405,14 @@
 
     /* Стили для SVG индикаторов сигналов */
     .icon {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       width: 1em;
       height: 1em;
       margin-right: 6px;
       flex-shrink: 0;
+      vertical-align: middle;
     }
 
     .icon svg {
