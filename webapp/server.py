@@ -102,7 +102,22 @@ def verify_telegram_webapp_data(init_data: str, bot_token: str) -> bool:
     """
     Проверяет подлинность данных от Telegram Web App
     https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
+    
+    В режиме разработки (DEV_MODE=1) пропускает проверку для локального тестирования
     """
+    # 🔧 Режим разработки - пропускаем аутентификацию
+    dev_mode = os.getenv('DEV_MODE', '0') == '1'
+    if dev_mode:
+        log_info("[DEV] Пропуск аутентификации в режиме разработки")
+        return True
+    
+    # Пустой init_data - пропускаем в DEV режиме
+    if not init_data or init_data == 'debug_mode':
+        if dev_mode:
+            return True
+        log_error("[AUTH] Пустой init_data в production режиме")
+        return False
+    
     try:
         parsed = dict(urllib.parse.parse_qsl(init_data))
         received_hash = parsed.pop('hash', None)

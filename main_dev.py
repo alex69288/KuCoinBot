@@ -36,6 +36,10 @@ print("📁 Загрузка переменных окружения из .env �
 load_dotenv()
 print("✅ Файл .env загружен", flush=True)
 
+# 🔧 Устанавливаем режим разработки для пропуска аутентификации WebApp
+os.environ['DEV_MODE'] = '1'
+print("🔧 DEV_MODE активирован (пропуск аутентификации WebApp)", flush=True)
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.logger import log_info, log_error
 
