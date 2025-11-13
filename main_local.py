@@ -8,7 +8,6 @@ import os
 import time
 import traceback
 import threading
-from dotenv import load_dotenv
 
 # 🔧 Исправление кодировки консоли для Windows (UTF-8)
 if sys.platform == 'win32':
@@ -16,6 +15,8 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
     os.environ['PYTHONIOENCODING'] = 'utf-8'
+
+from dotenv import load_dotenv
 
 # ========================================
 # ВАЖНО: Загрузка .env для локальной разработки
