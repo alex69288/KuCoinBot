@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -74,6 +75,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <h1>🧪 Тест отображения торговых пар в WebApp</h1>
@@ -111,7 +113,7 @@
       const baseData = cryptoData[baseCrypto];
 
       if (baseData) {
-        return `${baseData.emoji} ${symbol} (${baseData.name})`;
+        return `${symbol} (${baseData.emoji} ${baseData.name})`;
       }
 
       return symbol;
@@ -119,16 +121,16 @@
 
     // Тестовые случаи
     const testCases = [
-      { input: 'BTC/USDT', expected: '₿ BTC/USDT (Bitcoin)' },
-      { input: 'ETH/USDT', expected: 'Ξ ETH/USDT (Ethereum)' },
-      { input: 'SOL/USDT', expected: '◎ SOL/USDT (Solana)' },
-      { input: 'ADA/USDT', expected: '₳ ADA/USDT (Cardano)' },
-      { input: 'XRP/USDT', expected: '✕ XRP/USDT (Ripple)' },
-      { input: 'DOT/USDT', expected: '● DOT/USDT (Polkadot)' },
-      { input: 'BNB/USDT', expected: '⧉ BNB/USDT (Binance Coin)' },
-      { input: 'LINK/USDT', expected: '⛓ LINK/USDT (Chainlink)' },
-      { input: 'MATIC/USDT', expected: '🔷 MATIC/USDT (Polygon)' },
-      { input: 'AVAX/USDT', expected: '🔺 AVAX/USDT (Avalanche)' }
+      { input: 'BTC/USDT', expected: 'BTC/USDT (₿ Bitcoin)' },
+      { input: 'ETH/USDT', expected: 'ETH/USDT (Ξ Ethereum)' },
+      { input: 'SOL/USDT', expected: 'SOL/USDT (◎ Solana)' },
+      { input: 'ADA/USDT', expected: 'ADA/USDT (₳ Cardano)' },
+      { input: 'XRP/USDT', expected: 'XRP/USDT (✕ Ripple)' },
+      { input: 'DOT/USDT', expected: 'DOT/USDT (● Polkadot)' },
+      { input: 'BNB/USDT', expected: 'BNB/USDT (⧉ Binance Coin)' },
+      { input: 'LINK/USDT', expected: 'LINK/USDT (⛓ Chainlink)' },
+      { input: 'MATIC/USDT', expected: 'MATIC/USDT (🔷 Polygon)' },
+      { input: 'AVAX/USDT', expected: 'AVAX/USDT (🔺 Avalanche)' }
     ];
 
     // Выполнение тестов
@@ -166,4 +168,5 @@
     `;
   </script>
 </body>
+
 </html>

@@ -11,7 +11,7 @@ BTC/USDT (Bitcoin)
 
 ### Стало:
 ```
-₿ BTC/USDT (Bitcoin)
+BTC/USDT (₿ Bitcoin)
 ```
 
 ## ✨ Реализованные функции
@@ -57,7 +57,7 @@ function formatSymbol(symbol) {
   const baseData = cryptoData[baseCrypto];
   
   if (baseData) {
-    return `${baseData.emoji} ${symbol} (${baseData.name})`;
+    return `${symbol} (${baseData.emoji} ${baseData.name})`;
   }
   
   return symbol;
@@ -71,7 +71,7 @@ function formatSymbol(symbol) {
 - **Строка 1437**: Динамическое обновление при загрузке данных рынка
 
 ```html
-<span id="market-symbol" class="info-value">₿ BTC/USDT (Bitcoin)</span>
+<span id="market-symbol" class="info-value">BTC/USDT (₿ Bitcoin)</span>
 ```
 
 ### 2. Селектор торговых пар (Настройки)
@@ -79,9 +79,9 @@ function formatSymbol(symbol) {
 
 ```html
 <select id="trading-pair" class="form-select">
-  <option value="BTC/USDT">₿ BTC/USDT (Bitcoin)</option>
-  <option value="ETH/USDT">Ξ ETH/USDT (Ethereum)</option>
-  <option value="SOL/USDT">◎ SOL/USDT (Solana)</option>
+  <option value="BTC/USDT">BTC/USDT (₿ Bitcoin)</option>
+  <option value="ETH/USDT">ETH/USDT (Ξ Ethereum)</option>
+  <option value="SOL/USDT">SOL/USDT (◎ Solana)</option>
   ...
 </select>
 ```
@@ -143,7 +143,7 @@ Start-Process tests/test_webapp_symbol_display.html
 ```javascript
 // Простое использование
 const formatted = formatSymbol('BTC/USDT');
-console.log(formatted); // ₿ BTC/USDT (Bitcoin)
+console.log(formatted); // BTC/USDT (₿ Bitcoin)
 
 // В template literal
 symbolEl.innerHTML = formatSymbol(data.symbol);

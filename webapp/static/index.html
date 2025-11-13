@@ -782,7 +782,7 @@
         <div class="card-title">ОБНОВЛЕНИЕ РЫНКА</div>
         <div class="info-row">
           <span class="info-label">Пара:</span>
-          <span id="market-symbol" class="info-value">₿ BTC/USDT (Bitcoin)</span>
+          <span id="market-symbol" class="info-value">BTC/USDT (₿ Bitcoin)</span>
         </div>
         <div class="info-row">
           <span class="info-label">Цена:</span>
@@ -880,14 +880,14 @@
         <div class="form-group">
           <label class="form-label">Торговая пара</label>
           <select id="trading-pair" class="form-select" onchange="updateTradingPair()">
-            <option value="BTC/USDT">₿ BTC/USDT (Bitcoin)</option>
-            <option value="ETH/USDT">Ξ ETH/USDT (Ethereum)</option>
-            <option value="BNB/USDT">⧉ BNB/USDT (Binance Coin)</option>
-            <option value="SOL/USDT">◎ SOL/USDT (Solana)</option>
-            <option value="ADA/USDT">₳ ADA/USDT (Cardano)</option>
-            <option value="XRP/USDT">✕ XRP/USDT (Ripple)</option>
-            <option value="DOT/USDT">● DOT/USDT (Polkadot)</option>
-            <option value="LINK/USDT">⛓ LINK/USDT (Chainlink)</option>
+            <option value="BTC/USDT">BTC/USDT (₿ Bitcoin)</option>
+            <option value="ETH/USDT">ETH/USDT (Ξ Ethereum)</option>
+            <option value="BNB/USDT">BNB/USDT (⧉ Binance Coin)</option>
+            <option value="SOL/USDT">SOL/USDT (◎ Solana)</option>
+            <option value="ADA/USDT">ADA/USDT (₳ Cardano)</option>
+            <option value="XRP/USDT">XRP/USDT (✕ Ripple)</option>
+            <option value="DOT/USDT">DOT/USDT (● Polkadot)</option>
+            <option value="LINK/USDT">LINK/USDT (⛓ Chainlink)</option>
           </select>
         </div>
         <div class="form-group">
@@ -1338,7 +1338,7 @@
       const baseData = cryptoData[baseCrypto];
 
       if (baseData) {
-        return `${baseData.emoji} ${symbol} (${baseData.name})`;
+        return `${symbol} (${baseData.emoji} ${baseData.name})`;
       }
 
       return symbol;

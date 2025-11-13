@@ -14,10 +14,10 @@ ETH/USDT (Ethereum)
 
 **После:**
 ```
-₿ BTC/USDT (Bitcoin)
-Ξ ETH/USDT (Ethereum)
-◎ SOL/USDT (Solana)
-₳ ADA/USDT (Cardano)
+BTC/USDT (₿ Bitcoin)
+ETH/USDT (Ξ Ethereum)
+SOL/USDT (◎ Solana)
+ADA/USDT (₳ Cardano)
 ```
 
 ## 📋 Изменённые файлы
@@ -75,6 +75,7 @@ ETH/USDT (Ethereum)
 Добавление новой криптовалюты - просто добавьте в словарь:
 ```javascript
 'NEW': { emoji: '🆕', name: 'New Coin' }
+// Результат: NEW/USDT (🆕 New Coin)
 ```
 
 ## 📈 Преимущества
