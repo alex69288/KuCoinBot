@@ -90,7 +90,7 @@ export class TradingBot {
 
       this.isRunning = true;
       logger.info('🚀 Trading Bot started');
-      
+
       // Запускаем основной торговый цикл
       this.runTradingLoop();
     } catch (error) {

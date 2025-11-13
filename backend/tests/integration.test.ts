@@ -19,7 +19,7 @@ describe('Trading Bot Integration Tests', () => {
     });
 
     bot = new TradingBot(
-      exchange, 
+      exchange,
       {
         symbol: 'BTC/USDT',
         timeframe: '1h',
@@ -48,10 +48,10 @@ describe('Trading Bot Integration Tests', () => {
 
   test('Bot should enable/disable trading', () => {
     expect(bot.isTradingEnabled()).toBe(false);
-    
+
     bot.enableTrading();
     expect(bot.isTradingEnabled()).toBe(true);
-    
+
     bot.disableTrading();
     expect(bot.isTradingEnabled()).toBe(false);
   });
@@ -69,7 +69,7 @@ describe('Trading Bot Integration Tests', () => {
 
   test('Bot uptime should increase', (done) => {
     const uptime1 = bot.getUptime();
-    
+
     setTimeout(() => {
       const uptime2 = bot.getUptime();
       expect(uptime2).toBeGreaterThanOrEqual(uptime1);
