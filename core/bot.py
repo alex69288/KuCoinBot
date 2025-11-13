@@ -69,6 +69,7 @@ class AdvancedTradingBot:
         self.start_background_ml()
         # 🟢 ЛЕНИВАЯ ЗАГРУЗКА ПОЗИЦИИ - не блокирует старт WebApp
         self._position_loaded = False
+        self._position_loading = False  # Флаг, что загрузка уже идет
         threading.Thread(target=self._load_position_background, daemon=True).start()
 
     def start_background_ml(self):
@@ -644,8 +645,12 @@ class AdvancedTradingBot:
     def _load_position_background(self):
         """Фоновая загрузка состояния позиции - не блокирует старт"""
         import time
+        if self._position_loading:
+            return # Не запускаем, если уже в процессе
+        self._position_loading = True
+        
         # Даем серверу и первым запросам время (не конкурируем за ресурсы)
-        time.sleep(3)
+        time.sleep(1.5) # Сокращено с 3 до 1.5 сек
         log_info("🔄 Фоновая загрузка позиций...")
         try:
             self.load_position_state()
@@ -654,6 +659,8 @@ class AdvancedTradingBot:
         except Exception as e:
             log_error(f"❌ Ошибка фоновой загрузки позиций: {e}")
             self._position_loaded = False
+        finally:
+            self._position_loading = False
 
     def load_position_state(self):
         """Загружает состояние позиции из файла для текущей пары и проверяет реальные позиции на KuCoin"""

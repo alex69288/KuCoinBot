@@ -1454,8 +1454,8 @@
         console.log('📊 Загрузка статуса...');
         const initData = getInitData();
         console.log('📊 init_data:', initData);
-        // Используем полный формат для корректного отображения всех данных
-        const response = await fetch(`/api/status?init_data=${encodeURIComponent(initData)}&compact=0`);
+        // ⚡ Используем компактный формат для экономии трафика и ускорения
+        const response = await fetch(`/api/status?init_data=${encodeURIComponent(initData)}&compact=1`);
         console.log('📊 Response получен:', response.status, response.ok);
         if (!response.ok) {
           const errorText = await response.text();
@@ -1464,16 +1464,16 @@
         }
 
         const data = await response.json();
-        console.log('✅ Статус загружен:', data);
+        console.log('✅ Статус загружен (компактный):', data);
 
-        // Обновляем данные позиций
-        if (data.positions) {
-          document.getElementById('position-count').textContent = data.positions.open_count || 0;
-          document.getElementById('position-size').textContent = `${(data.positions.size_usdt || 0).toFixed(2)} USDT`;
-          document.getElementById('position-entry-price').textContent = `${(data.positions.entry_price || 0).toFixed(2)} USDT`;
+        // Обновляем данные позиций (используем компактные ключи)
+        if (data.p) {
+          document.getElementById('position-count').textContent = data.p.c || 0;
+          document.getElementById('position-size').textContent = `${(data.p.s || 0).toFixed(2)} USDT`;
+          document.getElementById('position-entry-price').textContent = `${(data.p.e || 0).toFixed(2)} USDT`;
 
-          const currentProfit = (typeof data.positions.current_profit_percent === 'number') ? data.positions.current_profit_percent : 0;
-          const currentProfitUsdt = data.positions.current_profit_usdt || 0;
+          const currentProfit = (typeof data.p.pr === 'number') ? data.p.pr : 0;
+          const currentProfitUsdt = data.p.pu || 0;
           const profitElement = document.getElementById('position-current-profit');
           if (typeof prevValues.positionProfitPercent === 'number') {
             if (currentProfit > prevValues.positionProfitPercent) applyFlash(profitElement, 'up');
@@ -1483,10 +1483,11 @@
           profitElement.className = `info-value ${currentProfit >= 0 ? 'price-change-positive' : 'price-change-negative'}`;
           prevValues.positionProfitPercent = currentProfit;
 
-          const toTp = data.positions.to_take_profit || 0;
+          const toTp = data.p.t || 0;
           document.getElementById('position-to-tp').textContent = `${toTp >= 0 ? '+' : ''}${toTp.toFixed(1)}%`;
-          document.getElementById('position-tp-target').textContent = `${(data.positions.tp_target || 2).toFixed(0)}%`;
-          document.getElementById('position-fees').textContent = `${(data.positions.fee_percent || 0.2).toFixed(1)}% (${(data.positions.fee_usdt || 0).toFixed(4)} USDT)`;
+          // Для этих данных нет компактного формата, используем старые значения или дефолт
+          // document.getElementById('position-tp-target').textContent = `${(data.p.tp_target || 2).toFixed(0)}%`;
+          // document.getElementById('position-fees').textContent = `${(data.p.fee_percent || 0.2).toFixed(1)}% (${(data.p.fee_usdt || 0).toFixed(4)} USDT)`;
         }
       } catch (error) {
         console.error('Ошибка загрузки статуса:', error);
@@ -1499,8 +1500,8 @@
         console.log('📈 Загрузка рынка...');
         const initData = getInitData();
         console.log('📈 init_data:', initData);
-        // Используем полный формат для корректного отображения EMA и ML
-        const response = await fetch(`/api/market?init_data=${encodeURIComponent(initData)}&compact=0`);
+        // ⚡ Используем компактный формат для экономии трафика
+        const response = await fetch(`/api/market?init_data=${encodeURIComponent(initData)}&compact=1`);
         console.log('📈 Response получен:', response.status, response.ok);
         if (!response.ok) {
           const errorText = await response.text();
@@ -1509,16 +1510,16 @@
         }
 
         const data = await response.json();
-        console.log('✅ Рынок загружен:', data);
+        console.log('✅ Рынок загружен (компактный):', data);
 
         // Пара в формате: ₿ BTC/USDT (Bitcoin)
-        const symbol = data.symbol || 'BTC/USDT';
+        const symbol = data.sym || 'BTC/USDT';
         const symbolEl = document.getElementById('market-symbol');
         symbolEl.innerHTML = formatSymbol(symbol);
 
         // Цена + анимация изменение
         const priceEl = document.getElementById('market-price');
-        const newPrice = (typeof data.current_price === 'number') ? data.current_price : 0;
+        const newPrice = (typeof data.p === 'number') ? data.p : 0;
         if (typeof prevValues.marketPrice === 'number') {
           if (newPrice > prevValues.marketPrice) applyFlash(priceEl, 'up');
           else if (newPrice < prevValues.marketPrice) applyFlash(priceEl, 'down');
@@ -1527,7 +1528,7 @@
         prevValues.marketPrice = newPrice;
 
         // Изменение 24ч
-        const change = (typeof data.change_24h === 'number') ? data.change_24h : 0;
+        const change = (typeof data.ch === 'number') ? data.ch : 0;
         const changeEl = document.getElementById('market-change-24h');
         if (typeof prevValues.change24h === 'number') {
           if (change > prevValues.change24h) applyFlash(changeEl, 'up');
@@ -1538,31 +1539,34 @@
         prevValues.change24h = change;
 
         // Обновляем EMA
-        if (data.ema) {
-          const emaIconId = data.ema.signal === 'buy' ? 'icon-circle-green' : data.ema.signal === 'sell' ? 'icon-circle-red' : 'icon-circle-white';
-          const emaPercent = (typeof data.ema.percent === 'number') ? data.ema.percent : 0;
+        if (data.e) {
+          const emaIconId = data.e.s === 'buy' ? 'icon-circle-green' : data.e.s === 'sell' ? 'icon-circle-red' : 'icon-circle-white';
+          const emaPercent = (typeof data.e.p === 'number') ? data.e.p : 0;
           const emaEl = document.getElementById('market-ema');
           if (typeof prevValues.emaPercent === 'number') {
             if (emaPercent > prevValues.emaPercent) applyFlash(emaEl, 'up');
             else if (emaPercent < prevValues.emaPercent) applyFlash(emaEl, 'down');
           }
-          emaEl.innerHTML = `<svg class="icon icon-svg"><use href="#${emaIconId}"></use></svg> ${data.ema.text || 'ВЫШЕ'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
+          // Текст сигнала EMA не передается в компактном виде, формируем его на клиенте
+          const emaText = emaPercent > 0 ? 'ВЫШЕ' : 'НИЖЕ';
+          emaEl.innerHTML = `<svg class="icon icon-svg"><use href="#${emaIconId}"></use></svg> ${emaText} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
           prevValues.emaPercent = emaPercent;
         }
 
         // Обновляем сигнал
-        if (data.signal) {
-          const signalIconId = data.signal === 'buy' ? 'icon-circle-green' : data.signal === 'sell' ? 'icon-circle-red' : 'icon-circle-white';
-          const signalText = data.signal === 'buy' ? 'ПОКУПКА' : data.signal === 'sell' ? 'ПРОДАЖА' : 'ОЖИДАНИЕ';
+        if (data.sg) {
+          const signalIconId = data.sg === 'buy' ? 'icon-circle-green' : data.sg === 'sell' ? 'icon-circle-red' : 'icon-circle-white';
+          const signalText = data.sg === 'buy' ? 'ПОКУПКА' : data.sg === 'sell' ? 'ПРОДАЖА' : 'ОЖИДАНИЕ';
           document.getElementById('market-signal').innerHTML = `<svg class="icon icon-svg"><use href="#${signalIconId}"></use></svg> ${signalText}`;
         }
 
         // Обновляем ML
-        if (data.ml) {
-          const mlIconId = data.ml.prediction > 0.6 ? 'icon-circle-green' : data.ml.prediction < 0.4 ? 'icon-circle-red' : 'icon-circle-yellow';
-          const mlText = data.ml.prediction > 0.6 ? 'ПОКУПКА' : data.ml.prediction < 0.4 ? 'ПРОДАЖА' : 'НЕЙТРАЛЬНОЕ';
+        if (data.m) {
+          const mlPrediction = (typeof data.m.pr === 'number') ? data.m.pr : 0.5;
+          const mlIconId = mlPrediction > 0.6 ? 'icon-circle-green' : mlPrediction < 0.4 ? 'icon-circle-red' : 'icon-circle-yellow';
+          const mlText = mlPrediction > 0.6 ? 'ПОКУПКА' : mlPrediction < 0.4 ? 'ПРОДАЖА' : 'НЕЙТРАЛЬНОЕ';
           const mlEl = document.getElementById('market-ml');
-          const mlPercent = (typeof data.ml.prediction === 'number') ? data.ml.prediction * 100 : 0;
+          const mlPercent = mlPrediction * 100;
           if (typeof prevValues.mlPercent === 'number') {
             if (mlPercent > prevValues.mlPercent) applyFlash(mlEl, 'up');
             else if (mlPercent < prevValues.mlPercent) applyFlash(mlEl, 'down');
