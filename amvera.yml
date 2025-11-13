@@ -8,13 +8,11 @@ meta:
     version: 20
 
 build:
-  folder: backend
   args:
-    - npm install
     - npm run build
 
 run:
-  command: cd backend && node dist/index.js
+  command: npm start
   persistenceMount: /data
   containerPort: 3000
 
