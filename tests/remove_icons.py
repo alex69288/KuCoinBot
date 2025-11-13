@@ -1,5 +1,5 @@
 """
-Скрипт для удаления всех иконок кроме индикаторов сигналов из index.html
+Скрипт для полного удаления всех иконок кроме индикаторов сигналов из index.html
 """
 import re
 
@@ -18,24 +18,41 @@ icons_to_remove = [
     'save', 'shield', 'wrench', 'inbox', 'ema'
 ]
 
-# Паттерны для замены
-patterns = []
-for icon in icons_to_remove:
-    # Удаляем обертки <span class="icon icon-{name}"><svg><use href="#icon-{name}"></use></svg></span>
-    pattern = rf'<span class="icon icon-{icon}"><svg><use href="#icon-{icon}"></use></svg></span>\s*'
-    patterns.append((pattern, ''))
-    
-    # Удаляем обертки в inline стиле
-    pattern = rf'<svg class="icon icon-svg"><use href="#icon-{icon}"></use></svg>\s*'
-    patterns.append((pattern, ''))
+# Счетчики
+removed_count = 0
 
-# Применяем замены
-for pattern, replacement in patterns:
-    content = re.sub(pattern, replacement, content)
+# Удаляем все варианты иконок
+for icon in icons_to_remove:
+    # Паттерн 1: <span class="icon icon-{name}"><svg>...</svg></span>
+    pattern1 = rf'<span class="icon icon-{icon}"><svg>\s*<use href="#icon-{icon}"></use>\s*</svg></span>\s*'
+    before = len(content)
+    content = re.sub(pattern1, '', content)
+    after = len(content)
+    if before != after:
+        removed_count += 1
+        print(f"  - Удалены обертки icon-{icon} (паттерн 1)")
+    
+    # Паттерн 2: в одной строке без переносов
+    pattern2 = rf'<span class="icon icon-{icon}"><svg><use href="#icon-{icon}"></use></svg></span>'
+    before = len(content)
+    content = re.sub(pattern2, '', content)
+    after = len(content)
+    if before != after:
+        removed_count += 1
+        print(f"  - Удалены обертки icon-{icon} (паттерн 2)")
+    
+    # Паттерн 3: SVG без span обертки
+    pattern3 = rf'<svg class="icon icon-svg"><use href="#icon-{icon}"></use></svg>\s*'
+    before = len(content)
+    content = re.sub(pattern3, '', content)
+    after = len(content)
+    if before != after:
+        removed_count += 1
+        print(f"  - Удалены SVG icon-{icon}")
 
 # Сохраняем файл
 with open(file_path, 'w', encoding='utf-8') as f:
     f.write(content)
 
-print(f"✓ Удалены все иконки кроме индикаторов сигналов")
+print(f"\n✓ Удалено {removed_count} типов иконок")
 print(f"✓ Файл сохранен: {file_path}")
