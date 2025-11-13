@@ -5,7 +5,7 @@ import { tradingBot } from '../index';
 const router = Router();
 
 // GET /api/status - получить статус бота
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
     if (!tradingBot) {
       // Если бот не инициализирован, возвращаем mock данные
@@ -31,10 +31,10 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Получаем реальный статус от бота
     const status = await tradingBot.getStatus();
-    res.json(status);
+    return res.json(status);
   } catch (error) {
     logger.error('Failed to get status:', error);
-    res.status(500).json({ error: 'Failed to get status' });
+    return res.status(500).json({ error: 'Failed to get status' });
   }
 });
 

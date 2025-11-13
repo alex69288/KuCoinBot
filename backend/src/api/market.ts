@@ -5,7 +5,7 @@ import { tradingBot } from '../index';
 const router = Router();
 
 // GET /api/market - получить рыночные данные
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
     if (!tradingBot) {
       // Mock данные если бот не инициализирован
@@ -25,10 +25,10 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Получаем реальные рыночные данные через бота
     const marketData = await tradingBot.getMarketData();
-    res.json(marketData);
+    return res.json(marketData);
   } catch (error) {
     logger.error('Failed to get market data:', error);
-    res.status(500).json({ error: 'Failed to get market data' });
+    return res.status(500).json({ error: 'Failed to get market data' });
   }
 });
 

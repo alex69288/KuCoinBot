@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 const router = Router();
 
 // GET /api/settings - получить настройки
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
     // TODO: Получить реальные настройки
     const settings = {
@@ -16,10 +16,10 @@ router.get('/', async (req: Request, res: Response) => {
       mlEnabled: true
     };
 
-    res.json(settings);
+    return res.json(settings);
   } catch (error) {
     logger.error('Failed to get settings:', error);
-    res.status(500).json({ error: 'Failed to get settings' });
+    return res.status(500).json({ error: 'Failed to get settings' });
   }
 });
 

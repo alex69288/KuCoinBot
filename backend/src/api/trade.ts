@@ -5,7 +5,7 @@ import { tradingBot } from '../index';
 const router = Router();
 
 // POST /api/trade/start - запустить торговлю
-router.post('/start', async (req: Request, res: Response) => {
+router.post('/start', async (_req: Request, res: Response) => {
   try {
     if (!tradingBot) {
       logger.warn('⚠️ Trading bot not available in mock mode');
@@ -23,10 +23,10 @@ router.post('/start', async (req: Request, res: Response) => {
     tradingBot.enableTrading();
     logger.info('✅ Trading started');
 
-    res.json({ success: true, message: 'Trading started' });
+    return res.json({ success: true, message: 'Trading started' });
   } catch (error) {
     logger.error('Failed to start trading:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to start trading'
     });
