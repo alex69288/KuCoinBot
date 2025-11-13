@@ -8,14 +8,13 @@ meta:
     version: 20
 
 build:
-  folder: backend
   args:
+    - cd backend
     - npm install
     - npm run build
 
 run:
-  scriptName: npm start
-  workdir: backend
+  scriptName: start.sh
   persistenceMount: /data
   containerPort: 3000
 
