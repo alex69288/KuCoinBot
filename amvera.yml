@@ -1,5 +1,5 @@
-# Конфигурация для Amvera Cloud - Node.js Backend
-# https://docs.amvera.ru/
+# Конфигурация для деплоя KuCoin Bot на Amvera Cloud
+# Документация: https://docs.amvera.ru/
 
 meta:
   environment: nodejs
@@ -8,25 +8,31 @@ meta:
     version: 20
 
 build:
+  # Команды для сборки проекта
   args:
     - cd backend && npm install
     - cd backend && npm run build
 
 run:
+  # Запуск приложения
   command: cd backend && node dist/index.js
+  # Монтирование данных для персистентности
   persistenceMount: /data
+  # Порт контейнера
   containerPort: 3000
 
-# Переменные окружения (устанавливаются в Amvera UI)
-# KUCOIN_API_KEY
-# KUCOIN_API_SECRET
-# KUCOIN_API_PASSPHRASE
-# KUCOIN_TESTNET=false
-# NODE_ENV=production
-
-# Health check
+# Health check для проверки работоспособности
 healthcheck:
   path: /health
   interval: 30
   timeout: 10
   retries: 3
+
+# Переменные окружения устанавливаются в панели Amvera:
+# - KUCOIN_API_KEY
+# - KUCOIN_API_SECRET
+# - KUCOIN_API_PASSPHRASE
+# - KUCOIN_TESTNET=false
+# - NODE_ENV=production
+# - TELEGRAM_BOT_TOKEN
+# - TELEGRAM_CHAT_ID
