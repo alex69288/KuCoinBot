@@ -14,13 +14,9 @@ meta:
 build:
   # Команды для сборки проекта
   args:
-    - # Fix "dubious ownership" error in Git (safe directories) that can
-    - # appear inside Amvera build/runtime containers when GitPython
-    - # or other tools try to access the repo. Add common mount points.
-    - git config --global --add safe.directory /source || true
-    - git config --global --add safe.directory /git || true
-    - git config --global --add safe.directory /app || true
-    - npm ci
+    - cp -r /git/* /source/ || true
+    - ls -la /source/
+    - npm install --ignore-scripts --no-optional --legacy-peer-deps
     - npm run build
 
 run:
