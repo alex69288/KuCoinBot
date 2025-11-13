@@ -19,6 +19,7 @@ services:
       - ./backend/src:/app/src
       - ./backend/logs:/app/logs
       - ./shared:/app/shared
+      - ./backend/dist:/app/dist
     depends_on:
       - redis
       - ml-service
