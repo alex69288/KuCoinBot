@@ -3,6 +3,7 @@
 """
 import logging
 import os
+import sys
 from datetime import datetime
 
 def setup_logger():
@@ -17,15 +18,16 @@ def setup_logger():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     
-    # Файловый логгер
+    # Файловый логгер с UTF-8 кодировкой
     file_handler = logging.FileHandler(
         f'logs/bot_{datetime.now().strftime("%Y%m%d")}.log',
         encoding='utf-8'
     )
     file_handler.setFormatter(formatter)
     
-    # Консольный логгер
-    console_handler = logging.StreamHandler()
+    # Консольный логгер с правильной кодировкой для Windows
+    # На Windows используем sys.stdout/stderr, которые уже переконфигурированы в entry points
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
     
     # Настройка основного логгера

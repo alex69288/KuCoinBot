@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 ЗАПУСК БОТА С ИНТЕГРИРОВАННЫМ WEB APP - УНИВЕРСАЛЬНАЯ ВЕРСИЯ
 Запускает торгового бота вместе с Web App сервером
@@ -5,17 +7,26 @@
 """
 import sys
 import os
+
+# 🔧 Исправление кодировки консоли для Windows (UTF-8) - ПЕРЕД всеми импортами!
+if sys.platform == 'win32':
+    import io
+    import codecs
+    
+    # Устанавливаем UTF-8 кодировку для консоли
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    
+    # Переменная окружения для всех процессов
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    
+    # Для запущенных подпроцессов
+    import locale
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8') if 'en_US.UTF-8' in locale.locale_alias.values() else None
+
 import time
 import traceback
 import threading
-
-# 🔧 Исправление кодировки консоли для Windows (UTF-8)
-if sys.platform == 'win32':
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
-    os.environ['PYTHONIOENCODING'] = 'utf-8'
-
 from dotenv import load_dotenv
 
 # ========================================
