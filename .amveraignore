@@ -1,0 +1,32 @@
+# Игнорируем Python части проекта (legacy код)
+python_bot_legacy.py
+python_bot_dev_legacy.py
+requirements.txt
+pytest.ini
+ml_model.pkl
+scaler.pkl
+__pycache__/
+.pytest_cache/
+
+# Игнорируем Python директории
+analytics/
+config/
+core/
+ml/
+ml-service/
+strategies/
+telegram/
+utils/
+webapp/
+
+# Игнорируем тесты и логи
+tests/
+logs/
+
+# Игнорируем frontend (если не нужен на сервере)
+frontend/
+
+# Локальные файлы
+.env
+.vscode/
+*.log
