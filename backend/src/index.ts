@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { logger } from './utils/logger';
@@ -77,6 +78,9 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Serve static files from frontend build
+app.use(express.static(path.join(__dirname, '../../frontend/dist')));
+
 // Health check
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -131,6 +135,11 @@ function startWebSocketBroadcasting() {
 
   logger.info('📡 WebSocket broadcasting started');
 }
+
+// Fallback для SPA - возвращаем index.html для всех не-API маршрутов
+app.get('*', (_req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
+});
 
 // Обработка ошибок (должен быть последним)
 app.use(errorHandler);
