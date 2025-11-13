@@ -1,12 +1,6 @@
 """
 Тест для проверки логики позиций после исправления WebSocket ошибок
-
-Примечание: файл переименован в test_websocket_fix_v0_1_8.py для совместимости с PyTest.
-Этот модуль помечен как пропущенный, чтобы избежать ошибок импорта при сборе.
 """
-import pytest
-pytest.skip("Deprecated filename with dots; use test_websocket_fix_v0_1_8.py", allow_module_level=True)
-
 import os
 import json
 

@@ -40,7 +40,8 @@
   height: 100%;
   fill: none;
   stroke: currentColor;
-  stroke-width: 2;
+  stroke-width: 1.75;
+  /* синхронизировано с новым спрайтом */
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -77,24 +78,71 @@
 }
 
 /* Специфичные цвета для важных иконок */
-.icon-robot { color: #00bcd4; }
-.icon-chart { color: #00bcd4; }
-.icon-money, .icon-wallet { color: #4caf50; }
-.icon-trend-up { color: #4caf50; }
-.icon-trend-down { color: #e53935; }
-.icon-check { color: #4caf50; }
-.icon-close { color: #e53935; }
-.icon-warning { color: #ffb300; }
-.icon-target { color: #ff4081; }
-.icon-play { color: #4caf50; }
-.icon-pause { color: #ffb300; }
-.icon-stop { color: #e53935; }
+.icon-robot {
+  color: #00bcd4;
+}
+
+.icon-chart {
+  color: #00bcd4;
+}
+
+.icon-money,
+.icon-wallet {
+  color: #4caf50;
+}
+
+.icon-trend-up {
+  color: #4caf50;
+}
+
+.icon-trend-down {
+  color: #e53935;
+}
+
+.icon-check {
+  color: #4caf50;
+}
+
+.icon-close {
+  color: #e53935;
+}
+
+.icon-warning {
+  color: #ffb300;
+}
+
+.icon-target {
+  color: #ff4081;
+}
+
+.icon-play {
+  color: #4caf50;
+}
+
+.icon-pause {
+  color: #ffb300;
+}
+
+.icon-stop {
+  color: #e53935;
+}
 
 /* Статусные круги */
-.icon-circle-green { color: #4ade80; }
-.icon-circle-red { color: #f87171; }
-.icon-circle-yellow { color: #fbbf24; }
-.icon-circle-white { color: #e5e7eb; }
+.icon-circle-green {
+  color: #4ade80;
+}
+
+.icon-circle-red {
+  color: #f87171;
+}
+
+.icon-circle-yellow {
+  color: #fbbf24;
+}
+
+.icon-circle-white {
+  color: #e5e7eb;
+}
 
 /* Анимации */
 .icon-refresh.spinning {
@@ -102,8 +150,13 @@
 }
 
 @keyframes icon-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Hover эффекты */
@@ -134,9 +187,20 @@ button:disabled .icon,
 
 /* Адаптивные размеры */
 @media (max-width: 768px) {
-  .icon { width: 1.1em; height: 1.1em; }
-  .icon-lg { width: 1.6em; height: 1.6em; }
-  .icon-xl { width: 2.2em; height: 2.2em; }
+  .icon {
+    width: 1.1em;
+    height: 1.1em;
+  }
+
+  .icon-lg {
+    width: 1.6em;
+    height: 1.6em;
+  }
+
+  .icon-xl {
+    width: 2.2em;
+    height: 2.2em;
+  }
 }
 
 /* Группировка иконок */
@@ -153,11 +217,25 @@ button:disabled .icon,
 }
 
 /* Утилиты трансформации */
-.icon-rotate-90 { transform: rotate(90deg); }
-.icon-rotate-180 { transform: rotate(180deg); }
-.icon-rotate-270 { transform: rotate(270deg); }
-.icon-flip-h { transform: scaleX(-1); }
-.icon-flip-v { transform: scaleY(-1); }
+.icon-rotate-90 {
+  transform: rotate(90deg);
+}
+
+.icon-rotate-180 {
+  transform: rotate(180deg);
+}
+
+.icon-rotate-270 {
+  transform: rotate(270deg);
+}
+
+.icon-flip-h {
+  transform: scaleX(-1);
+}
+
+.icon-flip-v {
+  transform: scaleY(-1);
+}
 
 /* Pulsing анимация */
 .icon-pulse {
@@ -165,8 +243,15 @@ button:disabled .icon,
 }
 
 @keyframes icon-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Badge для уведомлений */
