@@ -39,5 +39,83 @@ Write-Host ""
 
 Write-Host "⚙️  ЗАПУСК:" -ForegroundColor Green
 
-# Запускаем watch_mode.py
-python watch_mode.py
+# Переменные для мониторинга файлов
+$watchPath = Get-Location
+$watchFilter = '*.*'
+$lastChangeTime = 0
+$debounceInterval = 2  # Интервал перезагрузки в секундах
+$watcherProcess = $null
+
+# Функция для проверки изменений в файлах
+function CheckForChanges {
+    $latestChange = Get-ChildItem -Path $watchPath -Recurse -Exclude @('__pycache__', '.git', 'node_modules', '.pytest_cache', 'logs', '__pycache__', '*.pyc') | 
+                    Where-Object { -not $_.PSIsContainer } | 
+                    Sort-Object LastWriteTime -Descending | 
+                    Select-Object -First 1 -ExpandProperty LastWriteTime
+    
+    if ($latestChange) {
+        $latestChangeUnix = [int64]($latestChange.ToUniversalTime() - (Get-Date -Date "1970-01-01")).TotalSeconds
+        if ($latestChangeUnix -gt $script:lastChangeTime) {
+            $script:lastChangeTime = $latestChangeUnix
+            return $true
+        }
+    }
+    return $false
+}
+
+# Функция для перезагрузки и запуска
+function RestartBot {
+    Write-Host ""
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
+    Write-Host "🔄 Обнаружены изменения! Перезагрузка..." -ForegroundColor Yellow
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Завершаем предыдущий процесс если запущен
+    if ($script:watcherProcess -ne $null -and -not $script:watcherProcess.HasExited) {
+        Write-Host "🛑 Остановка текущего процесса..." -ForegroundColor Cyan
+        Stop-Process -InputObject $script:watcherProcess -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 500
+    }
+    
+    # Запускаем main_dev.py
+    Write-Host "▶️  Запуск main_dev.py..." -ForegroundColor Green
+    $script:watcherProcess = Start-Process -FilePath "python" -ArgumentList "main_dev.py" -NoNewWindow -PassThru
+}
+
+# Инициализация
+$script:lastChangeTime = [int64]((Get-Date).ToUniversalTime() - (Get-Date -Date "1970-01-01")).TotalSeconds
+$lastCheckTime = Get-Date
+
+# Первый запуск
+RestartBot
+
+# Главный цикл мониторинга
+Write-Host ""
+Write-Host "👁️  Ожидание изменений в файлах... (Ctrl+C для выхода)" -ForegroundColor Cyan
+Write-Host ""
+
+try {
+    while ($true) {
+        # Проверяем изменения каждые 0.5 сек
+        if ((Get-Date) - $lastCheckTime -gt (New-TimeSpan -Seconds 0.5)) {
+            if (CheckForChanges) {
+                Start-Sleep -Seconds $debounceInterval
+                RestartBot
+            }
+            $lastCheckTime = Get-Date
+        }
+        Start-Sleep -Milliseconds 100
+    }
+}
+finally {
+    # Очистка при выходе
+    if ($script:watcherProcess -ne $null -and -not $script:watcherProcess.HasExited) {
+        Write-Host ""
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Red
+        Write-Host "🛑 Остановка..." -ForegroundColor Red
+        Stop-Process -InputObject $script:watcherProcess -Force -ErrorAction SilentlyContinue
+        Write-Host "✅ Watch mode завершен" -ForegroundColor Green
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Red
+    }
+}
