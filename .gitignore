@@ -41,12 +41,18 @@ logs/
 
 # Data files
 *.csv
-*.json
 *.pkl
 *.model
 bot_settings.json
 ml_model.pkl
 scaler.pkl
+position_state.json
+
+# Exclude package.json from ignore (needed for Amvera)
+!package.json
+!backend/package.json
+!backend/package-lock.json
+!frontend/package.json
 
 # OS
 .DS_Store
