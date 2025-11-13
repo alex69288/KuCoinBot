@@ -1,5 +1,9 @@
-# Конфигурация для деплоя KuCoin Bot на Amvera Cloud
+# ============================================
+# Amvera Cloud Configuration - Node.js Backend
+# ============================================
 # Документация: https://docs.amvera.ru/
+# Этот проект использует ТОЛЬКО Node.js + TypeScript
+# Python файлы - legacy код, не используется
 
 meta:
   environment: nodejs
