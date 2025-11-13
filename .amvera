@@ -1,4 +1,5 @@
 nodejs
-# Force rebuild timestamp: 2025-11-13 14:46
-# This is a Node.js + TypeScript project ONLY
-# No Python files should be executed
+# Force rebuild timestamp: 2025-11-13 14:56
+# CRITICAL: Project structure moved to root
+# Build: npm ci && npm run build
+# Run: node dist/index.js
