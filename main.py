@@ -25,6 +25,15 @@ if sys.platform == 'win32':
     import locale
     locale.setlocale(locale.LC_ALL, 'en_US.UTF-8') if 'en_US.UTF-8' in locale.locale_alias.values() else None
 
+# 🔧 Конфигурация asyncio для корректной работы на Windows
+# Должна быть ПЕРЕД импортами, которые используют asyncio
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from utils.asyncio_config import configure_asyncio, suppress_asyncio_debug_warnings
+
+# Конфигурируем asyncio event loop (решает проблему ConnectionResetError на Windows)
+configure_asyncio()
+suppress_asyncio_debug_warnings()
+
 import time
 import traceback
 import threading
@@ -34,7 +43,6 @@ import threading
 # Переменные окружения устанавливаются в панели хостинга
 # ========================================
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.logger import log_info, log_error
 
 

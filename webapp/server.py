@@ -13,6 +13,11 @@ from datetime import datetime
 # Добавляем корневую директорию в путь
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# 🔧 Конфигурация asyncio для корректной работы на Windows (перед импортом FastAPI)
+from utils.asyncio_config import configure_asyncio, suppress_asyncio_debug_warnings
+configure_asyncio()
+suppress_asyncio_debug_warnings()
+
 from fastapi import FastAPI, HTTPException, Query, Body, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -1496,19 +1501,32 @@ class ConnectionManager:
             log_info(f"[WS] Подключение закрыто. Осталось активных: {len(self.active_connections)}")
     
     async def send_personal_message(self, message: dict, websocket: WebSocket):
-        """Отправляет сообщение конкретному клиенту"""
+        """Отправляет сообщение конкретному клиенту с обработкой ошибок"""
         try:
             await websocket.send_json(message)
+        except ConnectionResetError as e:
+            # Ошибка Windows: удаленный хост разорвал соединение
+            log_info(f"[WS] Соединение было разорвано клиентом (ConnectionResetError)")
+            self.disconnect(websocket)
         except Exception as e:
             log_error(f"[WS] Ошибка отправки персонального сообщения: {e}")
             self.disconnect(websocket)
     
     async def broadcast(self, message: dict):
-        """Рассылает сообщение всем подключенным клиентам"""
+        """Рассылает сообщение всем подключенным клиентам с обработкой разорванных соединений"""
         disconnected = []
-        for connection in self.active_connections:
+        
+        for connection in list(self.active_connections):  # Создаем копию списка для безопасной итерации
             try:
                 await connection.send_json(message)
+            except ConnectionResetError:
+                # Нормальная ошибка - клиент отключился на Windows
+                log_info(f"[WS] Клиент отключился (ConnectionResetError), удаляем из списка")
+                disconnected.append(connection)
+            except (RuntimeError, OSError) as e:
+                # Другие сетевые ошибки
+                log_info(f"[WS] Сетевая ошибка при отправке сообщения: {type(e).__name__}")
+                disconnected.append(connection)
             except Exception as e:
                 log_error(f"[WS] Ошибка отправки сообщения клиенту: {e}")
                 disconnected.append(connection)
@@ -1688,19 +1706,35 @@ async def websocket_endpoint(websocket: WebSocket):
         
         # Ожидаем сообщений от клиента (для keep-alive)
         while True:
-            data = await websocket.receive_text()
-            # Можем обрабатывать команды от клиента, если нужно
-            if data == "ping":
-                await manager.send_personal_message({
-                    "type": "pong",
-                    "timestamp": datetime.now().isoformat()
-                }, websocket)
+            try:
+                data = await websocket.receive_text()
+                # Можем обрабатывать команды от клиента, если нужно
+                if data == "ping":
+                    await manager.send_personal_message({
+                        "type": "pong",
+                        "timestamp": datetime.now().isoformat()
+                    }, websocket)
+            except ConnectionResetError:
+                # Нормальное отключение на Windows
+                log_info("[WS] Клиент отключился (ConnectionResetError)")
+                break
+            except RuntimeError as e:
+                # Соединение закрыто
+                log_info(f"[WS] Соединение закрыто: {e}")
+                break
                 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        log_info("[WS] Клиент отключился")
+        log_info("[WS] Клиент отключился (WebSocketDisconnect)")
+    except ConnectionResetError:
+        # Обработка ошибки Windows
+        manager.disconnect(websocket)
+        log_info("[WS] Соединение было разорвано (ConnectionResetError)")
     except Exception as e:
-        log_error(f"[WS] Ошибка WebSocket: {e}")
+        log_error(f"[WS] Ошибка WebSocket: {type(e).__name__}: {e}")
+        manager.disconnect(websocket)
+    finally:
+        # Гарантированно удаляем соединение
         manager.disconnect(websocket)
 
 
