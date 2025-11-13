@@ -9,8 +9,11 @@
 
   // Функция инициализации иконок
   function initializeIcons() {
+    console.log('[Icons] Запуск инициализации иконок...');
+    
     // Находим все элементы с классом icon
     const icons = document.querySelectorAll('.icon[class*="icon-"]');
+    console.log(`[Icons] Найдено элементов: ${icons.length}`);
     
     let convertedCount = 0;
     
@@ -40,8 +43,9 @@
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
       
-      // Устанавливаем ссылку на спрайт
-      use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', `/static/icons.svg#${iconName}`);
+      // Устанавливаем ссылку на спрайт (двойная установка для совместимости)
+      use.setAttribute('href', `/static/icons.svg#${iconName}`);
+      use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `/static/icons.svg#${iconName}`);
       
       // Собираем SVG
       svg.appendChild(use);
@@ -52,6 +56,8 @@
     
     if (convertedCount > 0) {
       console.log(`[Icons] ✓ Инициализировано ${convertedCount} иконок`);
+    } else {
+      console.warn('[Icons] ⚠ Не найдено иконок для инициализации');
     }
   }
 
