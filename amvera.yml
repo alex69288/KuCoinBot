@@ -20,9 +20,8 @@ build:
     - test -f backend/dist/index.js && echo "✓ index.js created successfully" || echo "✗ ERROR: index.js not found!"
 
 run:
-  # Запуск приложения из директории backend
-  workdir: backend
-  command: node dist/index.js
+  # Запуск приложения - используем абсолютный путь
+  command: node backend/dist/index.js
   # Монтирование данных для персистентности
   persistenceMount: /data
   # Порт контейнера
