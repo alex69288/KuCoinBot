@@ -46,11 +46,10 @@ class ExchangeManager:
             try:
                 print(f"🔌 Попытка {attempt}/{attempts}: Создание клиента KuCoin...", flush=True)
                 self.exchange = ccxt.kucoin(base_config)
-                print(f"✅ Клиент создан, быстрая инициализация...", flush=True)
-                # ⚡ ОПТИМИЗАЦИЯ: Загружаем рынки БЕЗ reload для ускорения старта
-                # При первом вызове markets будут загружены автоматически из кэша или API
-                self.exchange.load_markets(reload=False)
-                print(f"✅ Клиент готов ({len(self.exchange.markets)} пар в кэше)", flush=True)
+                print(f"✅ Клиент создан, загрузка рынков...", flush=True)
+                # Тестовый лёгкий запрос: markets (публичный) для проверки сети
+                self.exchange.load_markets(reload=True)
+                print(f"✅ Рынки загружены ({len(self.exchange.markets)} пар)", flush=True)
                 # Баланс пробуем только если есть ключи (легкий запрос)
                 if api_key and secret_key and passphrase:
                     self.exchange.fetch_balance()

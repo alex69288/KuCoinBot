@@ -150,9 +150,9 @@ def main():
         webapp_thread.start()
         print("✅ Web App поток запущен", flush=True)
         
-        # ⚡ ОПТИМИЗАЦИЯ: Минимальная задержка для старта uvicorn
-        print("⏳ Инициализация сервера...", flush=True)
-        time.sleep(0.5)  # Сокращено с 3 до 0.5 сек
+        # Даем серверу время на запуск
+        print("⏳ Ожидание запуска сервера (1 сек)...", flush=True)
+        time.sleep(1)  # Достаточно для инициализации uvicorn
         
         # Проверка доступности сервера
         port = int(os.getenv('PORT', 8000))
