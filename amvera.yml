@@ -14,12 +14,12 @@ meta:
 build:
   # Команды для сборки проекта
   args:
-    - cd backend && npm ci
-    - cd backend && npm run build
+    - npm ci
+    - npm run build
 
 run:
-  # Запуск приложения - используем абсолютный путь
-  command: node backend/dist/index.js
+  # Запуск приложения
+  command: node dist/index.js
   # Монтирование данных для персистентности
   persistenceMount: /data
   # Порт контейнера
