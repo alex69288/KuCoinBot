@@ -18,6 +18,9 @@ build:
     - ls -la /source/
     - npm install --ignore-scripts --no-optional --legacy-peer-deps
     - npm run build
+    - mkdir -p /app
+    - cp -r /source/dist /app/
+    - cp /source/package*.json /app/
 
 run:
   # Запуск приложения
