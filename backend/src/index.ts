@@ -9,9 +9,47 @@ import { Server as SocketIOServer } from 'socket.io';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import apiRoutes from './api/routes';
+import { ExchangeManager } from './core/exchange';
+import { TradingBot } from './core/bot';
 
 // Загружаем переменные окружения
 dotenv.config();
+
+// Инициализация Exchange и Bot
+let exchange: ExchangeManager | null = null;
+let tradingBot: TradingBot | null = null;
+
+try {
+  const apiKey = process.env.KUCOIN_API_KEY || '';
+  const apiSecret = process.env.KUCOIN_API_SECRET || '';
+  const apiPassphrase = process.env.KUCOIN_API_PASSPHRASE || '';
+  const testnet = process.env.KUCOIN_TESTNET === 'true';
+
+  if (apiKey && apiSecret && apiPassphrase) {
+    exchange = new ExchangeManager({
+      apiKey,
+      apiSecret,
+      apiPassphrase,
+      testnet
+    });
+
+    tradingBot = new TradingBot(exchange, {
+      symbol: process.env.TRADING_SYMBOL || 'BTC/USDT',
+      timeframe: process.env.TRADING_TIMEFRAME || '1h',
+      tradingEnabled: false, // Всегда начинаем с отключенной торговлей
+      strategy: 'ema_ml'
+    });
+
+    logger.info('✅ Exchange and Trading Bot initialized');
+  } else {
+    logger.warn('⚠️ KuCoin credentials not found, running in mock mode');
+  }
+} catch (error) {
+  logger.error('Failed to initialize Exchange/Bot:', error);
+}
+
+// Экспортируем для использования в routes
+export { tradingBot, exchange };
 
 const app: Express = express();
 const httpServer = createServer(app);
