@@ -1,12 +1,16 @@
-/* Базовый класс для иконок - используем встроенные SVG через data URI */
+/* 
+ * СОВРЕМЕННЫЕ ИКОНКИ v0.1.15
+ * Чистый, минималистичный дизайн в стиле Lucide Icons
+ * Без эмодзи - только качественный SVG
+ */
+
+/* Базовый класс для иконок */
 .icon {
   display: inline-block;
   width: 1em;
   height: 1em;
   vertical-align: -0.125em;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
+  flex-shrink: 0;
 }
 
 /* Размеры иконок */
@@ -30,175 +34,160 @@
   height: 2em;
 }
 
-/* Встроенные SVG иконки - мгновенная загрузка без внешних запросов */
-.icon-robot {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300bcd4'%3E%3Cpath d='M12 2c.8 0 1.5.7 1.5 1.5v1c2.2.5 4 2.3 4.5 4.5h1c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5h-1v2h1c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5h-1c-.5 2.2-2.3 4-4.5 4.5v1c0 .8-.7 1.5-1.5 1.5s-1.5-.7-1.5-1.5v-1c-2.2-.5-4-2.3-4.5-4.5h-1c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5h1v-2h-1C3.7 12 3 11.3 3 10.5S3.7 9 4.5 9h1c.5-2.2 2.3-4 4.5-4.5v-1c0-.8.7-1.5 1.5-1.5M9 11c-.6 0-1 .4-1 1s.4 1 1 1 1-.4 1-1-.4-1-1-1m6 0c-.6 0-1 .4-1 1s.4 1 1 1 1-.4 1-1-.4-1-1-1m-3 3c-1.1 0-2 .9-2 2h4c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E");
-}
-
-.icon-chart {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300bcd4'%3E%3Cpath d='M3 3v18h18v-2H5V3H3m4 14h2V9H7v8m4 0h2V5h-2v12m4 0h2v-6h-2v6m4 0h2v-4h-2v4z'/%3E%3C/svg%3E");
-}
-
-.icon-money {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234caf50'%3E%3Cpath d='M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2m1.5 14.5H13v1.5h-2v-1.5H9.5c-.8 0-1.5-.7-1.5-1.5V13h2v1h3v-2h-2c-1.1 0-2-.9-2-2V9c0-.8.7-1.5 1.5-1.5H11V6h2v1.5h1.5c.8 0 1.5.7 1.5 1.5v1.5h-2V9h-3v2h2c1.1 0 2 .9 2 2v1c0 .8-.7 1.5-1.5 1.5z'/%3E%3C/svg%3E");
-}
-
-.icon-trend-up {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234caf50'%3E%3Cpath d='M16 6l2.3 2.3-5.3 5.3-4-4L2 16.6 3.4 18l5.6-5.6 4 4 6.7-6.7L22 12V6h-6z'/%3E%3C/svg%3E");
-}
-
-.icon-trend-down {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e53935'%3E%3Cpath d='M16 18l2.3-2.3-5.3-5.3-4 4L2 7.4 3.4 6l5.6 5.6 4-4 6.7 6.7L22 12v6h-6z'/%3E%3C/svg%3E");
-}
-
-.icon-warning {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffb300'%3E%3Cpath d='M13 14h-2V9h2m0 9h-2v-2h2M1 21h22L12 2 1 21z'/%3E%3C/svg%3E");
-}
-
-.icon-check {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234caf50'%3E%3Cpath d='M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z'/%3E%3C/svg%3E");
-}
-
-.icon-close {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e53935'%3E%3Cpath d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z'/%3E%3C/svg%3E");
-}
-
-.icon-pause {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffb300'%3E%3Cpath d='M14 19h4V5h-4M6 19h4V5H6v14z'/%3E%3C/svg%3E");
-}
-
-.icon-play {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234caf50'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E");
-}
-
-.icon-refresh {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300bcd4'%3E%3Cpath d='M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'/%3E%3C/svg%3E");
-}
-
-.icon-list {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300bcd4'%3E%3Cpath d='M3 13h2v-2H3v2m0 4h2v-2H3v2m0-8h2V7H3v2m4 4h14v-2H7v2m0 4h14v-2H7v2M7 7v2h14V7H7z'/%3E%3C/svg%3E");
-}
-
-.icon-settings {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300bcd4'%3E%3Cpath d='M12 15.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5m7.4-2.9c0-.3.1-.6.1-1s0-.7-.1-1l2.1-1.6c.2-.1.2-.4.1-.6l-2-3.5c-.1-.2-.4-.3-.6-.2l-2.5 1c-.5-.4-1.1-.7-1.7-1l-.4-2.6c0-.2-.3-.4-.5-.4h-4c-.3 0-.5.2-.5.4l-.4 2.6c-.6.2-1.1.6-1.7 1l-2.5-1c-.2-.1-.5 0-.6.2l-2 3.5c-.1.2-.1.5.1.6l2.1 1.6c0 .3-.1.6-.1 1s0 .7.1 1l-2.1 1.6c-.2.1-.2.4-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.4 2.6c0 .2.2.4.5.4h4c.2 0 .5-.2.5-.4l.4-2.6c.6-.2 1.2-.6 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5c.1-.2.1-.5-.1-.6l-2.1-1.6z'/%3E%3C/svg%3E");
-}
-
-.icon-wallet {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300bcd4'%3E%3Cpath d='M21 18v1c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5z'/%3E%3C/svg%3E");
-}
-
-.icon-target {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff4081'%3E%3Cpath d='M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2m0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8m0-14c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6m0 10c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4m0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z'/%3E%3C/svg%3E");
-}
-
-.icon-bell {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300bcd4'%3E%3Cpath d='M21 19v1H3v-1l2-2v-6c0-3.1 2.03-5.83 5-6.71V4c0-1.11.89-2 2-2s2 .89 2 2v.29c2.97.88 5 3.61 5 6.71v6l2 2m-7 2c0 1.11-.89 2-2 2s-2-.89-2-2'/%3E%3C/svg%3E");
-}
-
-.icon-phone::before {
-  content: '📱';
-}
-
-.icon-card::before {
-  content: '💳';
-}
-
-.icon-stop::before {
-  content: '🛑';
-}
-
-.icon-home::before {
-  content: '🏠';
-}
-
-.icon-gamepad::before {
-  content: '🎮';
-}
-
-.icon-document::before {
-  content: '📜';
-}
-
-.icon-pin::before {
-  content: '📍';
-}
-
-.icon-trash::before {
-  content: '🗑️';
-}
-
-.icon-save::before {
-  content: '💾';
-}
-
-.icon-shield::before {
-  content: '🛡️';
-}
-
-.icon-wrench::before {
-  content: '🔧';
-}
-
-.icon-inbox::before {
-  content: '📭';
-}
-
-.icon-ema::before {
-  content: '📈';
-}
-
-.icon-circle-green::before {
-  content: '🟢';
-}
-
-.icon-circle-red::before {
-  content: '🔴';
-}
-
-.icon-circle-yellow::before {
-  content: '🟡';
-}
-
-.icon-circle-white::before {
-  content: '⚪';
-}
-
-/* Для SVG спрайтов */
-.icon-svg {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  vertical-align: -0.125em;
-}
-
-.icon-svg svg {
+/* SVG через use - лучшая производительность */
+.icon svg {
   width: 100%;
   height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Для filled иконок (круги статусов) */
+.icon-circle svg {
   fill: currentColor;
+  stroke: none;
 }
 
-/* Если элемент помечен как использующий SVG-спрайт, скрываем псевдоконтент-эмодзи */
-.icon-svg::before {
-  content: "";
+/* Цветовые схемы для иконок */
+.icon-primary {
+  color: var(--primary-color, #00bcd4);
 }
 
-/* Цвета для статусных иконок */
 .icon-success {
-  color: #4ade80;
+  color: var(--success-color, #4caf50);
 }
 
-.icon-error {
-  color: #f87171;
+.icon-danger {
+  color: var(--danger-color, #e53935);
 }
 
 .icon-warning {
-  color: #fbbf24;
+  color: var(--warning-color, #ffb300);
 }
 
-.icon-info {
-  color: #60a5fa;
+.icon-accent {
+  color: var(--accent-color, #ff4081);
 }
 
-.icon-neutral {
-  color: #9ca3af;
+.icon-muted {
+  color: var(--text-secondary, #b0b8c1);
+}
+
+/* Специфичные цвета для важных иконок */
+.icon-robot { color: #00bcd4; }
+.icon-chart { color: #00bcd4; }
+.icon-money, .icon-wallet { color: #4caf50; }
+.icon-trend-up { color: #4caf50; }
+.icon-trend-down { color: #e53935; }
+.icon-check { color: #4caf50; }
+.icon-close { color: #e53935; }
+.icon-warning { color: #ffb300; }
+.icon-target { color: #ff4081; }
+.icon-play { color: #4caf50; }
+.icon-pause { color: #ffb300; }
+.icon-stop { color: #e53935; }
+
+/* Статусные круги */
+.icon-circle-green { color: #4ade80; }
+.icon-circle-red { color: #f87171; }
+.icon-circle-yellow { color: #fbbf24; }
+.icon-circle-white { color: #e5e7eb; }
+
+/* Анимации */
+.icon-refresh.spinning {
+  animation: icon-spin 1s linear infinite;
+}
+
+@keyframes icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Hover эффекты */
+button .icon,
+a .icon,
+.clickable .icon {
+  transition: transform 0.2s ease;
+}
+
+button:hover .icon,
+a:hover .icon,
+.clickable:hover .icon {
+  transform: scale(1.1);
+}
+
+button:active .icon,
+a:active .icon,
+.clickable:active .icon {
+  transform: scale(0.95);
+}
+
+/* Disabled состояние */
+button:disabled .icon,
+.disabled .icon {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Адаптивные размеры */
+@media (max-width: 768px) {
+  .icon { width: 1.1em; height: 1.1em; }
+  .icon-lg { width: 1.6em; height: 1.6em; }
+  .icon-xl { width: 2.2em; height: 2.2em; }
+}
+
+/* Группировка иконок */
+.icon-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.icon-with-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+/* Утилиты трансформации */
+.icon-rotate-90 { transform: rotate(90deg); }
+.icon-rotate-180 { transform: rotate(180deg); }
+.icon-rotate-270 { transform: rotate(270deg); }
+.icon-flip-h { transform: scaleX(-1); }
+.icon-flip-v { transform: scaleY(-1); }
+
+/* Pulsing анимация */
+.icon-pulse {
+  animation: icon-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes icon-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Badge для уведомлений */
+.icon-badge {
+  position: relative;
+}
+
+.icon-badge::after {
+  content: attr(data-badge);
+  position: absolute;
+  top: -0.4em;
+  right: -0.4em;
+  min-width: 1.2em;
+  height: 1.2em;
+  padding: 0.1em 0.3em;
+  font-size: 0.6em;
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  border-radius: 0.6em;
+  background-color: var(--danger-color, #e53935);
+  color: white;
 }
