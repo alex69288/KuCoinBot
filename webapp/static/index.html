@@ -412,7 +412,7 @@
       flex-shrink: 0;
       position: absolute;
       top: 52%;
-      left: -9px;
+      left: -16px;
       transform: translateY(-50%);
     }
 
@@ -1441,7 +1441,8 @@
         console.log('📊 Загрузка статуса...');
         const initData = getInitData();
         console.log('📊 init_data:', initData);
-        const response = await fetch(`/api/status?init_data=${encodeURIComponent(initData)}`);
+        // Используем полный формат (без compact=1) для корректного отображения позиций
+        const response = await fetch(`/api/status?init_data=${encodeURIComponent(initData)}&compact=0`);
         console.log('📊 Response получен:', response.status, response.ok);
         if (!response.ok) {
           const errorText = await response.text();
@@ -1485,7 +1486,8 @@
         console.log('📈 Загрузка рынка...');
         const initData = getInitData();
         console.log('📈 init_data:', initData);
-        const response = await fetch(`/api/market?init_data=${encodeURIComponent(initData)}`);
+        // Используем полный формат (без compact=1) для корректного отображения данных
+        const response = await fetch(`/api/market?init_data=${encodeURIComponent(initData)}&compact=0`);
         console.log('📈 Response получен:', response.status, response.ok);
         if (!response.ok) {
           const errorText = await response.text();
