@@ -8,8 +8,10 @@ meta:
     version: 20
 
 build:
+  folder: backend
   args:
-    - cd backend && npm install && npm run build
+    - npm install
+    - npm run build
 
 run:
   command: cd backend && node dist/index.js
