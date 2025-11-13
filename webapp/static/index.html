@@ -782,7 +782,7 @@
         <div class="card-title">ОБНОВЛЕНИЕ РЫНКА</div>
         <div class="info-row">
           <span class="info-label">Пара:</span>
-          <span id="market-symbol" class="info-value">BTC/USDT (Bitcoin)</span>
+          <span id="market-symbol" class="info-value">₿ BTC/USDT (Bitcoin)</span>
         </div>
         <div class="info-row">
           <span class="info-label">Цена:</span>
@@ -880,10 +880,14 @@
         <div class="form-group">
           <label class="form-label">Торговая пара</label>
           <select id="trading-pair" class="form-select" onchange="updateTradingPair()">
-            <option value="BTC/USDT">BTC/USDT</option>
-            <option value="ETH/USDT">ETH/USDT</option>
-            <option value="BNB/USDT">BNB/USDT</option>
-            <option value="SOL/USDT">SOL/USDT</option>
+            <option value="BTC/USDT">₿ BTC/USDT (Bitcoin)</option>
+            <option value="ETH/USDT">Ξ ETH/USDT (Ethereum)</option>
+            <option value="BNB/USDT">⧉ BNB/USDT (Binance Coin)</option>
+            <option value="SOL/USDT">◎ SOL/USDT (Solana)</option>
+            <option value="ADA/USDT">₳ ADA/USDT (Cardano)</option>
+            <option value="XRP/USDT">✕ XRP/USDT (Ripple)</option>
+            <option value="DOT/USDT">● DOT/USDT (Polkadot)</option>
+            <option value="LINK/USDT">⛓ LINK/USDT (Chainlink)</option>
           </select>
         </div>
         <div class="form-group">
@@ -1303,6 +1307,43 @@
       toTakeProfit: null
     };
 
+    // Словарь эмодзи и названий криптовалют
+    const cryptoData = {
+      'BTC': { emoji: '₿', name: 'Bitcoin' },
+      'ETH': { emoji: 'Ξ', name: 'Ethereum' },
+      'XRP': { emoji: '✕', name: 'Ripple' },
+      'ADA': { emoji: '₳', name: 'Cardano' },
+      'SOL': { emoji: '◎', name: 'Solana' },
+      'DOT': { emoji: '●', name: 'Polkadot' },
+      'USDT': { emoji: '₮', name: 'Tether' },
+      'USDC': { emoji: 'Ⓒ', name: 'USD Coin' },
+      'BNB': { emoji: '⧉', name: 'Binance Coin' },
+      'LINK': { emoji: '⛓', name: 'Chainlink' },
+      'DOGE': { emoji: 'Ð', name: 'Dogecoin' },
+      'TON': { emoji: '💎', name: 'Toncoin' },
+      'LTC': { emoji: 'Ł', name: 'Litecoin' },
+      'MATIC': { emoji: '🔷', name: 'Polygon' },
+      'AVAX': { emoji: '🔺', name: 'Avalanche' }
+    };
+
+    // Форматирование символа пары с эмодзи и названием
+    function formatSymbol(symbol) {
+      if (!symbol) return symbol;
+
+      // Разделяем пару на части (например: BTC/USDT -> ['BTC', 'USDT'])
+      const parts = symbol.split('/');
+      if (parts.length !== 2) return symbol;
+
+      const [baseCrypto, quoteCrypto] = parts;
+      const baseData = cryptoData[baseCrypto];
+
+      if (baseData) {
+        return `${baseData.emoji} ${symbol} (${baseData.name})`;
+      }
+
+      return symbol;
+    }
+
     function applyFlash(el, dir) {
       if (!el) return;
       el.classList.remove('value-flash-up', 'value-flash-down');
@@ -1431,14 +1472,10 @@
         const data = await response.json();
         console.log('✅ Рынок загружен:', data);
 
-        // Пара в формате: 🪙 BTC/USDT (ПолноеНазвание)
+        // Пара в формате: ₿ BTC/USDT (Bitcoin)
         const symbol = data.symbol || 'BTC/USDT';
-        const parts = symbol.split('/');
-        const base = parts[0] || 'BTC';
-        const fullNames = { BTC: 'Bitcoin', ETH: 'Ethereum', BNB: 'BNB', SOL: 'Solana', ADA: 'Cardano', XRP: 'XRP', DOGE: 'Dogecoin', TON: 'Toncoin', LTC: 'Litecoin' };
-        const fullName = fullNames[base] || base;
         const symbolEl = document.getElementById('market-symbol');
-        symbolEl.innerHTML = `${symbol} (${fullName})`;
+        symbolEl.innerHTML = formatSymbol(symbol);
 
         // Цена + анимация изменение
         const priceEl = document.getElementById('market-price');
@@ -1566,7 +1603,7 @@
         container.innerHTML = positions.map(pos => `
           <div class="position-card">
             <div class="position-header">
-              <span class="position-symbol">${pos.pair || 'N/A'}</span>
+              <span class="position-symbol">${formatSymbol(pos.pair || 'N/A')}</span>
               <span class="position-pnl ${pos.pnl >= 0 ? 'price-change-positive' : 'price-change-negative'}">
                 ${pos.pnl >= 0 ? '+' : ''}${(pos.pnl || 0).toFixed(2)} USDT (${(pos.pnl_percent || 0).toFixed(2)}%)
               </span>
@@ -1620,7 +1657,7 @@
             </div>
             <div class="info-row">
               <span class="info-label">Пара</span>
-              <span class="info-value">${trade.symbol || 'N/A'}</span>
+              <span class="info-value">${formatSymbol(trade.symbol || 'N/A')}</span>
             </div>
             <div class="info-row">
               <span class="info-label">Цена</span>

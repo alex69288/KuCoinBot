@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест отображения символов - WebApp</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+    }
+
+    .container {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      color: #667eea;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .test-case {
+      background: #f8f9fa;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .test-case.pass {
+      border-left-color: #28a745;
+    }
+
+    .test-case.fail {
+      border-left-color: #dc3545;
+    }
+
+    .symbol-display {
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+      margin: 10px 0;
+    }
+
+    .expected {
+      color: #28a745;
+    }
+
+    .actual {
+      color: #007bff;
+    }
+
+    .summary {
+      margin-top: 30px;
+      padding: 20px;
+      background: #e9ecef;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .summary.pass {
+      background: #d4edda;
+      color: #155724;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Тест отображения торговых пар в WebApp</h1>
+    <div id="results"></div>
+    <div id="summary" class="summary"></div>
+  </div>
+
+  <script>
+    // Копируем словарь и функцию из webapp/static/index.html
+    const cryptoData = {
+      'BTC': { emoji: '₿', name: 'Bitcoin' },
+      'ETH': { emoji: 'Ξ', name: 'Ethereum' },
+      'XRP': { emoji: '✕', name: 'Ripple' },
+      'ADA': { emoji: '₳', name: 'Cardano' },
+      'SOL': { emoji: '◎', name: 'Solana' },
+      'DOT': { emoji: '●', name: 'Polkadot' },
+      'USDT': { emoji: '₮', name: 'Tether' },
+      'USDC': { emoji: 'Ⓒ', name: 'USD Coin' },
+      'BNB': { emoji: '⧉', name: 'Binance Coin' },
+      'LINK': { emoji: '⛓', name: 'Chainlink' },
+      'DOGE': { emoji: 'Ð', name: 'Dogecoin' },
+      'TON': { emoji: '💎', name: 'Toncoin' },
+      'LTC': { emoji: 'Ł', name: 'Litecoin' },
+      'MATIC': { emoji: '🔷', name: 'Polygon' },
+      'AVAX': { emoji: '🔺', name: 'Avalanche' }
+    };
+
+    function formatSymbol(symbol) {
+      if (!symbol) return symbol;
+
+      const parts = symbol.split('/');
+      if (parts.length !== 2) return symbol;
+
+      const [baseCrypto, quoteCrypto] = parts;
+      const baseData = cryptoData[baseCrypto];
+
+      if (baseData) {
+        return `${baseData.emoji} ${symbol} (${baseData.name})`;
+      }
+
+      return symbol;
+    }
+
+    // Тестовые случаи
+    const testCases = [
+      { input: 'BTC/USDT', expected: '₿ BTC/USDT (Bitcoin)' },
+      { input: 'ETH/USDT', expected: 'Ξ ETH/USDT (Ethereum)' },
+      { input: 'SOL/USDT', expected: '◎ SOL/USDT (Solana)' },
+      { input: 'ADA/USDT', expected: '₳ ADA/USDT (Cardano)' },
+      { input: 'XRP/USDT', expected: '✕ XRP/USDT (Ripple)' },
+      { input: 'DOT/USDT', expected: '● DOT/USDT (Polkadot)' },
+      { input: 'BNB/USDT', expected: '⧉ BNB/USDT (Binance Coin)' },
+      { input: 'LINK/USDT', expected: '⛓ LINK/USDT (Chainlink)' },
+      { input: 'MATIC/USDT', expected: '🔷 MATIC/USDT (Polygon)' },
+      { input: 'AVAX/USDT', expected: '🔺 AVAX/USDT (Avalanche)' }
+    ];
+
+    // Выполнение тестов
+    let passed = 0;
+    let failed = 0;
+    const resultsContainer = document.getElementById('results');
+
+    testCases.forEach((testCase, index) => {
+      const actual = formatSymbol(testCase.input);
+      const isPassed = actual === testCase.expected;
+
+      if (isPassed) passed++;
+      else failed++;
+
+      const testDiv = document.createElement('div');
+      testDiv.className = `test-case ${isPassed ? 'pass' : 'fail'}`;
+      testDiv.innerHTML = `
+        <div><strong>${isPassed ? '✅' : '❌'} Тест ${index + 1}:</strong> ${testCase.input}</div>
+        <div class="symbol-display expected">Ожидается: ${testCase.expected}</div>
+        <div class="symbol-display actual">Получено: ${actual}</div>
+      `;
+      resultsContainer.appendChild(testDiv);
+    });
+
+    // Итоговая сводка
+    const summaryDiv = document.getElementById('summary');
+    summaryDiv.className = `summary ${failed === 0 ? 'pass' : ''}`;
+    summaryDiv.innerHTML = `
+      <div>Всего тестов: ${testCases.length}</div>
+      <div>✅ Пройдено: ${passed}</div>
+      <div>❌ Провалено: ${failed}</div>
+      <div style="margin-top: 10px; font-size: 24px;">
+        ${failed === 0 ? '🎉 ВСЕ ТЕСТЫ ПРОЙДЕНЫ!' : '⚠️ Есть ошибки!'}
+      </div>
+    `;
+  </script>
+</body>
+</html>
