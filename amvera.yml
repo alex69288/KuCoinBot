@@ -14,15 +14,8 @@ meta:
 build:
   # Команды для сборки проекта
   args:
-    - echo "=== Step 1: Navigate to backend and install dependencies ==="
-    - cd backend && npm install && cd ..
-    - echo "=== Step 2: Build TypeScript ==="
-    - cd backend && npm run build && cd ..
-    - echo "=== Step 3: Verify build output ==="
-    - ls -la backend/dist/ || echo "ERROR: dist folder not found"
-    - test -f backend/dist/index.js && echo "SUCCESS: index.js exists" || echo "ERROR: index.js not found"
-    - echo "=== Step 4: List all files in backend/dist ==="
-    - find backend/dist -type f || echo "No files in dist"
+    - cd backend && npm ci
+    - cd backend && npm run build
 
 run:
   # Запуск приложения - используем абсолютный путь
