@@ -25,6 +25,9 @@ Write-Host "❌ НЕ будет перезагружено:" -ForegroundColor Ye
 Write-Host "  ❌ requirements.txt - переустановить зависимости вручную"
 Write-Host "  ❌ .env - переменные окружения загружаются при старте"
 Write-Host "  ❌ position_state.json - файл состояния позиций"
+Write-Host "  ❌ bot_settings.json - настройки бота"
+Write-Host "  ❌ ml_model.pkl - ML модель"
+Write-Host "  ❌ scaler.pkl - скейлер признаков"
 Write-Host "  ❌ logs/ - логи приложения"
 Write-Host "  ❌ __pycache__/ - кэш Python"
 Write-Host ""
@@ -51,24 +54,43 @@ $watcherProcess = $null
 
 # Функция для проверки изменений в файлах
 function CheckForChanges {
-    # Исключаем папки и файлы которые не должны влиять на перезагрузку
-    $excludePaths = @('__pycache__', '.git', 'node_modules', '.pytest_cache', 'logs', '\.pyc$', 'position_state\.json$', '\.log$')
+    # Папки и расширения которые НЕ должны триггерить перезагрузку
+    $ignoredDirs = @('__pycache__', '.git', 'node_modules', '.pytest_cache', 'logs', '.venv', 'venv')
+    $ignoredExtensions = @('.pyc', '.pyo', '.pyd', '.so', '.swp', '.swo')
+    $ignoredFiles = @('position_state.json', 'bot_settings.json', 'ml_model.pkl', 'scaler.pkl')
     
-    $latestChange = Get-ChildItem -Path $watchPath -Recurse -Exclude @('__pycache__', '.git', 'node_modules', '.pytest_cache', 'logs', '*.pyc', '.pytest_cache') | 
+    $latestChange = Get-ChildItem -Path $watchPath -Recurse -File | 
                     Where-Object { 
-                        -not $_.PSIsContainer -and
-                        -not ($_.FullName -match '\\__pycache__\\') -and
-                        -not ($_.FullName -match '\\.git\\') -and
-                        -not ($_.FullName -match '\\logs\\') -and
-                        -not ($_.FullName -match '\\position_state\.json$') -and
-                        -not ($_.FullName -match '\\\.\w+\.swp$')
+                        $file = $_
+                        $fullName = $_.FullName
+                        $fileName = $_.Name
+                        $extension = $_.Extension
+                        
+                        # Проверяем что файл не в исключенных папках
+                        $isInIgnoredDir = $false
+                        foreach ($ignoredDir in $ignoredDirs) {
+                            if ($fullName -like "*\$ignoredDir\*") {
+                                $isInIgnoredDir = $true
+                                break
+                            }
+                        }
+                        
+                        # Проверяем расширение
+                        $isIgnoredExt = $extension -in $ignoredExtensions
+                        
+                        # Проверяем имя файла
+                        $isIgnoredFile = $fileName -in $ignoredFiles
+                        
+                        # Возвращаем true если файл НЕ игнорируется
+                        -not $isInIgnoredDir -and -not $isIgnoredExt -and -not $isIgnoredFile
                     } | 
                     Sort-Object LastWriteTime -Descending | 
-                    Select-Object -First 1 -ExpandProperty LastWriteTime
+                    Select-Object -First 1
     
     if ($latestChange) {
-        $latestChangeUnix = [int64]($latestChange.ToUniversalTime() - (Get-Date -Date "1970-01-01")).TotalSeconds
+        $latestChangeUnix = [int64]($latestChange.LastWriteTime.ToUniversalTime() - (Get-Date -Date "1970-01-01")).TotalSeconds
         if ($latestChangeUnix -gt $script:lastChangeTime) {
+            Write-Host "  📝 Изменение: $($latestChange.Name)" -ForegroundColor Gray
             $script:lastChangeTime = $latestChangeUnix
             return $true
         }
