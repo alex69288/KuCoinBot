@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сравнение форматов отображения</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 900px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .container {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      color: #667eea;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .version-badge {
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .format-box {
+      padding: 20px;
+      border-radius: 10px;
+      border: 2px solid #e0e0e0;
+    }
+
+    .format-box.old {
+      background: #fff3cd;
+      border-color: #ffc107;
+    }
+
+    .format-box.new {
+      background: #d4edda;
+      border-color: #28a745;
+    }
+
+    .format-box h3 {
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pair-item {
+      padding: 12px;
+      margin: 8px 0;
+      background: white;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 500;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .explanation {
+      margin-top: 30px;
+      padding: 20px;
+      background: #e3f2fd;
+      border-radius: 10px;
+      border-left: 4px solid #2196f3;
+    }
+
+    .explanation h3 {
+      margin-top: 0;
+      color: #1976d2;
+    }
+
+    .pros {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f1f8e9;
+      border-radius: 8px;
+      border-left: 4px solid #8bc34a;
+    }
+
+    .pros ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .pros li {
+      margin: 8px 0;
+      color: #558b2f;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 Сравнение форматов отображения</h1>
+    <div class="version-badge">v0.1.17 → v0.1.18</div>
+
+    <div class="comparison">
+      <div class="format-box old">
+        <h3>❌ Старый формат (v0.1.17)</h3>
+        <div class="pair-item">₿ BTC/USDT (Bitcoin)</div>
+        <div class="pair-item">Ξ ETH/USDT (Ethereum)</div>
+        <div class="pair-item">◎ SOL/USDT (Solana)</div>
+        <div class="pair-item">₳ ADA/USDT (Cardano)</div>
+        <div class="pair-item">✕ XRP/USDT (Ripple)</div>
+        <div class="pair-item">● DOT/USDT (Polkadot)</div>
+        <div class="pair-item">⧉ BNB/USDT (Binance Coin)</div>
+        <div class="pair-item">⛓ LINK/USDT (Chainlink)</div>
+      </div>
+
+      <div class="format-box new">
+        <h3>✅ Новый формат (v0.1.18)</h3>
+        <div class="pair-item">BTC/USDT (₿ Bitcoin)</div>
+        <div class="pair-item">ETH/USDT (Ξ Ethereum)</div>
+        <div class="pair-item">SOL/USDT (◎ Solana)</div>
+        <div class="pair-item">ADA/USDT (₳ Cardano)</div>
+        <div class="pair-item">XRP/USDT (✕ Ripple)</div>
+        <div class="pair-item">DOT/USDT (● Polkadot)</div>
+        <div class="pair-item">BNB/USDT (⧉ Binance Coin)</div>
+        <div class="pair-item">LINK/USDT (⛓ Chainlink)</div>
+      </div>
+    </div>
+
+    <div class="explanation">
+      <h3>💡 Почему изменили формат?</h3>
+      <p>
+        <strong>Основная причина:</strong> Эмодзи теперь находится внутри скобок вместе с названием криптовалюты,
+        что создаёт визуальную группировку связанной информации.
+      </p>
+      <p>
+        В новом формате торговая пара (BTC/USDT) остаётся основной информацией, 
+        а эмодзи с названием выступают как дополнительное пояснение в скобках.
+      </p>
+    </div>
+
+    <div class="pros">
+      <h3>✨ Преимущества нового формата:</h3>
+      <ul>
+        <li><strong>Лучшая читаемость</strong> - торговая пара выделяется первой</li>
+        <li><strong>Логическая группировка</strong> - эмодзи и название вместе в скобках</li>
+        <li><strong>Консистентность</strong> - формат соответствует общепринятым стандартам</li>
+        <li><strong>Чистый интерфейс</strong> - основная информация не смешивается с декоративной</li>
+        <li><strong>Удобство чтения</strong> - глаз сразу видит торговую пару</li>
+      </ul>
+    </div>
+
+    <div style="margin-top: 30px; text-align: center; color: #666; font-size: 14px;">
+      <p><strong>Обновлено:</strong> 13 ноября 2025 г.</p>
+      <p><strong>Версия:</strong> v0.1.18</p>
+      <p><strong>Коммит:</strong> d193b06</p>
+    </div>
+  </div>
+</body>
+</html>
