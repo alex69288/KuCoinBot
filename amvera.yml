@@ -9,10 +9,11 @@ meta:
 
 build:
   args:
-    - npm run build
+    - cd backend && npm install
+    - cd backend && npm run build
 
 run:
-  command: npm start
+  scriptName: backend/dist/index.js
   persistenceMount: /data
   containerPort: 3000
 
