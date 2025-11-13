@@ -14,14 +14,15 @@ meta:
 build:
   # Команды для сборки проекта
   args:
-    - cd /git
+    - pwd
+    - ls -la
     - npm install --ignore-scripts --no-optional --legacy-peer-deps
     - npm run build
-    - ls -la /git/dist/
+    - ls -la dist/
 
 run:
-  # Запуск приложения из директории /git
-  command: cd /git && node dist/index.js
+  # Запуск приложения
+  command: node dist/index.js
   # Монтирование данных для персистентности
   persistenceMount: /data
   # Порт контейнера
