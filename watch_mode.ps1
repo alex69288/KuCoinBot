@@ -24,6 +24,9 @@ Write-Host ""
 Write-Host "❌ НЕ будет перезагружено:" -ForegroundColor Yellow
 Write-Host "  ❌ requirements.txt - переустановить зависимости вручную"
 Write-Host "  ❌ .env - переменные окружения загружаются при старте"
+Write-Host "  ❌ position_state.json - файл состояния позиций"
+Write-Host "  ❌ logs/ - логи приложения"
+Write-Host "  ❌ __pycache__/ - кэш Python"
 Write-Host ""
 
 Write-Host "💡 КАК ИСПОЛЬЗОВАТЬ:" -ForegroundColor Cyan
@@ -48,8 +51,18 @@ $watcherProcess = $null
 
 # Функция для проверки изменений в файлах
 function CheckForChanges {
-    $latestChange = Get-ChildItem -Path $watchPath -Recurse -Exclude @('__pycache__', '.git', 'node_modules', '.pytest_cache', 'logs', '__pycache__', '*.pyc') | 
-                    Where-Object { -not $_.PSIsContainer } | 
+    # Исключаем папки и файлы которые не должны влиять на перезагрузку
+    $excludePaths = @('__pycache__', '.git', 'node_modules', '.pytest_cache', 'logs', '\.pyc$', 'position_state\.json$', '\.log$')
+    
+    $latestChange = Get-ChildItem -Path $watchPath -Recurse -Exclude @('__pycache__', '.git', 'node_modules', '.pytest_cache', 'logs', '*.pyc', '.pytest_cache') | 
+                    Where-Object { 
+                        -not $_.PSIsContainer -and
+                        -not ($_.FullName -match '\\__pycache__\\') -and
+                        -not ($_.FullName -match '\\.git\\') -and
+                        -not ($_.FullName -match '\\logs\\') -and
+                        -not ($_.FullName -match '\\position_state\.json$') -and
+                        -not ($_.FullName -match '\\\.\w+\.swp$')
+                    } | 
                     Sort-Object LastWriteTime -Descending | 
                     Select-Object -First 1 -ExpandProperty LastWriteTime
     
