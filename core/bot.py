@@ -1,18 +1,10 @@
 """
 ОСНОВНОЙ КЛАСС БОТА
 """
-import sys
-import os
-# 🔧 Исправление кодировки консоли для Windows (UTF-8)
-if sys.platform == 'win32':
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
-    os.environ['PYTHONIOENCODING'] = 'utf-8'
-
 import threading
 import time
 import json
+import os
 from datetime import datetime
 from config.settings import SettingsManager
 from core.exchange import ExchangeManager
