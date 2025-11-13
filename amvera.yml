@@ -14,11 +14,16 @@ meta:
 build:
   # Команды для сборки проекта
   args:
+    - echo "=== BUILD START v0.1.51 ==="
     - pwd
     - ls -la
+    - echo "=== Installing dependencies ==="
     - npm install --ignore-scripts --no-optional --legacy-peer-deps
+    - echo "=== Building TypeScript ==="
     - npm run build
+    - echo "=== Build output ==="
     - ls -la dist/
+    - echo "=== BUILD COMPLETE ==="
 
 run:
   # Запуск приложения

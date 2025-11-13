@@ -1,5 +1,6 @@
 nodejs
-# Force rebuild timestamp: 2025-11-13 14:56
-# CRITICAL: Project structure moved to root
-# Build: npm ci && npm run build
+# Force rebuild timestamp: 2025-11-13 15:43
+# Version: v0.1.50
+# CRITICAL: Working from extracted archive directory
+# Build: pwd && ls -la && npm install && npm run build
 # Run: node dist/index.js
