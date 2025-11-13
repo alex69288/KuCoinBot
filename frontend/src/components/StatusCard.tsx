@@ -1,4 +1,4 @@
-import { BotStatus } from '../services/api';
+import type { BotStatus } from '../services/api';
 
 interface StatusCardProps {
   data?: BotStatus;

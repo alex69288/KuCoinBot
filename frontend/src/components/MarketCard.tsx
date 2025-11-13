@@ -1,4 +1,4 @@
-import { MarketData } from '../services/api';
+import type { MarketData } from '../services/api';
 
 interface MarketCardProps {
   data?: MarketData;

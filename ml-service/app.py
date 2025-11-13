@@ -13,8 +13,8 @@ app = Flask(__name__)
 CORS(app)  # Разрешаем CORS для всех доменов
 
 # Путь к моделям
-MODEL_PATH = os.getenv('MODEL_PATH', '../ml_model.pkl')
-SCALER_PATH = os.getenv('SCALER_PATH', '../scaler.pkl')
+MODEL_PATH = os.getenv('MODEL_PATH', './ml_model.pkl')
+SCALER_PATH = os.getenv('SCALER_PATH', './scaler.pkl')
 
 # Загрузка модели при старте
 model = None
