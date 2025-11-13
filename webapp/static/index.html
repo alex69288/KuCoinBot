@@ -1415,19 +1415,32 @@
       }
     }
 
-    // Загрузка всех данных (оптимизированная версия)
+    // ⚡ Показать скелетоны загрузки
+    function showLoadingSkeletons() {
+      // Показываем индикаторы загрузки вместо данных
+      document.querySelectorAll('.info-value').forEach(el => {
+        if (!el.textContent.includes('...')) {
+          el.dataset.originalText = el.textContent;
+          el.textContent = '⏳';
+        }
+      });
+    }
+
+    // Загрузка всех данных (оптимизированная версия v0.1.19)
     async function loadData() {
-      // Загружаем только критичные данные при первой загрузке
-      // Остальные данные загрузятся по требованию при переключении вкладок
+      // ⚡ БЫСТРАЯ ЗАГРУЗКА: показываем скелетон, данные грузим асинхронно
+      showLoadingSkeletons();
+
+      // Загружаем критичные данные ПАРАЛЛЕЛЬНО для ускорения
       try {
-        console.log('🔄 loadData(): Начало загрузки...');
-        console.log('🔄 loadData(): Вызов loadStatus()...');
-        await loadStatus();
-        console.log('🔄 loadData(): loadStatus() завершен');
-        console.log('🔄 loadData(): Вызов loadMarket()...');
-        await loadMarket();
-        console.log('🔄 loadData(): loadMarket() завершен');
-        console.log('✅ loadData(): Все данные загружены успешно');
+        console.log('🔄 loadData(): Начало параллельной загрузки...');
+        const startTime = Date.now();
+        await Promise.all([
+          loadStatus().catch(e => console.error('Ошибка loadStatus:', e)),
+          loadMarket().catch(e => console.error('Ошибка loadMarket:', e))
+        ]);
+        const loadTime = Date.now() - startTime;
+        console.log(`✅ loadData(): Критичные данные загружены за ${loadTime}ms`);
       } catch (error) {
         console.error('❌ loadData(): Ошибка загрузки данных:', error);
         console.error('❌ loadData(): Stack trace:', error.stack);
@@ -1441,8 +1454,8 @@
         console.log('📊 Загрузка статуса...');
         const initData = getInitData();
         console.log('📊 init_data:', initData);
-        // Используем полный формат (без compact=1) для корректного отображения позиций
-        const response = await fetch(`/api/status?init_data=${encodeURIComponent(initData)}&compact=0`);
+        // ⚡ Используем компактный формат для экономии трафика и ускорения
+        const response = await fetch(`/api/status?init_data=${encodeURIComponent(initData)}&compact=1`);
         console.log('📊 Response получен:', response.status, response.ok);
         if (!response.ok) {
           const errorText = await response.text();
@@ -1486,8 +1499,8 @@
         console.log('📈 Загрузка рынка...');
         const initData = getInitData();
         console.log('📈 init_data:', initData);
-        // Используем полный формат (без compact=1) для корректного отображения данных
-        const response = await fetch(`/api/market?init_data=${encodeURIComponent(initData)}&compact=0`);
+        // ⚡ Используем компактный формат для экономии трафика
+        const response = await fetch(`/api/market?init_data=${encodeURIComponent(initData)}&compact=1`);
         console.log('📈 Response получен:', response.status, response.ok);
         if (!response.ok) {
           const errorText = await response.text();

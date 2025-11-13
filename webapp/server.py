@@ -71,6 +71,32 @@ app.add_middleware(
 # Глобальная переменная для экземпляра бота (будет установлена при запуске)
 trading_bot = None
 
+# ⚡ КЭШ для оптимизации API запросов
+_api_cache = {
+    'status': {'data': None, 'timestamp': 0},
+    'market': {'data': None, 'timestamp': 0},
+    'positions': {'data': None, 'timestamp': 0},
+}
+_cache_ttl = {
+    'status': 2,     # 2 секунды для статуса
+    'market': 3,     # 3 секунды для рынка  
+    'positions': 5,  # 5 секунд для позиций
+}
+
+def _get_cached_or_fetch(cache_key: str, fetch_func, *args, **kwargs):
+    """Возвращает кэшированные данные или вызывает функцию для получения новых"""
+    import time
+    now = time.time()
+    cache = _api_cache.get(cache_key)
+    
+    if cache and cache['data'] and (now - cache['timestamp']) < _cache_ttl.get(cache_key, 5):
+        return cache['data']
+    
+    # Получаем новые данные
+    data = fetch_func(*args, **kwargs)
+    _api_cache[cache_key] = {'data': data, 'timestamp': now}
+    return data
+
 def set_trading_bot(bot):
     """Устанавливает экземпляр торгового бота"""
     global trading_bot

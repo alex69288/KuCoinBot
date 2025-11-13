@@ -67,8 +67,9 @@ class AdvancedTradingBot:
         # ML в фоне - не блокирует старт
         self.ml_model = MLModel()
         self.start_background_ml()
-        # 🟢 ЗАГРУЖАЕМ СОСТОЯНИЕ ПОЗИЦИИ ИЗ ФАЙЛА
-        self.load_position_state()
+        # 🟢 ЛЕНИВАЯ ЗАГРУЗКА ПОЗИЦИИ - не блокирует старт WebApp
+        self._position_loaded = False
+        threading.Thread(target=self._load_position_background, daemon=True).start()
 
     def start_background_ml(self):
         """Фоновая загрузка ML"""
@@ -639,6 +640,13 @@ class AdvancedTradingBot:
             log_info(f"✅ Все позиции для {current_symbol} закрыты")
         
         log_info(f"💾 Состояние позиции для {current_symbol} обновлено")
+
+    def _load_position_background(self):
+        """Фоновая загрузка состояния позиции - не блокирует старт"""
+        log_info("🔄 Фоновая загрузка позиций...")
+        self.load_position_state()
+        self._position_loaded = True
+        log_info("✅ Позиции загружены в фоне")
 
     def load_position_state(self):
         """Загружает состояние позиции из файла для текущей пары и проверяет реальные позиции на KuCoin"""
