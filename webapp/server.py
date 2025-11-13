@@ -28,6 +28,7 @@ import asyncio
 import json
 
 from utils.logger import log_info, log_error
+import time
 
 # Импортируем компактные форматы для оптимизации трафика
 try:
@@ -299,6 +300,43 @@ async def get_bot_status(
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
+        # Быстрый ранний ответ, если рынки ещё не загружены (не блокируем UI)
+        markets_ready = True
+        try:
+            if hasattr(trading_bot, 'exchange') and hasattr(trading_bot.exchange, 'wait_for_markets'):
+                markets_ready = trading_bot.exchange.wait_for_markets(timeout=0.1)
+        except Exception:
+            markets_ready = False
+
+        if not markets_ready:
+            if compact and compact == 1:
+                return {
+                    'p': {'c': 0, 's': 0, 'e': 0, 'pr': 0, 'pu': 0, 't': 0},
+                    'ts': int(time.time()),
+                    'loading': True
+                }
+            else:
+                # Полный формат
+                tp_default = 2.0
+                try:
+                    tp_default = trading_bot.settings.risk_settings.get('take_profit_percent', 2.0)
+                except Exception:
+                    pass
+                return {
+                    'positions': {
+                        'open_count': 0,
+                        'size_usdt': 0,
+                        'entry_price': 0,
+                        'current_profit_percent': 0,
+                        'current_profit_usdt': 0,
+                        'to_take_profit': 0,
+                        'tp_target': tp_default,
+                        'fee_percent': 0.2,
+                        'fee_usdt': 0
+                    },
+                    'ts': int(time.time()),
+                    'loading': True
+                }
         import os
         from utils.position_manager import load_position_state
         
@@ -424,6 +462,51 @@ async def get_market_data(
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Telegram data")
     
     try:
+        # Быстрый ранний ответ, если рынки ещё не загружены (не блокируем UI)
+        markets_ready = True
+        try:
+            if hasattr(trading_bot, 'exchange') and hasattr(trading_bot.exchange, 'wait_for_markets'):
+                markets_ready = trading_bot.exchange.wait_for_markets(timeout=0.1)
+        except Exception:
+            markets_ready = False
+
+        # Выбираем активный символ заранее
+        active_symbol = symbol
+        if not active_symbol:
+            try:
+                active_symbol = trading_bot.settings.trading_pairs['active_pair']
+            except Exception:
+                active_symbol = 'BTC/USDT'
+
+        if not markets_ready:
+            if compact and compact == 1:
+                return {
+                    'sym': active_symbol,
+                    'p': 0,
+                    'h': 0,
+                    'l': 0,
+                    'v': 0,
+                    'ch': 0,
+                    'e': {'s': 'wait', 'p': 0},
+                    'sg': 'wait',
+                    'm': {'pr': 0.5},
+                    'ts': int(time.time()),
+                    'loading': True
+                }
+            else:
+                return {
+                    'symbol': active_symbol,
+                    'current_price': 0,
+                    'high_24h': 0,
+                    'low_24h': 0,
+                    'volume_24h': 0,
+                    'change_24h': 0,
+                    'ema': {'signal': 'wait', 'percent': 0, 'text': 'ОЖИДАНИЕ'},
+                    'signal': 'wait',
+                    'ml': {'prediction': 0.5},
+                    'ts': int(time.time()),
+                    'loading': True
+                }
         # Используем активную пару, если символ не указан
         if not symbol:
             symbol = trading_bot.settings.trading_pairs['active_pair']

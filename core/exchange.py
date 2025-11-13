@@ -65,9 +65,20 @@ class ExchangeManager:
                 
                 print(f"✅ Клиент создан, рынки загружаются в фоне...", flush=True)
                 
-                # Баланс пробуем только если есть ключи (легкий запрос)
-                if api_key and secret_key and passphrase:
-                    self.exchange.fetch_balance()
+                # Баланс и другие тёплые запросы выполняем в фоне, чтобы не блокировать старт
+                def _warmup_background():
+                    try:
+                        time.sleep(1.0)
+                        # Повторно читаем переменные, чтобы не замыкать локальные
+                        _k = os.getenv('KUCOIN_API_KEY')
+                        _s = os.getenv('KUCOIN_SECRET_KEY')
+                        _p = os.getenv('KUCOIN_PASSPHRASE')
+                        if _k and _s and _p:
+                            self.exchange.fetch_balance()
+                            log_info("🧊 Warmup: баланс получен в фоне")
+                    except Exception as e:
+                        log_error(f"⚠️ Warmup ошибка: {e}")
+                threading.Thread(target=_warmup_background, daemon=True).start()
                 self.connected = True
                 log_info(f"✅ Успешное подключение к KuCoin (попытка {attempt}/{attempts})")
                 return
