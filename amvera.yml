@@ -13,7 +13,7 @@ build:
     - cd backend && npm run build
 
 run:
-  scriptName: backend/dist/index.js
+  command: cd backend && node dist/index.js
   persistenceMount: /data
   containerPort: 3000
 
