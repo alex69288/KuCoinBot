@@ -3,6 +3,8 @@
 """
 import logging
 import os
+import sys
+import io
 from datetime import datetime
 
 def setup_logger():
@@ -24,9 +26,12 @@ def setup_logger():
     )
     file_handler.setFormatter(formatter)
     
-    # Консольный логгер
-    console_handler = logging.StreamHandler()
+    # Консольный логгер с UTF-8 кодировкой
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
+    # Устанавливаем UTF-8 кодировку для консольного вывода
+    if hasattr(console_handler.stream, 'buffer'):
+        console_handler.stream = io.TextIOWrapper(console_handler.stream.buffer, encoding='utf-8', line_buffering=True)
     
     # Настройка основного логгера
     logger = logging.getLogger('TradingBot')
