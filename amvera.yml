@@ -28,9 +28,7 @@ build:
 run:
   # Запуск приложения — если dist отсутствует, собираем перед стартом
   command: >-
-    bash -lc "if [ ! -f dist/index.js ]; then echo 'dist not found, running npm install and npm run build'; \
-    npm install --ignore-scripts --no-optional --legacy-peer-deps && npm run build; fi; \
-    node dist/index.js"
+    bash -lc 'if [ ! -f dist/index.js ]; then echo "dist not found, running npm install and npm run build"; npm install --ignore-scripts --no-optional --legacy-peer-deps && npm run build; fi; exec node dist/index.js'
   # Монтирование данных для персистентности
   persistenceMount: /data
   # Порт контейнера
