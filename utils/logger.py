@@ -1,12 +1,11 @@
 """
-ЛОГГИРОВАНИЕ v0.1.15
-Обновленная система логирования с улучшенным форматированием
+ЛОГГИРОВАНИЕ v0.1.16
+Система логирования без иконок
 """
 import logging
 import os
 import sys
 from datetime import datetime
-from config.icons import Icons
 
 def setup_logger():
     """Настройка логгера"""
@@ -14,24 +13,11 @@ def setup_logger():
     if not os.path.exists('logs'):
         os.makedirs('logs')
     
-    # Форматирование с иконками статуса
-    class IconFormatter(logging.Formatter):
-        """Форматтер с иконками для разных уровней логирования"""
-        
-        FORMATS = {
-            logging.DEBUG: f"%(asctime)s {Icons.INFO} [DEBUG] %(message)s",
-            logging.INFO: f"%(asctime)s {Icons.SUCCESS} [INFO] %(message)s",
-            logging.WARNING: f"%(asctime)s {Icons.WARNING} [WARN] %(message)s",
-            logging.ERROR: f"%(asctime)s {Icons.ERROR} [ERROR] %(message)s",
-            logging.CRITICAL: f"%(asctime)s {Icons.ERROR} [CRITICAL] %(message)s"
-        }
-        
-        def format(self, record):
-            log_fmt = self.FORMATS.get(record.levelno, self.FORMATS[logging.INFO])
-            formatter = logging.Formatter(log_fmt, datefmt='%Y-%m-%d %H:%M:%S')
-            return formatter.format(record)
-    
-    formatter = IconFormatter()
+    # Простое форматирование
+    formatter = logging.Formatter(
+        '%(asctime)s [%(levelname)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
     
     # Файловый логгер с UTF-8 кодировкой
     file_handler = logging.FileHandler(

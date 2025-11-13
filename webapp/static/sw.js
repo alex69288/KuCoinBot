@@ -10,7 +10,6 @@ const RUNTIME_CACHE = 'kucoin-bot-runtime';
 const PRECACHE_URLS = [
   '/static/',
   '/static/index.html',
-  '/static/icons.css',
   'https://telegram.org/js/telegram-web-app.js'
 ];
 
