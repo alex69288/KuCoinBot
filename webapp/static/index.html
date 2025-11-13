@@ -753,6 +753,222 @@
 </head>
 
 <body>
+  <!-- INLINE SVG SPRITES -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <defs>
+    <!-- Робот (AI/Bot) - более современный дизайн -->
+    <symbol id="icon-robot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="11" width="18" height="10" rx="2"/>
+      <circle cx="12" cy="5" r="2"/>
+      <path d="M12 7v4"/>
+      <line x1="8" y1="16" x2="8" y2="16"/>
+      <line x1="16" y1="16" x2="16" y2="16"/>
+    </symbol>
+    
+    <!-- Графики/Статистика - более четкие линии -->
+    <symbol id="icon-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"/>
+      <line x1="12" y1="20" x2="12" y2="4"/>
+      <line x1="6" y1="20" x2="6" y2="14"/>
+    </symbol>
+    
+    <!-- Деньги/Доллар - упрощенная монета -->
+    <symbol id="icon-money" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+      <path d="M12 18V6"/>
+    </symbol>
+    
+    <!-- Тренд вверх - четкая стрелка -->
+    <symbol id="icon-trend-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+      <polyline points="17 6 23 6 23 12"/>
+    </symbol>
+    
+    <!-- Тренд вниз - четкая стрелка -->
+    <symbol id="icon-trend-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
+      <polyline points="17 18 23 18 23 12"/>
+    </symbol>
+    
+    <!-- Предупреждение - четкий треугольник -->
+    <symbol id="icon-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </symbol>
+    
+    <!-- Галочка/Успех - жирная галка -->
+    <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </symbol>
+    
+    <!-- Крестик/Закрыть - симметричный крест -->
+    <symbol id="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/>
+      <line x1="6" y1="6" x2="18" y2="18"/>
+    </symbol>
+    
+    <!-- Пауза - две вертикальные полосы -->
+    <symbol id="icon-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="4" width="4" height="16"/>
+      <rect x="14" y="4" width="4" height="16"/>
+    </symbol>
+    
+    <!-- Играть/Старт - треугольник -->
+    <symbol id="icon-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="5 3 19 12 5 21 5 3"/>
+    </symbol>
+    
+    <!-- Обновить - круговая стрелка -->
+    <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/>
+      <polyline points="1 20 1 14 7 14"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </symbol>
+    
+    <!-- Список/Меню - три полосы -->
+    <symbol id="icon-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6"/>
+      <line x1="8" y1="12" x2="21" y2="12"/>
+      <line x1="8" y1="18" x2="21" y2="18"/>
+      <line x1="3" y1="6" x2="3.01" y2="6"/>
+      <line x1="3" y1="12" x2="3.01" y2="12"/>
+      <line x1="3" y1="18" x2="3.01" y2="18"/>
+    </symbol>
+    
+    <!-- Настройки - шестеренка -->
+    <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m-6 0l-4.2-4.2m17.4 5.2h-6m-6 0H1m17.2 5.2l-4.2-4.2m-6 0l-4.2 4.2"/>
+    </symbol>
+    
+    <!-- Кошелек/Портфель - бумажник -->
+    <symbol id="icon-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+      <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+      <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
+    </symbol>
+    
+    <!-- Цель - мишень -->
+    <symbol id="icon-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <circle cx="12" cy="12" r="6"/>
+      <circle cx="12" cy="12" r="2"/>
+    </symbol>
+    
+    <!-- Звонок/Уведомление - колокольчик -->
+    <symbol id="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </symbol>
+    
+    <!-- Телефон/Мобильный - смартфон -->
+    <symbol id="icon-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+      <line x1="12" y1="18" x2="12.01" y2="18"/>
+    </symbol>
+    
+    <!-- Кредитная карта -->
+    <symbol id="icon-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+      <line x1="1" y1="10" x2="23" y2="10"/>
+    </symbol>
+    
+    <!-- Стоп - квадрат -->
+    <symbol id="icon-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="6" width="12" height="12"/>
+    </symbol>
+    
+    <!-- Дом -->
+    <symbol id="icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </symbol>
+    
+    <!-- Геймпад/Управление - слайдеры -->
+    <symbol id="icon-gamepad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="4" y1="9" x2="20" y2="9"/>
+      <line x1="4" y1="15" x2="20" y2="15"/>
+      <line x1="10" y1="3" x2="8" y2="21"/>
+      <line x1="16" y1="3" x2="14" y2="21"/>
+    </symbol>
+    
+    <!-- Документ/История - файл с текстом -->
+    <symbol id="icon-document" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </symbol>
+    
+    <!-- Маркер/Позиция - геометка -->
+    <symbol id="icon-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+      <circle cx="12" cy="10" r="3"/>
+    </symbol>
+    
+    <!-- Мусорка/Удалить -->
+    <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </symbol>
+    
+    <!-- Сохранить - дискета -->
+    <symbol id="icon-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+      <polyline points="17 21 17 13 7 13 7 21"/>
+      <polyline points="7 3 7 8 15 8"/>
+    </symbol>
+    
+    <!-- Щит/Защита -->
+    <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </symbol>
+    
+    <!-- Инструменты/Гаечный ключ -->
+    <symbol id="icon-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    </symbol>
+    
+    <!-- Круги для статусов -->
+    <symbol id="icon-circle-green" viewBox="0 0 24 24">
+      <circle fill="#4ade80" cx="12" cy="12" r="10"/>
+    </symbol>
+    
+    <symbol id="icon-circle-red" viewBox="0 0 24 24">
+      <circle fill="#f87171" cx="12" cy="12" r="10"/>
+    </symbol>
+    
+    <symbol id="icon-circle-yellow" viewBox="0 0 24 24">
+      <circle fill="#fbbf24" cx="12" cy="12" r="10"/>
+    </symbol>
+    
+    <symbol id="icon-circle-white" viewBox="0 0 24 24">
+      <circle fill="#e5e7eb" cx="12" cy="12" r="10"/>
+    </symbol>
+    
+    <!-- Пустая коробка - входящие -->
+    <symbol id="icon-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+      <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+    </symbol>
+    
+    <!-- EMA Линия - волнистая линия -->
+    <symbol id="icon-ema" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12 L 8 8 L 13 14 L 21 4"/>
+      <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+      <circle cx="13" cy="14" r="1.5" fill="currentColor"/>
+    </symbol>
+  </defs>
+</svg>
+
+  <!-- END INLINE SVG SPRITES -->
+
+
   <!-- WebSocket индикатор подключения -->
   <div id="ws-status" class="ws-status" title="WebSocket статус"></div>
 
@@ -769,7 +985,7 @@
   <div id="confirm-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <span class="icon icon-target"><svg><use href="/static/icons.svg#icon-target"></use></svg></span>
+        <span class="icon icon-target"><svg><use href="#icon-target"></use></svg></span>
         <span id="modal-title">Подтверждение</span>
       </div>
       <div class="modal-body">
@@ -787,63 +1003,63 @@
     <div id="tab-home" class="tab-content active">
       <!-- Обновление рынка -->
       <div class="card">
-        <div class="card-title"><span class="icon icon-chart"><svg><use href="/static/icons.svg#icon-chart"></use></svg></span> ОБНОВЛЕНИЕ РЫНКА</div>
+        <div class="card-title"><span class="icon icon-chart"><svg><use href="#icon-chart"></use></svg></span> ОБНОВЛЕНИЕ РЫНКА</div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-money"><svg><use href="/static/icons.svg#icon-money"></use></svg></span> Пара:</span>
-          <span id="market-symbol" class="info-value"><span class="icon icon-money"><svg><use href="/static/icons.svg#icon-money"></use></svg></span> BTC/USDT (Bitcoin)</span>
+          <span class="info-label"><span class="icon icon-money"><svg><use href="#icon-money"></use></svg></span> Пара:</span>
+          <span id="market-symbol" class="info-value"><span class="icon icon-money"><svg><use href="#icon-money"></use></svg></span> BTC/USDT (Bitcoin)</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-money"><svg><use href="/static/icons.svg#icon-money"></use></svg></span> Цена:</span>
+          <span class="info-label"><span class="icon icon-money"><svg><use href="#icon-money"></use></svg></span> Цена:</span>
           <span id="market-price" class="info-value">103685.90 USDT</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-chart"><svg><use href="/static/icons.svg#icon-chart"></use></svg></span> 24ч:</span>
+          <span class="info-label"><span class="icon icon-chart"><svg><use href="#icon-chart"></use></svg></span> 24ч:</span>
           <span id="market-change-24h" class="info-value price-change-positive">+1.52%</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-ema"><svg><use href="/static/icons.svg#icon-ema"></use></svg></span> EMA:</span>
-          <span id="market-ema" class="info-value"><span class="icon icon-circle-green"><svg><use href="/static/icons.svg#icon-circle-green"></use></svg></span> BBEPX (+0.46%)</span>
+          <span class="info-label"><span class="icon icon-ema"><svg><use href="#icon-ema"></use></svg></span> EMA:</span>
+          <span id="market-ema" class="info-value"><span class="icon icon-circle-green"><svg><use href="#icon-circle-green"></use></svg></span> BBEPX (+0.46%)</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-target"><svg><use href="/static/icons.svg#icon-target"></use></svg></span> Сигнал:</span>
-          <span id="market-signal" class="info-value"><span class="icon icon-circle-white"><svg><use href="/static/icons.svg#icon-circle-white"></use></svg></span> ОЖИДАНИЕ</span>
+          <span class="info-label"><span class="icon icon-target"><svg><use href="#icon-target"></use></svg></span> Сигнал:</span>
+          <span id="market-signal" class="info-value"><span class="icon icon-circle-white"><svg><use href="#icon-circle-white"></use></svg></span> ОЖИДАНИЕ</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-robot"><svg><use href="/static/icons.svg#icon-robot"></use></svg></span> ML:</span>
-          <span id="market-ml" class="info-value"><span class="icon icon-circle-yellow"><svg><use href="/static/icons.svg#icon-circle-yellow"></use></svg></span> НЕЙТРАЛЬНОЕ
+          <span class="info-label"><span class="icon icon-robot"><svg><use href="#icon-robot"></use></svg></span> ML:</span>
+          <span id="market-ml" class="info-value"><span class="icon icon-circle-yellow"><svg><use href="#icon-circle-yellow"></use></svg></span> НЕЙТРАЛЬНОЕ
             (51,1%)</span>
         </div>
       </div>
 
       <!-- Позиция открыта -->
       <div class="card">
-        <div class="card-title"><span class="icon icon-home"><svg><use href="/static/icons.svg#icon-home"></use></svg></span> ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ %)</div>
+        <div class="card-title"><span class="icon icon-home"><svg><use href="#icon-home"></use></svg></span> ПОЗИЦИЯ ОТКРЫТА (РЕЖИМ %)</div>
         <div class="info-row">
           <span class="info-label">� Количество открытых позиций:</span>
           <span id="position-count" class="info-value">2</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-money"><svg><use href="/static/icons.svg#icon-money"></use></svg></span> Размер ставки:</span>
+          <span class="info-label"><span class="icon icon-money"><svg><use href="#icon-money"></use></svg></span> Размер ставки:</span>
           <span id="position-size" class="info-value">2.0 USDT</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-pin"><svg><use href="/static/icons.svg#icon-pin"></use></svg></span> Цена входа (TP):</span>
+          <span class="info-label"><span class="icon icon-pin"><svg><use href="#icon-pin"></use></svg></span> Цена входа (TP):</span>
           <span id="position-entry-price" class="info-value">110185.70 USDT</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-money"><svg><use href="/static/icons.svg#icon-money"></use></svg></span> Текущая прибыль:</span>
+          <span class="info-label"><span class="icon icon-money"><svg><use href="#icon-money"></use></svg></span> Текущая прибыль:</span>
           <span id="position-current-profit" class="info-value price-change-negative">-5.90% (-0.1239 USDT)</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-target"><svg><use href="/static/icons.svg#icon-target"></use></svg></span> До Take Profit:</span>
+          <span class="info-label"><span class="icon icon-target"><svg><use href="#icon-target"></use></svg></span> До Take Profit:</span>
           <span id="position-to-tp" class="info-value">+0.0%</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-target"><svg><use href="/static/icons.svg#icon-target"></use></svg></span> Цель TP:</span>
+          <span class="info-label"><span class="icon icon-target"><svg><use href="#icon-target"></use></svg></span> Цель TP:</span>
           <span id="position-tp-target" class="info-value">2%</span>
         </div>
         <div class="info-row">
-          <span class="info-label"><span class="icon icon-card"><svg><use href="/static/icons.svg#icon-card"></use></svg></span> Комиссии:</span>
+          <span class="info-label"><span class="icon icon-card"><svg><use href="#icon-card"></use></svg></span> Комиссии:</span>
           <span id="position-fees" class="info-value">0.2% (0.0042 USDT)</span>
         </div>
       </div>
@@ -852,7 +1068,7 @@
     <!-- Вкладка: Управление -->
     <div id="tab-control" class="tab-content">
       <div class="card">
-        <div class="card-title"><span class="icon icon-settings"><svg><use href="/static/icons.svg#icon-settings"></use></svg></span> Управление торговлей</div>
+        <div class="card-title"><span class="icon icon-settings"><svg><use href="#icon-settings"></use></svg></span> Управление торговлей</div>
         <div class="form-switch">
           <div>
             <span class="form-label">Торговля</span>
@@ -868,17 +1084,17 @@
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="icon icon-target"><svg><use href="/static/icons.svg#icon-target"></use></svg></span> Быстрые действия</div>
+        <div class="card-title"><span class="icon icon-target"><svg><use href="#icon-target"></use></svg></span> Быстрые действия</div>
         <button class="btn btn-warning" onclick="confirmCloseAllPositions()">
-          <span><span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span></span> Закрыть все позиции
+          <span><span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span></span> Закрыть все позиции
         </button>
         <button class="btn btn-primary" onclick="refreshData()">
-          <span><span class="icon icon-refresh"><svg><use href="/static/icons.svg#icon-refresh"></use></svg></span></span> Обновить данные
+          <span><span class="icon icon-refresh"><svg><use href="#icon-refresh"></use></svg></span></span> Обновить данные
         </button>
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="icon icon-chart"><svg><use href="/static/icons.svg#icon-chart"></use></svg></span> Торговые настройки</div>
+        <div class="card-title"><span class="icon icon-chart"><svg><use href="#icon-chart"></use></svg></span> Торговые настройки</div>
         <div class="form-group">
           <label class="form-label">Торговая пара</label>
           <select id="trading-pair" class="form-select" onchange="updateTradingPair()">
@@ -902,7 +1118,7 @@
           <input type="number" id="position-size-input" class="form-input" value="10" min="1" max="100" step="1">
         </div>
         <button class="btn btn-success" onclick="saveControlSettings()">
-          <span><span class="icon icon-save"><svg><use href="/static/icons.svg#icon-save"></use></svg></span></span> Сохранить настройки
+          <span><span class="icon icon-save"><svg><use href="#icon-save"></use></svg></span></span> Сохранить настройки
         </button>
       </div>
     </div>
@@ -910,7 +1126,7 @@
     <!-- Вкладка: Настройки -->
     <div id="tab-settings" class="tab-content">
       <div class="card">
-        <div class="card-title"><span class="icon icon-shield"><svg><use href="/static/icons.svg#icon-shield"></use></svg></span> Риск-менеджмент</div>
+        <div class="card-title"><span class="icon icon-shield"><svg><use href="#icon-shield"></use></svg></span> Риск-менеджмент</div>
         <div class="form-group">
           <label class="form-label">Take Profit (%)</label>
           <input type="number" id="take-profit" class="form-input" value="2.0" min="0.1" max="10" step="0.1">
@@ -928,12 +1144,12 @@
           <input type="number" id="max-daily-loss" class="form-input" value="50" min="5" max="1000" step="5">
         </div>
         <button class="btn btn-primary" onclick="saveRiskSettings()">
-          <span><span class="icon icon-save"><svg><use href="/static/icons.svg#icon-save"></use></svg></span></span> Сохранить настройки риска
+          <span><span class="icon icon-save"><svg><use href="#icon-save"></use></svg></span></span> Сохранить настройки риска
         </button>
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="icon icon-trend-up"><svg><use href="/static/icons.svg#icon-trend-up"></use></svg></span> EMA Настройки</div>
+        <div class="card-title"><span class="icon icon-trend-up"><svg><use href="#icon-trend-up"></use></svg></span> EMA Настройки</div>
         <div class="form-group">
           <label class="form-label">Быстрая EMA (период)</label>
           <input type="number" id="ema-fast" class="form-input" value="9" min="3" max="50" step="1">
@@ -947,12 +1163,12 @@
           <input type="number" id="ema-threshold" class="form-input" value="0.25" min="0.01" max="2" step="0.01">
         </div>
         <button class="btn btn-primary" onclick="saveEmaSettings()">
-          <span><span class="icon icon-save"><svg><use href="/static/icons.svg#icon-save"></use></svg></span></span> Сохранить настройки EMA
+          <span><span class="icon icon-save"><svg><use href="#icon-save"></use></svg></span></span> Сохранить настройки EMA
         </button>
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="icon icon-robot"><svg><use href="/static/icons.svg#icon-robot"></use></svg></span> ML Настройки</div>
+        <div class="card-title"><span class="icon icon-robot"><svg><use href="#icon-robot"></use></svg></span> ML Настройки</div>
         <div class="form-switch">
           <span class="form-label">Использовать ML</span>
           <label class="switch">
@@ -969,15 +1185,15 @@
           <input type="number" id="ml-sell-threshold" class="form-input" value="0.4" min="0" max="1" step="0.05">
         </div>
         <button class="btn btn-primary" onclick="saveMLSettings()">
-          <span><span class="icon icon-save"><svg><use href="/static/icons.svg#icon-save"></use></svg></span></span> Сохранить настройки ML
+          <span><span class="icon icon-save"><svg><use href="#icon-save"></use></svg></span></span> Сохранить настройки ML
         </button>
         <button class="btn btn-warning" onclick="retrainML()">
-          <span><span class="icon icon-refresh"><svg><use href="/static/icons.svg#icon-refresh"></use></svg></span></span> Переобучить модель
+          <span><span class="icon icon-refresh"><svg><use href="#icon-refresh"></use></svg></span></span> Переобучить модель
         </button>
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="icon icon-wrench"><svg><use href="/static/icons.svg#icon-wrench"></use></svg></span> Общие настройки</div>
+        <div class="card-title"><span class="icon icon-wrench"><svg><use href="#icon-wrench"></use></svg></span> Общие настройки</div>
         <div class="form-switch">
           <div>
             <span class="form-label">Демо режим</span>
@@ -1005,7 +1221,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="icon icon-bell"><svg><use href="/static/icons.svg#icon-bell"></use></svg></span> Уведомления</div>
+        <div class="card-title"><span class="icon icon-bell"><svg><use href="#icon-bell"></use></svg></span> Уведомления</div>
         <div class="form-switch">
           <span class="form-label">О совершенных операциях</span>
           <label class="switch">
@@ -1052,7 +1268,7 @@
           </label>
         </div>
         <button class="btn btn-success" onclick="saveNotificationSettings()">
-          <span><span class="icon icon-save"><svg><use href="/static/icons.svg#icon-save"></use></svg></span></span> Сохранить настройки уведомлений
+          <span><span class="icon icon-save"><svg><use href="#icon-save"></use></svg></span></span> Сохранить настройки уведомлений
         </button>
       </div>
     </div>
@@ -1060,7 +1276,7 @@
     <!-- Вкладка: Позиции -->
     <div id="tab-positions" class="tab-content">
       <div class="card">
-        <div class="card-title"><span class="icon icon-pin"><svg><use href="/static/icons.svg#icon-pin"></use></svg></span> Открытые позиции</div>
+        <div class="card-title"><span class="icon icon-pin"><svg><use href="#icon-pin"></use></svg></span> Открытые позиции</div>
         <div id="positions-list">
           <div class="loading">Загрузка...</div>
         </div>
@@ -1070,7 +1286,7 @@
     <!-- Вкладка: История -->
     <div id="tab-history" class="tab-content">
       <div class="card">
-        <div class="card-title"><span class="icon icon-document"><svg><use href="/static/icons.svg#icon-document"></use></svg></span> История сделок</div>
+        <div class="card-title"><span class="icon icon-document"><svg><use href="#icon-document"></use></svg></span> История сделок</div>
         <div id="history-list">
           <div class="loading">Загрузка...</div>
         </div>
@@ -1080,7 +1296,7 @@
     <!-- Вкладка: Аналитика -->
     <div id="tab-analytics" class="tab-content">
       <div class="card">
-        <div class="card-title"><span class="icon icon-chart"><svg><use href="/static/icons.svg#icon-chart"></use></svg></span> Сегодня</div>
+        <div class="card-title"><span class="icon icon-chart"><svg><use href="#icon-chart"></use></svg></span> Сегодня</div>
         <div class="stat-grid" style="margin-bottom: 0;">
           <div class="stat-item">
             <div class="stat-label">Сделок</div>
@@ -1102,7 +1318,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="icon icon-chart"><svg><use href="/static/icons.svg#icon-chart"></use></svg></span> Общая статистика</div>
+        <div class="card-title"><span class="icon icon-chart"><svg><use href="#icon-chart"></use></svg></span> Общая статистика</div>
         <div class="stat-grid" style="margin-bottom: 0;">
           <div class="stat-item">
             <div class="stat-label">Всего сделок</div>
@@ -1124,7 +1340,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="icon icon-chart"><svg><use href="/static/icons.svg#icon-chart"></use></svg></span> Детальная статистика</div>
+        <div class="card-title"><span class="icon icon-chart"><svg><use href="#icon-chart"></use></svg></span> Детальная статистика</div>
         <div class="info-row">
           <span class="info-label">Средняя прибыль</span>
           <span id="avg-profit" class="info-value">0.00 USDT</span>
@@ -1145,7 +1361,7 @@
 
       <div class="card">
         <button class="btn btn-danger" onclick="resetAnalytics()">
-          <span><span class="icon icon-trash"><svg><use href="/static/icons.svg#icon-trash"></use></svg></span></span> Сбросить статистику
+          <span><span class="icon icon-trash"><svg><use href="#icon-trash"></use></svg></span></span> Сбросить статистику
         </button>
       </div>
     </div>
@@ -1154,27 +1370,27 @@
   <!-- Нижнее меню вкладок -->
   <div class="tabs">
     <button class="tab active" onclick="switchTab('home')">
-      <span class="tab-icon"><span class="icon icon-home"><svg><use href="/static/icons.svg#icon-home"></use></svg></span></span>
+      <span class="tab-icon"><span class="icon icon-home"><svg><use href="#icon-home"></use></svg></span></span>
       <span>Главная</span>
     </button>
     <button class="tab" onclick="switchTab('control')">
-      <span class="tab-icon"><span class="icon icon-gamepad"><svg><use href="/static/icons.svg#icon-gamepad"></use></svg></span></span>
+      <span class="tab-icon"><span class="icon icon-gamepad"><svg><use href="#icon-gamepad"></use></svg></span></span>
       <span>Управление</span>
     </button>
     <button class="tab" onclick="switchTab('settings')">
-      <span class="tab-icon"><span class="icon icon-settings"><svg><use href="/static/icons.svg#icon-settings"></use></svg></span></span>
+      <span class="tab-icon"><span class="icon icon-settings"><svg><use href="#icon-settings"></use></svg></span></span>
       <span>Настройки</span>
     </button>
     <button class="tab" onclick="switchTab('positions')">
-      <span class="tab-icon"><span class="icon icon-pin"><svg><use href="/static/icons.svg#icon-pin"></use></svg></span></span>
+      <span class="tab-icon"><span class="icon icon-pin"><svg><use href="#icon-pin"></use></svg></span></span>
       <span>Позиции</span>
     </button>
     <button class="tab" onclick="switchTab('history')">
-      <span class="tab-icon"><span class="icon icon-document"><svg><use href="/static/icons.svg#icon-document"></use></svg></span></span>
+      <span class="tab-icon"><span class="icon icon-document"><svg><use href="#icon-document"></use></svg></span></span>
       <span>История</span>
     </button>
     <button class="tab" onclick="switchTab('analytics')">
-      <span class="tab-icon"><span class="icon icon-chart"><svg><use href="/static/icons.svg#icon-chart"></use></svg></span></span>
+      <span class="tab-icon"><span class="icon icon-chart"><svg><use href="#icon-chart"></use></svg></span></span>
       <span>Аналитика</span>
     </button>
   </div>
@@ -1440,7 +1656,7 @@
         const fullNames = { BTC: 'Bitcoin', ETH: 'Ethereum', BNB: 'BNB', SOL: 'Solana', ADA: 'Cardano', XRP: 'XRP', DOGE: 'Dogecoin', TON: 'Toncoin', LTC: 'Litecoin' };
         const fullName = fullNames[base] || base;
         const symbolEl = document.getElementById('market-symbol');
-        symbolEl.innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#icon-money"></use></svg> ${symbol} (${fullName})`;
+        symbolEl.innerHTML = `<svg class="icon icon-svg"><use href="#icon-money"></use></svg> ${symbol} (${fullName})`;
 
         // Цена + анимация изменение
         const priceEl = document.getElementById('market-price');
@@ -1472,7 +1688,7 @@
             if (emaPercent > prevValues.emaPercent) applyFlash(emaEl, 'up');
             else if (emaPercent < prevValues.emaPercent) applyFlash(emaEl, 'down');
           }
-          emaEl.innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${emaIconId}"></use></svg> ${data.ema.text || 'ВЫШЕ'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
+          emaEl.innerHTML = `<svg class="icon icon-svg"><use href="#${emaIconId}"></use></svg> ${data.ema.text || 'ВЫШЕ'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
           prevValues.emaPercent = emaPercent;
         }
 
@@ -1480,7 +1696,7 @@
         if (data.signal) {
           const signalIconId = data.signal === 'buy' ? 'icon-circle-green' : data.signal === 'sell' ? 'icon-circle-red' : 'icon-circle-white';
           const signalText = data.signal === 'buy' ? 'ПОКУПКА' : data.signal === 'sell' ? 'ПРОДАЖА' : 'ОЖИДАНИЕ';
-          document.getElementById('market-signal').innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${signalIconId}"></use></svg> ${signalText}`;
+          document.getElementById('market-signal').innerHTML = `<svg class="icon icon-svg"><use href="#${signalIconId}"></use></svg> ${signalText}`;
         }
 
         // Обновляем ML
@@ -1493,7 +1709,7 @@
             if (mlPercent > prevValues.mlPercent) applyFlash(mlEl, 'up');
             else if (mlPercent < prevValues.mlPercent) applyFlash(mlEl, 'down');
           }
-          mlEl.innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${mlIconId}"></use></svg> ${mlText} (${mlPercent.toFixed(1)}%)`;
+          mlEl.innerHTML = `<svg class="icon icon-svg"><use href="#${mlIconId}"></use></svg> ${mlText} (${mlPercent.toFixed(1)}%)`;
           prevValues.mlPercent = mlPercent;
         }
       } catch (error) {
@@ -1561,7 +1777,7 @@
         const container = document.getElementById('positions-list');
 
         if (!positions || positions.length === 0) {
-          container.innerHTML = '<div class="empty-state"><div class="empty-icon"><span class="icon icon-inbox"><svg><use href="/static/icons.svg#icon-inbox"></use></svg></span></div><div>Нет открытых позиций</div></div>';
+          container.innerHTML = '<div class="empty-state"><div class="empty-icon"><span class="icon icon-inbox"><svg><use href="#icon-inbox"></use></svg></span></div><div>Нет открытых позиций</div></div>';
           return;
         }
 
@@ -1590,7 +1806,7 @@
               <span class="info-value">${(pos.current_price || 0).toFixed(2)} USDT</span>
             </div>
             <button class="btn btn-danger" onclick="closePosition('${pos.id || ''}')">
-              <span><span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span></span> Закрыть позицию
+              <span><span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span></span> Закрыть позицию
             </button>
           </div>
         `).join('');
@@ -1610,7 +1826,7 @@
         const container = document.getElementById('history-list');
 
         if (!data || data.length === 0) {
-          container.innerHTML = '<div class="empty-state"><div class="empty-icon"><span class="icon icon-inbox"><svg><use href="/static/icons.svg#icon-inbox"></use></svg></span></div><div>История сделок пуста</div></div>';
+          container.innerHTML = '<div class="empty-state"><div class="empty-icon"><span class="icon icon-inbox"><svg><use href="#icon-inbox"></use></svg></span></div><div>История сделок пуста</div></div>';
           return;
         }
 
@@ -1810,13 +2026,13 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('<span class="icon icon-check"><svg><use href="/static/icons.svg#icon-check"></use></svg></span> Настройки обновлены');
+          showNotification('<span class="icon icon-check"><svg><use href="#icon-check"></use></svg></span> Настройки обновлены');
         } else {
-          showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка обновления');
+          showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка обновления');
         }
       } catch (error) {
         console.error('Ошибка обновления настроек:', error);
-        showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка обновления');
+        showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка обновления');
       }
     }
 
@@ -1837,13 +2053,13 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('<span class="icon icon-check"><svg><use href="/static/icons.svg#icon-check"></use></svg></span> Настройки риска сохранены');
+          showNotification('<span class="icon icon-check"><svg><use href="#icon-check"></use></svg></span> Настройки риска сохранены');
         } else {
-          showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка сохранения');
+          showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка сохранения');
         }
       } catch (error) {
         console.error('Ошибка сохранения настроек риска:', error);
-        showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка сохранения');
+        showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка сохранения');
       }
     }
 
@@ -1863,13 +2079,13 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('<span class="icon icon-check"><svg><use href="/static/icons.svg#icon-check"></use></svg></span> Настройки EMA сохранены');
+          showNotification('<span class="icon icon-check"><svg><use href="#icon-check"></use></svg></span> Настройки EMA сохранены');
         } else {
-          showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка сохранения');
+          showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка сохранения');
         }
       } catch (error) {
         console.error('Ошибка сохранения настроек EMA:', error);
-        showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка сохранения');
+        showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка сохранения');
       }
     }
 
@@ -1889,19 +2105,19 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('<span class="icon icon-check"><svg><use href="/static/icons.svg#icon-check"></use></svg></span> Настройки ML сохранены');
+          showNotification('<span class="icon icon-check"><svg><use href="#icon-check"></use></svg></span> Настройки ML сохранены');
         } else {
-          showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка сохранения');
+          showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка сохранения');
         }
       } catch (error) {
         console.error('Ошибка сохранения настроек ML:', error);
-        showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка сохранения');
+        showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка сохранения');
       }
     }
 
     async function retrainML() {
       try {
-        showNotification('<span class="icon icon-robot"><svg><use href="/static/icons.svg#icon-robot"></use></svg></span> Переобучение ML модели...');
+        showNotification('<span class="icon icon-robot"><svg><use href="#icon-robot"></use></svg></span> Переобучение ML модели...');
         const response = await fetch('/api/ml/retrain', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1910,13 +2126,13 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('<span class="icon icon-check"><svg><use href="/static/icons.svg#icon-check"></use></svg></span> ML модель переобучена');
+          showNotification('<span class="icon icon-check"><svg><use href="#icon-check"></use></svg></span> ML модель переобучена');
         } else {
           showNotification('ℹ️ ' + (result.message || 'ML недоступен'));
         }
       } catch (error) {
         console.error('Ошибка переобучения ML:', error);
-        showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка переобучения');
+        showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка переобучения');
       }
     }
 
@@ -2016,13 +2232,13 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('<span class="icon icon-check"><svg><use href="/static/icons.svg#icon-check"></use></svg></span> Настройки обновлены');
+          showNotification('<span class="icon icon-check"><svg><use href="#icon-check"></use></svg></span> Настройки обновлены');
         } else {
-          showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка обновления');
+          showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка обновления');
         }
       } catch (error) {
         console.error('Ошибка обновления настроек:', error);
-        showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка обновления');
+        showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка обновления');
       }
     }
 
@@ -2036,14 +2252,14 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('<span class="icon icon-check"><svg><use href="/static/icons.svg#icon-check"></use></svg></span> Позиция закрыта');
+          showNotification('<span class="icon icon-check"><svg><use href="#icon-check"></use></svg></span> Позиция закрыта');
           await loadPositions();
         } else {
-          showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка закрытия');
+          showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка закрытия');
         }
       } catch (error) {
         console.error('Ошибка закрытия позиции:', error);
-        showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка закрытия');
+        showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка закрытия');
       }
     }
 
@@ -2134,19 +2350,19 @@
 
         const result = await response.json();
         if (result.status === 'success') {
-          showNotification('<span class="icon icon-check"><svg><use href="/static/icons.svg#icon-check"></use></svg></span> Статистика сброшена');
+          showNotification('<span class="icon icon-check"><svg><use href="#icon-check"></use></svg></span> Статистика сброшена');
           await loadAnalytics();
         } else {
-          showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка сброса');
+          showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка сброса');
         }
       } catch (error) {
         console.error('Ошибка сброса статистики:', error);
-        showNotification('<span class="icon icon-close"><svg><use href="/static/icons.svg#icon-close"></use></svg></span> Ошибка сброса');
+        showNotification('<span class="icon icon-close"><svg><use href="#icon-close"></use></svg></span> Ошибка сброса');
       }
     }
 
     async function refreshData() {
-      showNotification('<span class="icon icon-refresh"><svg><use href="/static/icons.svg#icon-refresh"></use></svg></span> Обновление...');
+      showNotification('<span class="icon icon-refresh"><svg><use href="#icon-refresh"></use></svg></span> Обновление...');
       await loadTabData(currentTab);
     }
 
@@ -2306,7 +2522,7 @@
             else if (emaPercent < prevValues.emaPercent) applyFlash(emaEl, 'down');
           }
 
-          emaEl.innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${emaIconId}"></use></svg> ${data.ema.text || 'EMA'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
+          emaEl.innerHTML = `<svg class="icon icon-svg"><use href="#${emaIconId}"></use></svg> ${data.ema.text || 'EMA'} (${emaPercent >= 0 ? '+' : ''}${emaPercent.toFixed(2)}%)`;
           prevValues.emaPercent = emaPercent;
         }
 
@@ -2323,7 +2539,7 @@
             else if (mlPercent < prevValues.mlPercent) applyFlash(mlEl, 'down');
           }
 
-          mlEl.innerHTML = `<svg class="icon icon-svg"><use href="/static/icons.svg#${mlIconId}"></use></svg> ${mlText} (${mlPercent.toFixed(1)}%)`;
+          mlEl.innerHTML = `<svg class="icon icon-svg"><use href="#${mlIconId}"></use></svg> ${mlText} (${mlPercent.toFixed(1)}%)`;
           prevValues.mlPercent = mlPercent;
         }
 
