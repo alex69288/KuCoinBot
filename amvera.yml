@@ -13,15 +13,16 @@ meta:
 
 build:
   # Команды для сборки проекта
-  # Каждая команда выполняется из корня проекта
   args:
-    - echo "=== Installing dependencies ==="
-    - npm install --prefix backend
-    - echo "=== Building TypeScript ==="
-    - npm run build --prefix backend
-    - echo "=== Checking build output ==="
-    - ls -la backend/dist/ || echo "dist folder not found"
-    - test -f backend/dist/index.js && echo "✓ index.js created successfully" || echo "✗ ERROR: index.js not found!"
+    - echo "=== Step 1: Navigate to backend and install dependencies ==="
+    - cd backend && npm install && cd ..
+    - echo "=== Step 2: Build TypeScript ==="
+    - cd backend && npm run build && cd ..
+    - echo "=== Step 3: Verify build output ==="
+    - ls -la backend/dist/ || echo "ERROR: dist folder not found"
+    - test -f backend/dist/index.js && echo "SUCCESS: index.js exists" || echo "ERROR: index.js not found"
+    - echo "=== Step 4: List all files in backend/dist ==="
+    - find backend/dist -type f || echo "No files in dist"
 
 run:
   # Запуск приложения - используем абсолютный путь
