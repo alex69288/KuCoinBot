@@ -18,13 +18,11 @@ build:
     - ls -la /source/
     - npm install --ignore-scripts --no-optional --legacy-peer-deps
     - npm run build
-    - mkdir -p /app
-    - cp -r /source/dist /app/
-    - cp /source/package*.json /app/
+    - ls -la /source/dist/
 
 run:
-  # Запуск приложения
-  command: node dist/index.js
+  # Запуск приложения из директории /source
+  command: cd /source && node dist/index.js
   # Монтирование данных для персистентности
   persistenceMount: /data
   # Порт контейнера
