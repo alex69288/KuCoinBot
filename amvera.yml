@@ -20,10 +20,8 @@ build:
     - npm run build
 
 run:
-  # Запуск приложения — сначала устанавливаем безопасные каталоги Git
-  # на случай, если приложение обращается к локальному репозиторию
-  # (это предотвращает ValueError: SHA is empty).
-  command: bash -lc "git config --global --add safe.directory /source || true && git config --global --add safe.directory /git || true && git config --global --add safe.directory /app || true && node dist/index.js"
+  # Запуск приложения
+  command: node dist/index.js
   # Монтирование данных для персистентности
   persistenceMount: /data
   # Порт контейнера
