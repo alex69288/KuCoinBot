@@ -51,6 +51,6 @@ subprocess.run([
     '--host', '0.0.0.0',
     '--port', str(port),
     '--reload',  # Горячая перезагрузка
-    '--reload-dirs', 'webapp',  # Только смотрим за папкой webapp
+    '--reload-dir', 'webapp',  # Только смотрим за папкой webapp (правильное имя параметра)
     '--log-level', 'info'
 ], cwd=os.path.dirname(os.path.abspath(__file__)))
