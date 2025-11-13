@@ -1,4 +1,4 @@
-import ccxt from 'ccxt';
+import * as ccxt from 'ccxt';
 import { logger } from '../utils/logger';
 
 export interface ExchangeConfig {
@@ -42,7 +42,7 @@ export interface Ticker {
 }
 
 export class ExchangeManager {
-  private exchange: ccxt.kucoin;
+  private exchange: ccxt.Exchange;
   private isConnected: boolean = false;
 
   constructor(config: ExchangeConfig) {
@@ -112,7 +112,7 @@ export class ExchangeManager {
   async getTicker(symbol: string = 'BTC/USDT'): Promise<Ticker> {
     try {
       const ticker = await this.exchange.fetchTicker(symbol);
-      
+
       return {
         symbol: ticker.symbol,
         last: ticker.last || 0,
@@ -136,7 +136,7 @@ export class ExchangeManager {
   async getMarketData(symbol: string = 'BTC/USDT'): Promise<MarketData> {
     try {
       const ticker = await this.getTicker(symbol);
-      
+
       return {
         symbol: ticker.symbol,
         price: ticker.last,
@@ -166,8 +166,8 @@ export class ExchangeManager {
   ): Promise<any[]> {
     try {
       const ohlcv = await this.exchange.fetchOHLCV(symbol, timeframe, undefined, limit);
-      
-      return ohlcv.map(candle => ({
+
+      return ohlcv.map((candle: any) => ({
         timestamp: candle[0],
         open: candle[1],
         high: candle[2],
@@ -192,14 +192,14 @@ export class ExchangeManager {
   ): Promise<any> {
     try {
       logger.info(`Creating ${side} limit order: ${amount} ${symbol} @ ${price}`);
-      
+
       const order = await this.exchange.createLimitOrder(
         symbol,
         side,
         amount,
         price
       );
-      
+
       logger.info(`Order created successfully: ${order.id}`);
       return order;
     } catch (error) {
@@ -218,13 +218,13 @@ export class ExchangeManager {
   ): Promise<any> {
     try {
       logger.info(`Creating ${side} market order: ${amount} ${symbol}`);
-      
+
       const order = await this.exchange.createMarketOrder(
         symbol,
         side,
         amount
       );
-      
+
       logger.info(`Market order created successfully: ${order.id}`);
       return order;
     } catch (error) {

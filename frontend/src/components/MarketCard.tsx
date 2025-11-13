@@ -25,7 +25,7 @@ export default function MarketCard({ data, isLoading }: MarketCardProps) {
       <h2 className="text-2xl font-semibold mb-4 text-primary-400">
         Рынок
       </h2>
-      
+
       <div className="space-y-3">
         <div className="flex justify-between items-center">
           <span className="text-gray-400">Пара:</span>

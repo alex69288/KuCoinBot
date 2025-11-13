@@ -20,7 +20,7 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   if (err instanceof AppError) {
-    logger.error(`AppError: ${err.message}`, { 
+    logger.error(`AppError: ${err.message}`, {
       statusCode: err.statusCode,
       path: req.path,
       method: req.method
@@ -41,8 +41,8 @@ export const errorHandler = (
 
   return res.status(500).json({
     status: 'error',
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
+    message: process.env.NODE_ENV === 'production'
+      ? 'Internal server error'
       : err.message
   });
 };

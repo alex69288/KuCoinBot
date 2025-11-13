@@ -12,7 +12,7 @@ export class EMAStrategy extends BaseStrategy {
 
   constructor(config?: Partial<EMAConfig>) {
     super('EMA Strategy');
-    
+
     this.config = {
       fastPeriod: config?.fastPeriod || 9,
       slowPeriod: config?.slowPeriod || 21,
@@ -77,7 +77,7 @@ export class EMAStrategy extends BaseStrategy {
 
     } catch (error) {
       logger.error('Error in EMA strategy analysis:', error);
-      
+
       return {
         action: 'HOLD',
         confidence: 0,

@@ -25,7 +25,7 @@ export default function StatusCard({ data, isLoading }: StatusCardProps) {
       <h2 className="text-2xl font-semibold mb-4 text-primary-400">
         Статус Бота
       </h2>
-      
+
       <div className="space-y-3">
         <div className="flex justify-between items-center">
           <span className="text-gray-400">Статус:</span>

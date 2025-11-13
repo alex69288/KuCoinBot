@@ -8,25 +8,25 @@ const router = Router();
 router.post('/start', async (req: Request, res: Response) => {
   try {
     if (!tradingBot) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Bot not initialized (missing API credentials)' 
+      return res.status(400).json({
+        success: false,
+        error: 'Bot not initialized (missing API credentials)'
       });
     }
 
     if (!tradingBot.isActive()) {
       await tradingBot.start();
     }
-    
+
     tradingBot.enableTrading();
     logger.info('✅ Trading started');
-    
+
     res.json({ success: true, message: 'Trading started' });
   } catch (error) {
     logger.error('Failed to start trading:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to start trading' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start trading'
     });
   }
 });
@@ -35,21 +35,21 @@ router.post('/start', async (req: Request, res: Response) => {
 router.post('/stop', async (req: Request, res: Response) => {
   try {
     if (!tradingBot) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Bot not initialized' 
+      return res.status(400).json({
+        success: false,
+        error: 'Bot not initialized'
       });
     }
 
     tradingBot.disableTrading();
     logger.info('⚠️ Trading stopped');
-    
+
     res.json({ success: true, message: 'Trading stopped' });
   } catch (error) {
     logger.error('Failed to stop trading:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to stop trading' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to stop trading'
     });
   }
 });
@@ -58,21 +58,21 @@ router.post('/stop', async (req: Request, res: Response) => {
 router.post('/bot/start', async (req: Request, res: Response) => {
   try {
     if (!tradingBot) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Bot not initialized' 
+      return res.status(400).json({
+        success: false,
+        error: 'Bot not initialized'
       });
     }
 
     await tradingBot.start();
     logger.info('🚀 Bot started');
-    
+
     res.json({ success: true, message: 'Bot started (trading disabled)' });
   } catch (error) {
     logger.error('Failed to start bot:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to start bot' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start bot'
     });
   }
 });
@@ -81,21 +81,21 @@ router.post('/bot/start', async (req: Request, res: Response) => {
 router.post('/bot/stop', async (req: Request, res: Response) => {
   try {
     if (!tradingBot) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Bot not initialized' 
+      return res.status(400).json({
+        success: false,
+        error: 'Bot not initialized'
       });
     }
 
     tradingBot.stop();
     logger.info('🛑 Bot stopped');
-    
+
     res.json({ success: true, message: 'Bot stopped completely' });
   } catch (error) {
     logger.error('Failed to stop bot:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to stop bot' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to stop bot'
     });
   }
 });

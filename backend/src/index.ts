@@ -89,11 +89,49 @@ app.use('/api', apiRoutes);
 // WebSocket connection
 io.on('connection', (socket) => {
   logger.info(`WebSocket client connected: ${socket.id}`);
-  
+
+  // Отправляем начальный статус
+  if (tradingBot) {
+    tradingBot.getStatus().then(status => {
+      socket.emit('status', status);
+    }).catch(err => {
+      logger.error('Failed to send initial status:', err);
+    });
+  }
+
   socket.on('disconnect', () => {
     logger.info(`WebSocket client disconnected: ${socket.id}`);
   });
 });
+
+// WebSocket broadcasting - отправка обновлений клиентам
+function startWebSocketBroadcasting() {
+  // Отправка статуса бота каждые 5 секунд
+  setInterval(async () => {
+    if (!tradingBot) return;
+
+    try {
+      const status = await tradingBot.getStatus();
+      io.emit('status', status);
+    } catch (error) {
+      logger.error('Failed to broadcast status:', error);
+    }
+  }, 5000);
+
+  // Отправка рыночных данных каждые 10 секунд
+  setInterval(async () => {
+    if (!tradingBot) return;
+
+    try {
+      const marketData = await tradingBot.getMarketData();
+      io.emit('market', marketData);
+    } catch (error) {
+      logger.error('Failed to broadcast market data:', error);
+    }
+  }, 10000);
+
+  logger.info('📡 WebSocket broadcasting started');
+}
 
 // Обработка ошибок (должен быть последним)
 app.use(errorHandler);
@@ -103,6 +141,9 @@ httpServer.listen(PORT, () => {
   logger.info(`🚀 Backend server started on port ${PORT}`);
   logger.info(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`📡 WebSocket ready on port ${PORT}`);
+
+  // Запускаем WebSocket broadcasting
+  startWebSocketBroadcasting();
 });
 
 // Graceful shutdown
